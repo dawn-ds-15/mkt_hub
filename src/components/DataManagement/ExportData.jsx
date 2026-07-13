@@ -5,7 +5,7 @@ export default function ExportData() {
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState(false);
 
-  const periods = ['Monthly', 'Quarterly', 'Weekly', 'Yearly'];
+  const periods = ['Hàng tháng', 'Hàng quý', 'Hàng tuần', 'Hàng năm'];
 
   const simulateExport = () => {
     if (exporting) return;
@@ -21,8 +21,8 @@ export default function ExportData() {
     <div className="space-y-6">
       {/* Header */}
       <div className="mb-2">
-        <h2 className="font-headline-lg text-headline-lg text-on-surface">Export Data Repository</h2>
-        <p className="text-body-md text-on-surface-variant max-w-2xl">Generate and download comprehensive performance reports, raw data dumps, and dashboard snapshots for external analysis.</p>
+        <h2 className="font-headline-lg text-headline-lg text-on-surface">Export Dữ liệu</h2>
+        <p className="text-body-md text-on-surface-variant max-w-2xl">Tạo và tải xuống các báo cáo hiệu suất, dữ liệu thô và ảnh chụp dashboard để phân tích bên ngoài.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -34,19 +34,19 @@ export default function ExportData() {
                 <span className="material-symbols-outlined">picture_as_pdf</span>
               </div>
               <div>
-                <h3 className="font-title-md text-title-md">Weekly Report</h3>
-                <span className="text-xs text-on-surface-variant uppercase tracking-wider">Document Format • PDF</span>
+                <h3 className="font-title-md text-title-md">Báo cáo Tuần</h3>
+                <span className="text-xs text-on-surface-variant uppercase tracking-wider">Định dạng Tài liệu • PDF</span>
               </div>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
             <div className="space-y-1.5">
-              <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">SELECT WEEK & YEAR</label>
+              <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">CHỌN TUẦN & NĂM</label>
               <div className="flex gap-2">
                 <select className="flex-1 bg-surface-container-low border border-outline-variant rounded-lg text-body-md py-2 px-3 focus:ring-primary focus:border-primary transition-all">
-                  <option>Week 42</option>
-                  <option>Week 41</option>
-                  <option>Week 40</option>
+                  <option>Tuần 42</option>
+                  <option>Tuần 41</option>
+                  <option>Tuần 40</option>
                 </select>
                 <select className="w-24 bg-surface-container-low border border-outline-variant rounded-lg text-body-md py-2 px-3 focus:ring-primary focus:border-primary transition-all">
                   <option>2023</option>
@@ -55,24 +55,24 @@ export default function ExportData() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">PROJECT CATEGORY</label>
+              <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">DANH MỤC DỰ ÁN</label>
               <select className="w-full bg-surface-container-low border border-outline-variant rounded-lg text-body-md py-2 px-3 focus:ring-primary focus:border-primary transition-all">
-                <option>All Projects</option>
-                <option>Growth Q4</option>
+                <option>Tất cả Dự án</option>
+                <option>Tăng trưởng Q4</option>
                 <option>Retention Beta</option>
               </select>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">TEAM MEMBER FOCUS</label>
+              <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">THÀNH VIÊN</label>
               <select className="w-full bg-surface-container-low border border-outline-variant rounded-lg text-body-md py-2 px-3 focus:ring-primary focus:border-primary transition-all">
-                <option>Entire Team</option>
+                <option>Toàn bộ Nhóm</option>
                 <option>Design Ops</option>
-                <option>Strategy Lead</option>
+                <option>Chiến lược</option>
               </select>
             </div>
           </div>
           <div className="mt-8 flex items-center justify-between">
-            <p className="text-sm text-on-surface-variant italic">Estimated size: ~2.4MB</p>
+            <p className="text-sm text-on-surface-variant italic">Dung lượng ước tính: ~2.4MB</p>
             <button className="bg-surface-container-high hover:bg-primary-container hover:text-on-primary-container text-on-surface-variant font-title-md text-sm py-3 px-6 rounded-xl flex items-center gap-2 transition-all active:scale-95">
               <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
               Xuất PDF
@@ -87,13 +87,13 @@ export default function ExportData() {
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>table_chart</span>
             </div>
             <div>
-              <h3 className="font-title-md text-title-md">Dashboard Report</h3>
-              <span className="text-xs text-on-surface-variant uppercase tracking-wider">Data Sheets • XLSX</span>
+              <h3 className="font-title-md text-title-md">Báo cáo Dashboard</h3>
+              <span className="text-xs text-on-surface-variant uppercase tracking-wider">Bảng tính • XLSX</span>
             </div>
           </div>
           <div className="space-y-4 flex-1">
             <div className="space-y-1.5">
-              <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">REPORTING PERIOD</label>
+              <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">KỲ BÁO CÁO</label>
               <div className="grid grid-cols-2 gap-2">
                 {periods.map((p) => (
                   <button
@@ -111,9 +111,9 @@ export default function ExportData() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">FISCAL YEAR</label>
+              <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">NĂM TÀI CHÍNH</label>
               <select className="w-full bg-surface-container-low border border-outline-variant rounded-lg text-body-md py-2 px-3 focus:ring-primary transition-all">
-                <option>2024 (Current)</option>
+                <option>2024 (Hiện tại)</option>
                 <option>2023</option>
                 <option>2022</option>
               </select>
@@ -135,27 +135,27 @@ export default function ExportData() {
                   <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>inventory_2</span>
                 </div>
                 <div>
-                  <h3 className="font-headline-md text-headline-md text-on-surface">System Archive & Backup</h3>
+                  <h3 className="font-headline-md text-headline-md text-on-surface">Lưu trữ & Sao lưu Hệ thống</h3>
                   <div className="flex items-center justify-center md:justify-start gap-2">
-                    <span className="text-xs text-primary uppercase bg-primary-fixed/20 px-2 py-0.5 rounded font-semibold">Full Ecosystem</span>
+                    <span className="text-xs text-primary uppercase bg-primary-fixed/20 px-2 py-0.5 rounded font-semibold">Toàn bộ Hệ thống</span>
                     <span className="flex items-center gap-1 text-xs text-on-surface-variant">
                       <span className="material-symbols-outlined text-xs">verified_user</span>
-                      MANAGER ONLY
+                      CHỈ QUẢN LÝ
                     </span>
                   </div>
                 </div>
               </div>
               <p className="text-body-md text-on-surface-variant max-w-xl leading-relaxed">
-                Perform a comprehensive system export including all active workspace data, team interactions, historical logs, and custom configuration settings. This action generates a compressed JSON archive for off-site disaster recovery or workspace migration.
+                Thực hiện xuất toàn bộ hệ thống bao gồm dữ liệu không gian làm việc, tương tác nhóm, nhật ký lịch sử và cấu hình tùy chỉnh. Thao tác này tạo một kho lưu trữ JSON nén để khôi phục thảm họa hoặc di chuyển không gian làm việc.
               </p>
               <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4">
                 <div className="flex items-center gap-2 text-xs text-on-surface-variant bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant">
                   <span className="material-symbols-outlined text-[14px]">storage</span>
-                  Est. 450 MB
+                  Ước tính 450 MB
                 </div>
                 <div className="flex items-center gap-2 text-xs text-on-surface-variant bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant">
                   <span className="material-symbols-outlined text-[14px]">history</span>
-                  Last Backup: 2 days ago
+                  Sao lưu gần nhất: 2 ngày trước
                 </div>
               </div>
             </div>
@@ -176,10 +176,10 @@ export default function ExportData() {
                   {exporting ? 'sync' : exported ? 'check_circle' : 'package_2'}
                 </span>
                 <span className="relative z-10">
-                  {exporting ? 'Processing...' : exported ? 'Download Ready' : 'Export Full Data'}
+                  {exporting ? 'Đang xử lý...' : exported ? 'Sẵn sàng Tải xuống' : 'Xuất Toàn bộ Dữ liệu'}
                 </span>
               </button>
-              <p className="text-[10px] text-on-surface-variant opacity-50 text-center uppercase tracking-wider">ENCRYPTED AES-256 PACKAGING</p>
+              <p className="text-[10px] text-on-surface-variant opacity-50 text-center uppercase tracking-wider">ĐÓNG GÓI MÃ HÓA AES-256</p>
             </div>
           </div>
         </section>
@@ -191,7 +191,7 @@ export default function ExportData() {
             <div className="w-8 h-8 rounded-full border-2 border-surface bg-success/20 flex items-center justify-center text-[10px] font-bold">XLS</div>
             <div className="w-8 h-8 rounded-full border-2 border-surface bg-[#ffb59c]/20 flex items-center justify-center text-[10px] font-bold">JSON</div>
           </div>
-          <p className="text-sm text-on-surface-variant">Select a module above to initialize the data stream for export. All exports are logged for compliance.</p>
+          <p className="text-sm text-on-surface-variant">Chọn một module ở trên để khởi tạo luồng dữ liệu xuất. Tất cả các lần xuất đều được ghi lại để tuân thủ.</p>
         </div>
       </div>
     </div>

@@ -1,14 +1,14 @@
 import { useState } from 'react';
 
 const statusConfig = {
-  near_deadline: { label: 'Near Deadline', bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' },
-  on_track: { label: 'On Track', bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' },
+  near_deadline: { label: 'Sắp hết hạn', bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' },
+  on_track: { label: 'Đúng tiến độ', bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' },
 };
 
 const taskStatusConfig = {
-  done: { label: 'Done', bg: 'bg-green-100', text: 'text-green-700' },
-  in_progress: { label: 'In Progress', bg: 'bg-amber-100', text: 'text-amber-700' },
-  pending: { label: 'Pending', bg: 'bg-slate-100', text: 'text-slate-600' },
+  done: { label: 'Hoàn thành', bg: 'bg-green-100', text: 'text-green-700' },
+  in_progress: { label: 'Đang thực hiện', bg: 'bg-amber-100', text: 'text-amber-700' },
+  pending: { label: 'Chờ xử lý', bg: 'bg-slate-100', text: 'text-slate-600' },
 };
 
 export default function ProjectCard({ project }) {
@@ -37,7 +37,7 @@ export default function ProjectCard({ project }) {
                 <div className="w-6 h-6 rounded-full bg-slate-300 flex items-center justify-center text-[10px] font-bold text-white">
                   {project.owner.split(' ').map(w => w[0]).join('')}
                 </div>
-                <span className="text-label-sm text-on-surface-variant">Owner: {project.owner}</span>
+                <span className="text-label-sm text-on-surface-variant">Chủ sở hữu: {project.owner}</span>
               </div>
             </div>
           </div>
@@ -52,7 +52,7 @@ export default function ProjectCard({ project }) {
           </div>
           <div className="col-span-3">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-label-sm text-on-surface-variant">{project.tasksCompleted} / {project.tasksTotal} Tasks</span>
+                <span className="text-label-sm text-on-surface-variant">{project.tasksCompleted} / {project.tasksTotal} Task</span>
               <span className="text-label-sm font-bold text-on-surface">{project.progress}%</span>
             </div>
             <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
@@ -78,10 +78,10 @@ export default function ProjectCard({ project }) {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-surface-container text-label-sm uppercase text-on-surface-variant">
-                      <th className="px-4 py-3 font-semibold">Task Name</th>
-                      <th className="px-4 py-3 font-semibold">Assignee</th>
-                      <th className="px-4 py-3 font-semibold">Due Date</th>
-                      <th className="px-4 py-3 font-semibold">Status</th>
+                      <th className="px-4 py-3 font-semibold">Tên Task</th>
+                        <th className="px-4 py-3 font-semibold">Người phụ trách</th>
+                        <th className="px-4 py-3 font-semibold">Hạn chót</th>
+                        <th className="px-4 py-3 font-semibold">Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant">
@@ -109,7 +109,7 @@ export default function ProjectCard({ project }) {
                 </table>
               </div>
             ) : (
-              <p className="text-on-surface-variant text-body-md italic">No tasks created yet for this project phase.</p>
+              <p className="text-on-surface-variant text-body-md italic">Chưa có task nào cho giai đoạn dự án này.</p>
             )}
           </div>
         </div>

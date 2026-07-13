@@ -34,8 +34,8 @@ export default function ImportData() {
     <div className="space-y-6">
       {/* Header */}
       <div className="mb-2">
-        <h2 className="font-headline-lg text-headline-lg text-on-surface">Import Data</h2>
-        <p className="text-body-md text-on-surface-variant max-w-2xl">Upload CSV or Excel files to import task history, KPI data, and closed deal records into the workspace.</p>
+        <h2 className="font-headline-lg text-headline-lg text-on-surface">Import Dữ liệu</h2>
+        <p className="text-body-md text-on-surface-variant max-w-2xl">Tải lên tệp CSV hoặc Excel để nhập lịch sử công việc, dữ liệu KPI và hồ sơ deal đã đóng vào không gian làm việc.</p>
       </div>
 
       {/* Configuration Bar */}
@@ -44,9 +44,9 @@ export default function ImportData() {
           <label className="block text-xs text-on-surface-variant font-semibold uppercase tracking-wider mb-2">LOẠI DỮ LIỆU</label>
           <div className="relative">
             <select className="w-full bg-surface-container-high border border-outline-variant text-on-surface rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all">
-              <option>Task History</option>
-              <option>KPI History</option>
-              <option>Closed Deal History</option>
+                  <option>Lịch sử Task</option>
+              <option>Lịch sử KPI</option>
+              <option>Lịch sử Deal đã đóng</option>
             </select>
             <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
           </div>
@@ -92,7 +92,7 @@ export default function ImportData() {
               {fileName ? (
                 <>
                   <h3 className="font-title-md text-title-md text-on-surface mb-1">{fileName}</h3>
-                  <p className="text-on-surface-variant text-sm">File ready for import</p>
+                  <p className="text-on-surface-variant text-sm">Tệp sẵn sàng để import</p>
                 </>
               ) : (
                 <>
@@ -222,7 +222,7 @@ export default function ImportData() {
       <div className="sticky bottom-0 bg-surface/80 backdrop-blur-xl border border-outline-variant rounded-xl p-4 flex flex-wrap gap-4 items-center">
         <button className="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-all px-4 py-2 hover:bg-surface-container-high rounded-xl">
           <span className="material-symbols-outlined">download</span>
-          <span className="font-medium text-sm">Download Template</span>
+          <span className="font-medium text-sm">Tải Template</span>
         </button>
         <div className="ml-auto flex gap-4">
           <button className="px-6 py-2.5 text-on-surface-variant hover:text-on-surface transition-all border border-outline-variant hover:border-outline rounded-xl font-medium text-sm">

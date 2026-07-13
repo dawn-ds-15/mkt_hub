@@ -6,10 +6,10 @@ import TaskList from '../components/Projects/TaskList';
 import WeeklyReport from '../components/Projects/WeeklyReport';
 
 const tabs = [
-  { label: 'Tasks List', key: 'tasks' },
+  { label: 'Danh sách Task', key: 'tasks' },
   { label: 'Kanban', key: 'kanban' },
-  { label: 'Weekly Report', key: 'weekly' },
-  { label: 'Projects', key: 'projects' },
+  { label: 'Báo cáo Tuần', key: 'weekly' },
+  { label: 'Dự án', key: 'projects' },
 ];
 
 export default function ProjectsTasks() {
@@ -35,7 +35,7 @@ export default function ProjectsTasks() {
   };
 
   return (
-    <Layout title="Projects & Tasks">
+    <Layout title="Dự án & Task">
       <div className="space-y-6">
         <div className="flex items-center gap-8">
           <nav className="flex gap-6">

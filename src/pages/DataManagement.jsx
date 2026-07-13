@@ -3,12 +3,12 @@ import Layout from '../components/Layout';
 import { BackupReset, DropdownConfig, ExportData, ImportData, SlackSettings, TeamMembers } from '../components/DataManagement';
 
 const tabs = [
-  { label: 'Import Data', key: 'import' },
-  { label: 'Export Data', key: 'export' },
-  { label: 'Team Members', key: 'members' },
-  { label: 'Dropdown Config', key: 'dropdown' },
-  { label: 'Slack Settings', key: 'slack' },
-  { label: 'Backup & Reset', key: 'backup' },
+  { label: 'Import', key: 'import' },
+  { label: 'Export', key: 'export' },
+  { label: 'Thành viên', key: 'members' },
+  { label: 'Cấu hình Dropdown', key: 'dropdown' },
+  { label: 'Cấu hình Slack', key: 'slack' },
+  { label: 'Sao lưu & Đặt lại', key: 'backup' },
 ];
 
 export default function DataManagementPage() {
@@ -41,7 +41,7 @@ export default function DataManagementPage() {
   };
 
   return (
-    <Layout title="Data Management">
+    <Layout title="Quản lý Dữ liệu">
       <div className="space-y-6">
         {/* Sub-navigation */}
         <div className="border-b border-outline-variant">

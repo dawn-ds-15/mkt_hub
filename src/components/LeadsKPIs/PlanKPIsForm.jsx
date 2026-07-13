@@ -66,7 +66,7 @@ export default function PlanKPIsForm() {
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
           <span className="material-symbols-outlined text-primary">target</span>
-          Form Plan KPIs
+          Plan KPIs
         </h3>
         <select
           className="border-border-light rounded text-body-sm bg-surface-container-low px-2 py-1 focus:ring-primary focus:border-primary"
@@ -182,7 +182,7 @@ export default function PlanKPIsForm() {
         <div className="bg-surface-container-low p-3 rounded-lg border border-dashed border-outline-variant">
           <p className="text-label-md font-semibold text-primary mb-1 flex items-center gap-1">
             <span className="material-symbols-outlined text-[14px]">info</span>
-            Rollover Logic
+             Logic Rollover
           </p>
           <p className="text-body-sm text-on-surface-variant italic">
             Số liệu Plan sẽ được phân bổ đều theo tháng. Nếu tháng trước không đạt, phần dư có thể được thiết lập Rollover sang tháng kế tiếp.

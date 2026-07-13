@@ -19,8 +19,8 @@ export default function TeamMembers() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-headline-lg text-headline-lg text-on-surface">Team Members</h2>
-          <p className="text-on-surface-variant text-body-md">Manage your workspace access and roles</p>
+          <h2 className="font-headline-lg text-headline-lg text-on-surface">Thành viên Nhóm</h2>
+          <p className="text-on-surface-variant text-body-md">Quản lý quyền truy cập và vai trò trong không gian làm việc</p>
         </div>
         <button className="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-title-md flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20">
           <span className="material-symbols-outlined">person_add</span>
@@ -31,7 +31,7 @@ export default function TeamMembers() {
       {/* Table */}
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
         <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/50">
-          <span className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">DIRECTORY • {members.length} MEMBERS</span>
+          <span className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">DANH SÁCH • {members.length} THÀNH VIÊN</span>
           <div className="flex gap-2">
             <button className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant">
               <span className="material-symbols-outlined text-[20px]">filter_list</span>
@@ -45,11 +45,11 @@ export default function TeamMembers() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="text-on-surface-variant/70 border-b border-outline-variant">
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">MEMBER</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">EMAIL ADDRESS</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">ROLE</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">STATUS</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">ACTIONS</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">THÀNH VIÊN</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">EMAIL</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">VAI TRÒ</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">TRẠNG THÁI</th>
+                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">THAO TÁC</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/5">
@@ -62,7 +62,7 @@ export default function TeamMembers() {
                       </div>
                       <div className="flex flex-col">
                         <span className="text-on-surface font-semibold text-sm">{member.name}</span>
-                        <span className="text-xs text-on-surface-variant">Last active: {member.lastActive}</span>
+                        <span className="text-xs text-on-surface-variant">Hoạt động gần nhất: {member.lastActive}</span>
                       </div>
                     </div>
                   </td>
@@ -90,7 +90,7 @@ export default function TeamMembers() {
                         <div className="w-9 h-5 bg-surface-container-high rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success" />
                       </label>
                       <span className={`text-xs font-medium ${member.active ? 'text-success' : 'text-on-surface-variant'}`}>
-                        {member.active ? 'Active' : 'Inactive'}
+                        {member.active ? 'Hoạt động' : 'Không hoạt động'}
                       </span>
                     </div>
                   </td>
@@ -110,7 +110,7 @@ export default function TeamMembers() {
           </table>
         </div>
         <div className="p-4 bg-surface-container-low/30 flex items-center justify-between">
-          <span className="text-xs text-on-surface-variant">Showing 1-{members.length} of {members.length} team members</span>
+          <span className="text-xs text-on-surface-variant">Hiển thị 1-{members.length} trong tổng số {members.length} thành viên</span>
           <div className="flex gap-1">
             <button className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface-container-high disabled:opacity-30" disabled>
               <span className="material-symbols-outlined">chevron_left</span>

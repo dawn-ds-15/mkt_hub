@@ -73,7 +73,7 @@ export default function WeeklyReport() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Thành viên</label>
+              <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Người phụ trách</label>
             <select className="border border-outline-variant rounded p-1.5 text-body-md focus:border-primary focus:ring-0 min-w-[150px]"
               value={filters.member}
               onChange={(e) => setFilters(p => ({ ...p, member: e.target.value }))}>
@@ -84,11 +84,11 @@ export default function WeeklyReport() {
         <div className="flex items-center gap-2">
           <button className="px-4 py-2 bg-surface-container-high text-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-surface-variant transition-colors border border-outline-variant">
             <span className="material-symbols-outlined text-[18px]">bolt</span>
-            Auto-fill
+            Tự động điền
           </button>
           <button className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-primary/90 transition-colors">
             <span className="material-symbols-outlined text-[18px]">download</span>
-            Export TXT
+            Xuất TXT
           </button>
         </div>
       </section>
@@ -96,11 +96,11 @@ export default function WeeklyReport() {
       {/* Report Header */}
       <div className="flex items-center justify-between">
         <h3 className="font-headline-lg text-headline-lg text-primary flex items-center gap-3">
-          <span className="text-[32px]">📊</span> Weekly Report — Tuần {data.week}/{data.year}
+          <span className="text-[32px]">📊</span> Báo cáo Tuần — Tuần {data.week}/{data.year}
         </h3>
-        <span className="text-label-md font-medium text-on-surface-variant bg-surface-container px-3 py-1 rounded-full border border-outline-variant">
-          Status: {data.status}
-        </span>
+          <span className="text-label-md font-medium text-on-surface-variant bg-surface-container px-3 py-1 rounded-full border border-outline-variant">
+            Trạng thái: {data.status}
+          </span>
       </div>
 
       {/* 4 Sections */}
@@ -118,7 +118,7 @@ export default function WeeklyReport() {
                   <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Mã công việc</th>
                   <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Tên công việc</th>
                   <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-center">Kết quả</th>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-right">Phụ trách</th>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-right">Người phụ trách</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
@@ -147,10 +147,10 @@ export default function WeeklyReport() {
             <table className="w-full text-left">
               <thead className="bg-surface-container-low border-b border-outline-variant">
                 <tr>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Dự kiến</th>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Hạng mục chính</th>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Thời gian</th>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Hạng mục</th>
                   <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Deadline</th>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-right">Mức độ ưu tiên</th>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-right">Ưu tiên</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
@@ -217,7 +217,7 @@ export default function WeeklyReport() {
       {/* Weekly Log */}
       <section>
         <div className="flex items-center justify-between mb-stack_md">
-          <h3 className="font-headline-md text-headline-md">Weekly Log</h3>
+          <h3 className="font-headline-md text-headline-md">Nhật ký Tuần</h3>
           <button
             onClick={handleSave}
             disabled={saving}

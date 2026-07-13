@@ -15,11 +15,11 @@ export default function SlackSettings() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="font-headline-lg text-headline-lg text-on-surface">Slack Settings</h2>
-          <p className="text-body-md text-on-surface-variant">Configure automated alerts and integration hooks.</p>
+          <h2 className="font-headline-lg text-headline-lg text-on-surface">Cấu hình Slack</h2>
+          <p className="text-body-md text-on-surface-variant">Cấu hình cảnh báo tự động và hook tích hợp.</p>
         </div>
         <button className="px-4 py-2 text-primary border border-primary/20 rounded-xl font-medium hover:bg-primary/10 transition-all flex items-center gap-2">
-          <span className="material-symbols-outlined text-sm">open_in_new</span> External Docs
+          <span className="material-symbols-outlined text-sm">open_in_new</span> Tài liệu Bên ngoài
         </button>
       </div>
 
@@ -29,11 +29,11 @@ export default function SlackSettings() {
         <div className="md:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary">webhook</span>
-            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Webhook Config</h3>
+            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Cấu hình Webhook</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-on-surface-variant ml-1">Slack Webhook URL</label>
+              <label className="text-xs text-on-surface-variant ml-1">URL Webhook Slack</label>
               <input
                 className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none text-sm"
                 placeholder="https://hooks.slack.com/services/..."
@@ -41,7 +41,7 @@ export default function SlackSettings() {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-on-surface-variant ml-1">Channel Name</label>
+              <label className="text-xs text-on-surface-variant ml-1">Tên Kênh</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">#</span>
                 <input
@@ -52,7 +52,7 @@ export default function SlackSettings() {
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-2">
-            <button className="px-5 py-2.5 text-on-surface-variant font-medium border border-outline-variant rounded-xl hover:bg-surface-container-high active:scale-95 transition-all text-sm">Test Webhook</button>
+            <button className="px-5 py-2.5 text-on-surface-variant font-medium border border-outline-variant rounded-xl hover:bg-surface-container-high active:scale-95 transition-all text-sm">Kiểm tra Webhook</button>
             <button className="px-8 py-2.5 bg-primary text-on-primary font-bold rounded-xl shadow-lg hover:brightness-110 active:scale-[0.98] transition-all text-sm">Lưu</button>
           </div>
         </div>
@@ -61,7 +61,7 @@ export default function SlackSettings() {
         <div className="md:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-error">notification_important</span>
-            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Deadline Alert</h3>
+            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Cảnh báo Hạn chót</h3>
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-on-surface-variant ml-1">Cảnh báo sắp hạn (số ngày)</label>
@@ -81,7 +81,7 @@ export default function SlackSettings() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-success">schedule</span>
-              <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Notification Schedule</h3>
+              <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Lịch Thông báo</h3>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -95,7 +95,7 @@ export default function SlackSettings() {
           </div>
           <div className="flex flex-col gap-4">
             <div className="flex justify-between items-center bg-surface-container-low/50 p-3 rounded-xl border border-outline-variant">
-              <span className="text-sm">Delivery Time</span>
+              <span className="text-sm">Giờ Gửi</span>
               <input
                 className="bg-transparent border-none text-primary text-lg p-0 focus:ring-0 cursor-pointer"
                 type="time" defaultValue="08:00"
@@ -131,7 +131,7 @@ export default function SlackSettings() {
         <div className="md:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-[#4A154B]">visibility</span>
-            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Live Preview</h3>
+            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Xem trước</h3>
           </div>
           <div className="bg-[#1a1d21] rounded-lg p-4 text-[15px]">
             <div className="flex gap-3">
@@ -161,7 +161,7 @@ export default function SlackSettings() {
               </div>
             </div>
           </div>
-          <div className="mt-4 text-[10px] text-center text-on-surface-variant/50 uppercase tracking-widest font-bold">Example Delivery Output</div>
+          <div className="mt-4 text-[10px] text-center text-on-surface-variant/50 uppercase tracking-widest font-bold">Ví dụ Kết quả Gửi</div>
         </div>
       </div>
 
@@ -170,19 +170,19 @@ export default function SlackSettings() {
         <div className="p-6 border-b border-outline-variant flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">history</span>
-            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Notification History</h3>
+            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Lịch sử Thông báo</h3>
           </div>
-          <button className="text-xs text-primary hover:underline">Download CSV</button>
+          <button className="text-xs text-primary hover:underline">Tải CSV</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-container-high/40">
               <tr>
-                <th className="p-4 text-xs font-bold text-on-surface-variant border-b border-outline-variant uppercase tracking-wider">Time</th>
-                <th className="p-4 text-xs font-bold text-on-surface-variant border-b border-outline-variant uppercase tracking-wider">Recipient</th>
-                <th className="p-4 text-xs font-bold text-on-surface-variant border-b border-outline-variant uppercase tracking-wider text-center">Overdue</th>
-                <th className="p-4 text-xs font-bold text-on-surface-variant border-b border-outline-variant uppercase tracking-wider text-center">Upcoming</th>
-                <th className="p-4 text-xs font-bold text-on-surface-variant border-b border-outline-variant uppercase tracking-wider text-right">Status</th>
+                <th className="p-4 text-xs font-bold text-on-surface-variant border-b border-outline-variant uppercase tracking-wider">Thời gian</th>
+                <th className="p-4 text-xs font-bold text-on-surface-variant border-b border-outline-variant uppercase tracking-wider">Người nhận</th>
+                <th className="p-4 text-xs font-bold text-on-surface-variant border-b border-outline-variant uppercase tracking-wider text-center">Quá hạn</th>
+                <th className="p-4 text-xs font-bold text-on-surface-variant border-b border-outline-variant uppercase tracking-wider text-center">Sắp đến</th>
+                <th className="p-4 text-xs font-bold text-on-surface-variant border-b border-outline-variant uppercase tracking-wider text-right">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/5">
@@ -220,7 +220,7 @@ export default function SlackSettings() {
           </table>
         </div>
         <div className="p-4 bg-surface-container-high/20 text-center">
-          <button className="text-xs font-bold text-on-surface-variant hover:text-primary transition-all uppercase tracking-widest">Load More Results</button>
+          <button className="text-xs font-bold text-on-surface-variant hover:text-primary transition-all uppercase tracking-widest">Xem thêm Kết quả</button>
         </div>
       </div>
     </div>

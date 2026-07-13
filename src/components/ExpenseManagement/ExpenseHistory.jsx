@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { getExpenseList } from '../../services/api';
 
 const statusConfig = {
-  approved: { label: 'Approved', class: 'bg-success/10 text-success' },
-  pending: { label: 'Pending', class: 'bg-warning/10 text-warning' },
+  approved: { label: 'Đã duyệt', class: 'bg-success/10 text-success' },
+  pending: { label: 'Chờ duyệt', class: 'bg-warning/10 text-warning' },
 };
 
 function formatCurrency(val) {
@@ -37,7 +37,7 @@ export default function ExpenseHistory({ refreshKey }) {
               <th className="px-6 py-3 font-label-md text-on-surface-variant border-b border-border-light">Kỳ</th>
               <th className="px-6 py-3 font-label-md text-on-surface-variant border-b border-border-light text-right">Direct Cost</th>
               <th className="px-6 py-3 font-label-md text-on-surface-variant border-b border-border-light text-right">Overhead</th>
-              <th className="px-6 py-3 font-label-md text-on-surface-variant border-b border-border-light text-right">Total</th>
+              <th className="px-6 py-3 font-label-md text-on-surface-variant border-b border-border-light text-right">Tổng</th>
               <th className="px-6 py-3 font-label-md text-on-surface-variant border-b border-border-light text-center">Trạng thái</th>
               <th className="px-6 py-3 font-label-md text-on-surface-variant border-b border-border-light text-right">Hành động</th>
             </tr>

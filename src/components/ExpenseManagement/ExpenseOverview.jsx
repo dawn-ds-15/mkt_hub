@@ -149,12 +149,12 @@ export default function ExpenseOverview() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-surface-muted border-b border-border-subtle sticky top-0">
                   <tr>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline">Project</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline">Type</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Budget Plan</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Actual Cost</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Variance</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-center">New Cust</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline">Dự án</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline">Loại</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Budget</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Thực tế</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Chênh lệch</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-center">KH Mới</th>
                     <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">CAC</th>
                   </tr>
                 </thead>
@@ -180,7 +180,7 @@ export default function ExpenseOverview() {
               </table>
             </div>
             <div className="p-4 border-t border-border-subtle bg-surface-muted flex justify-between items-center">
-              <span className="text-body-sm text-outline">Showing {Math.min(page * rowsPerPage, totalRows)} of {data.totalProjects} Projects</span>
+              <span className="text-body-sm text-outline">Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong {data.totalProjects} Dự án</span>
               <div className="flex gap-2">
                 <button
                   disabled={page === 1}

@@ -1,16 +1,16 @@
 import { useLocation } from 'react-router-dom';
 
 const navItems = [
-  { label: 'Dashboard', href: '/' },
-  { label: 'Projects & Tasks', href: '/projects' },
+  { label: 'Tổng quan', href: '/' },
+  { label: 'Dự án & Task', href: '/projects' },
   { label: 'Leads & KPIs', href: '/leads' },
-  { label: 'Expense Management', href: '/expense' },
-  { label: 'Data Management', href: '/data' },
+  { label: 'Quản lý Chi phí', href: '/expense' },
+  { label: 'Quản lý Dữ liệu', href: '/data' },
 ];
 
 const bottomLinks = [
-  { label: 'Settings', href: '/settings' },
-  { label: 'Help Center', href: '/help' },
+  { label: 'Cài đặt', href: '/settings' },
+  { label: 'Trợ giúp', href: '/help' },
 ];
 
 export default function Sidebar() {
@@ -24,7 +24,7 @@ export default function Sidebar() {
         </div>
         <div>
           <h1 className="text-headline-md font-headline-md font-bold text-white">MKT Hub</h1>
-          <p className="text-[10px] text-outline-variant font-medium tracking-wider uppercase">Marketing Operations</p>
+          <p className="text-[10px] text-outline-variant font-medium tracking-wider uppercase">Vận hành Marketing</p>
         </div>
       </div>
 

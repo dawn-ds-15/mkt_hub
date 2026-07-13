@@ -2,11 +2,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { getTaskList } from '../../services/api';
 
 const statusStyles = {
-  overdue: { bg: 'bg-red-100', text: 'text-red-700', label: 'Overdue', row: 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100', icon: 'error', iconColor: 'text-red-600', fill: true },
-  processing: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Processing', row: 'bg-amber-50/50 hover:bg-amber-100/50', icon: 'priority_high', iconColor: 'text-amber-500' },
-  in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'In Progress', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
-  planning: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Planning', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
-  done: { bg: 'bg-green-100', text: 'text-green-700', label: 'Done', row: 'opacity-70 hover:opacity-100', icon: 'check_circle', iconColor: 'text-green-600' },
+  overdue: { bg: 'bg-red-100', text: 'text-red-700', label: 'Quá hạn', row: 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100', icon: 'error', iconColor: 'text-red-600', fill: true },
+  processing: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Đang xử lý', row: 'bg-amber-50/50 hover:bg-amber-100/50', icon: 'priority_high', iconColor: 'text-amber-500' },
+  in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Đang thực hiện', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
+  planning: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Lên kế hoạch', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
+  done: { bg: 'bg-green-100', text: 'text-green-700', label: 'Hoàn thành', row: 'opacity-70 hover:opacity-100', icon: 'check_circle', iconColor: 'text-green-600' },
 };
 
 const priorityColors = {
@@ -16,25 +16,25 @@ const priorityColors = {
 };
 
 const priorityLabels = {
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
+  high: 'Cao',
+  medium: 'Trung bình',
+  low: 'Thấp',
 };
 
 const statsMeta = [
   { key: 'total', label: 'Tổng cộng', color: 'text-primary' },
-  { key: 'planning', label: 'Planning', color: 'text-secondary' },
-  { key: 'processing', label: 'Processing', color: 'text-primary-container' },
-  { key: 'done', label: 'Done', color: 'text-green-700' },
-  { key: 'overdue', label: 'Overdue', color: 'text-red-700' },
+  { key: 'planning', label: 'Lên kế hoạch', color: 'text-secondary' },
+  { key: 'processing', label: 'Đang xử lý', color: 'text-primary-container' },
+  { key: 'done', label: 'Hoàn thành', color: 'text-green-700' },
+  { key: 'overdue', label: 'Quá hạn', color: 'text-red-700' },
   { key: 'near_deadline', label: 'Sắp hạn', color: 'text-amber-700' },
 ];
 
 const filterDefs = [
-  { key: 'project', label: 'Project:', options: ['All Projects', 'Social Q4', 'Web Redesign', 'PR Hub', 'Campaigns'] },
-  { key: 'status', label: 'Status:', options: ['All Status', 'planning', 'processing', 'in_progress', 'done', 'overdue'] },
-  { key: 'priority', label: 'Priority:', options: ['All Priorities', 'high', 'medium', 'low'] },
-  { key: 'assignee', label: 'Assignee:', options: ['Everyone', 'An Nguyen', 'Minh Le', 'Thu Ha', 'Khoa Vo', 'Trang Mai'] },
+  { key: 'project', label: 'Dự án:', options: ['Tất cả', 'Social Q4', 'Web Redesign', 'PR Hub', 'Chiến dịch'] },
+  { key: 'status', label: 'Trạng thái:', options: ['Tất cả', 'planning', 'processing', 'in_progress', 'done', 'overdue'] },
+  { key: 'priority', label: 'Ưu tiên:', options: ['Tất cả', 'high', 'medium', 'low'] },
+  { key: 'assignee', label: 'Người phụ trách:', options: ['Tất cả', 'An Nguyen', 'Minh Le', 'Thu Ha', 'Khoa Vo', 'Trang Mai'] },
 ];
 
 export default function TaskList() {
@@ -43,10 +43,10 @@ export default function TaskList() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({
-    project: 'All Projects',
-    status: 'All Status',
-    priority: 'All Priorities',
-    assignee: 'Everyone',
+    project: 'Tất cả',
+    status: 'Tất cả',
+    priority: 'Tất cả',
+    assignee: 'Tất cả',
   });
   const perPage = 10;
 
@@ -68,16 +68,16 @@ export default function TaskList() {
 
   useEffect(() => {
     let result = [...tasks];
-    if (filters.project !== 'All Projects') {
+    if (filters.project !== 'Tất cả') {
       result = result.filter(t => t.project === filters.project);
     }
-    if (filters.status !== 'All Status') {
+    if (filters.status !== 'Tất cả') {
       result = result.filter(t => t.status === filters.status);
     }
-    if (filters.priority !== 'All Priorities') {
+    if (filters.priority !== 'Tất cả') {
       result = result.filter(t => t.priority === filters.priority);
     }
-    if (filters.assignee !== 'Everyone') {
+    if (filters.assignee !== 'Tất cả') {
       result = result.filter(t => t.assignee.name === filters.assignee);
     }
     setFilteredTasks(result);
@@ -98,7 +98,7 @@ export default function TaskList() {
   }, [tasks]);
 
   const clearFilters = () => {
-    setFilters({ project: 'All Projects', status: 'All Status', priority: 'All Priorities', assignee: 'Everyone' });
+    setFilters({ project: 'Tất cả', status: 'Tất cả', priority: 'Tất cả', assignee: 'Tất cả' });
   };
 
   const totalPages = Math.ceil(filteredTasks.length / perPage);
@@ -166,18 +166,23 @@ export default function TaskList() {
               value={filters[def.key]}
               onChange={(e) => setFilters(prev => ({ ...prev, [def.key]: e.target.value }))}
             >
-              {def.options.map((opt) => (
-                <option key={opt} value={opt}>
-                  {def.key === 'status' ? opt.charAt(0).toUpperCase() + opt.slice(1).replace('_', ' ') : opt}
-                </option>
-              ))}
+              {def.options.map((opt) => {
+                const statusLabels = { 'Tất cả': 'Tất cả', planning: 'Lên kế hoạch', processing: 'Đang xử lý', in_progress: 'Đang thực hiện', done: 'Hoàn thành', overdue: 'Quá hạn' };
+                const priorityLabelsMap = { 'Tất cả': 'Tất cả', high: 'Cao', medium: 'Trung bình', low: 'Thấp' };
+                const label = def.key === 'status' ? (statusLabels[opt] || opt) : def.key === 'priority' ? (priorityLabelsMap[opt] || opt) : opt;
+                return (
+                  <option key={opt} value={opt}>
+                    {label}
+                  </option>
+                );
+              })}
             </select>
             <span className="material-symbols-outlined text-sm absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
           </div>
         ))}
         <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm cursor-pointer hover:bg-surface-container-high transition-colors relative group">
           <span className="material-symbols-outlined text-sm text-outline">calendar_today</span>
-          <span className="font-semibold">Select Range</span>
+          <span className="font-semibold">Chọn khoảng</span>
           <span className="material-symbols-outlined text-sm text-outline">expand_more</span>
         </div>
         <button
@@ -227,7 +232,7 @@ export default function TaskList() {
           value={quickTask.priority}
           onChange={(e) => setQuickTask(prev => ({ ...prev, priority: e.target.value }))}
         >
-          <option value="">Priority</option>
+           <option value="">Độ ưu tiên</option>
           <option>high</option>
           <option>medium</option>
           <option>low</option>
@@ -256,22 +261,22 @@ export default function TaskList() {
                 <th className="w-12 p-3"><span className="material-symbols-outlined text-outline">warning</span></th>
                 <th className="p-3 text-label-sm text-outline uppercase whitespace-nowrap">Dự án</th>
                 <th className="p-3 text-label-sm text-outline uppercase min-w-[250px]">Tên Task</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Assignee</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Stakeholders</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Status</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Priority</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Start</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Due</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Done</th>
+                <th className="p-3 text-label-sm text-outline uppercase">Người phụ trách</th>
+                <th className="p-3 text-label-sm text-outline uppercase">Liên quan</th>
+                <th className="p-3 text-label-sm text-outline uppercase">Trạng thái</th>
+                <th className="p-3 text-label-sm text-outline uppercase">Ưu tiên</th>
+                <th className="p-3 text-label-sm text-outline uppercase">Bắt đầu</th>
+                <th className="p-3 text-label-sm text-outline uppercase">Hạn chót</th>
+                <th className="p-3 text-label-sm text-outline uppercase">Hoàn thành</th>
                 <th className="p-3 text-label-sm text-outline uppercase text-center"><span className="material-symbols-outlined">link</span></th>
-                <th className="p-3 text-label-sm text-outline uppercase">Remark</th>
+                <th className="p-3 text-label-sm text-outline uppercase">Ghi chú</th>
                 <th className="p-3 text-label-sm text-outline uppercase text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
               {pagedTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="p-10 text-center text-outline">No tasks found</td>
+                  <td colSpan={13} className="p-10 text-center text-outline">Không tìm thấy task</td>
                 </tr>
               ) : (
                 pagedTasks.map((task) => {
@@ -344,7 +349,7 @@ export default function TaskList() {
         {/* Pagination Footer */}
         <div className="p-4 border-t border-outline-variant bg-surface flex items-center justify-between">
           <span className="text-label-md text-outline">
-            Showing {(page - 1) * perPage + 1}-{Math.min(page * perPage, filteredTasks.length)} of {filteredTasks.length} tasks
+            Hiển thị {(page - 1) * perPage + 1}-{Math.min(page * perPage, filteredTasks.length)} trong {filteredTasks.length} task
           </span>
           <div className="flex items-center gap-2">
             <button

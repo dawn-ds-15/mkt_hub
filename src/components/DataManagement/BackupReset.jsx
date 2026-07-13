@@ -17,9 +17,9 @@ export default function BackupReset() {
     const now = new Date();
     const date = new Date(dateStr);
     const diffH = Math.floor((now - date) / 3600000);
-    if (diffH < 1) return 'Just now';
-    if (diffH < 24) return `${diffH}h ago`;
-    return `${Math.floor(diffH / 24)}d ago`;
+    if (diffH < 1) return 'Vừa xong';
+    if (diffH < 24) return `${diffH} giờ trước`;
+    return `${Math.floor(diffH / 24)} ngày trước`;
   };
 
   if (loading) {
@@ -35,12 +35,12 @@ export default function BackupReset() {
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="font-headline-lg text-headline-lg text-on-surface">Backup & Reset</h2>
-          <p className="text-on-surface-variant text-body-md mt-1">Manage system snapshots and workspace restoration environments.</p>
+          <h2 className="font-headline-lg text-headline-lg text-on-surface">Sao lưu & Đặt lại</h2>
+          <p className="text-on-surface-variant text-body-md mt-1">Quản lý ảnh chụp hệ thống và môi trường khôi phục không gian làm việc.</p>
         </div>
         <button className="flex items-center gap-2 bg-primary text-on-primary px-6 py-2.5 rounded-lg font-title-md hover:bg-primary/90 active:scale-95 transition-all shadow-lg shadow-primary/20">
           <span className="material-symbols-outlined">cloud_upload</span>
-          Create Backup
+          Tạo Sao lưu
         </button>
       </div>
 
@@ -49,8 +49,8 @@ export default function BackupReset() {
         {/* Snapshot History */}
         <div className="col-span-12 lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Snapshot History</h3>
-            <span className="text-primary font-body-md text-sm">{data.snapshots.length} Backups Stored ({data.totalSize})</span>
+            <h3 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Lịch sử Snapshot</h3>
+            <span className="text-primary font-body-md text-sm">{data.snapshots.length} Bản sao lưu ({data.totalSize})</span>
           </div>
           <div className="flex flex-col gap-3">
             {data.snapshots.map((item) => (
@@ -62,7 +62,7 @@ export default function BackupReset() {
                   <div>
                     <p className="font-title-md text-on-surface">{item.name}</p>
                     <p className="text-on-surface-variant font-body-md text-sm">
-                      {item.date} • {item.time} • {item.size} • <span className="text-success">Verified</span>
+                      {item.date} • {item.time} • {item.size} • <span className="text-success">Đã xác minh</span>
                     </p>
                   </div>
                 </div>
@@ -79,7 +79,7 @@ export default function BackupReset() {
           </div>
           <div className="pt-4 flex justify-center border-t border-outline-variant">
             <button className="text-on-surface-variant hover:text-primary text-body-md flex items-center gap-1 transition-all underline underline-offset-4 decoration-primary/30">
-              View All Archived Snapshots
+              Xem Tất cả Snapshot Đã lưu
             </button>
           </div>
         </div>
@@ -92,11 +92,11 @@ export default function BackupReset() {
               <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>upload_file</span>
             </div>
             <div>
-              <p className="font-title-md text-on-surface">Drop backup file here</p>
-              <p className="text-on-surface-variant text-sm mt-1 px-4">Upload a .zip file from a previous export to restore workspace state.</p>
+              <p className="font-title-md text-on-surface">Thả tệp sao lưu vào đây</p>
+              <p className="text-on-surface-variant text-sm mt-1 px-4">Tải lên tệp .zip từ lần xuất trước để khôi phục trạng thái không gian làm việc.</p>
             </div>
             <button className="px-6 py-2 border border-outline text-on-surface hover:bg-surface-container transition-all rounded-lg text-body-md">
-              Select File
+              Chọn Tệp
             </button>
           </div>
 
@@ -104,14 +104,14 @@ export default function BackupReset() {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 border-l-4 border-error bg-error/5">
             <h3 className="font-label-md text-label-md text-error uppercase tracking-wider mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-lg">warning</span>
-              Reset Sandbox
+              Đặt lại Sandbox
             </h3>
             <p className="text-on-surface-variant text-sm mb-6">
-              This will purge all marketing campaign data, lead history, and workspace configurations in the sandbox environment. This action <span className="text-error font-bold">cannot be undone</span>.
+              Thao tác này sẽ xóa tất cả dữ liệu chiến dịch marketing, lịch sử lead và cấu hình không gian làm việc trong môi trường sandbox. Hành động này <span className="text-error font-bold">không thể hoàn tác</span>.
             </p>
             <div className="flex flex-col gap-4">
               <div>
-                <label className="text-xs font-label-md text-on-surface-variant mb-2 block">TYPE 'RESET' TO CONFIRM</label>
+                <label className="text-xs font-label-md text-on-surface-variant mb-2 block">NHẬP 'RESET' ĐỂ XÁC NHẬN</label>
                 <input
                   className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-center tracking-[0.3em] focus:ring-2 focus:ring-error focus:outline-none transition-all"
                   placeholder="RESET"
@@ -127,7 +127,7 @@ export default function BackupReset() {
                     : 'bg-error/10 border border-error/20 text-error/50 cursor-not-allowed'
                 }`}
               >
-                Reset to Default
+                Đặt lại Mặc định
               </button>
             </div>
           </div>
@@ -139,28 +139,28 @@ export default function BackupReset() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
           <span className="material-symbols-outlined text-primary bg-primary-fixed/30 p-2 rounded-lg">history</span>
           <div>
-            <p className="text-xs font-label-md text-on-surface-variant opacity-70">LAST BACKUP</p>
+            <p className="text-xs font-label-md text-on-surface-variant opacity-70">SAO LƯU GẦN NHẤT</p>
             <p className="font-body-md font-semibold">{getRelativeTime(data.lastBackup)}</p>
           </div>
         </div>
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
           <span className="material-symbols-outlined text-success bg-success/10 p-2 rounded-lg">verified</span>
           <div>
-            <p className="text-xs font-label-md text-on-surface-variant opacity-70">INTEGRITY CHECK</p>
+            <p className="text-xs font-label-md text-on-surface-variant opacity-70">KIỂM TRA TOÀN VẸN</p>
             <p className="font-body-md font-semibold">{data.integrityCheck}</p>
           </div>
         </div>
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
           <span className="material-symbols-outlined text-primary bg-primary-fixed/30 p-2 rounded-lg">storage</span>
           <div>
-            <p className="text-xs font-label-md text-on-surface-variant opacity-70">DISK USAGE</p>
+            <p className="text-xs font-label-md text-on-surface-variant opacity-70">DUNG LƯỢNG ĐĨA</p>
             <p className="font-body-md font-semibold">{data.diskUsage}</p>
           </div>
         </div>
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
           <span className="material-symbols-outlined text-on-surface-variant bg-surface-container-high p-2 rounded-lg">schedule</span>
           <div>
-            <p className="text-xs font-label-md text-on-surface-variant opacity-70">AUTO-SNAPSHOT</p>
+            <p className="text-xs font-label-md text-on-surface-variant opacity-70">TỰ ĐỘNG CHỤP</p>
             <p className="font-body-md font-semibold">{data.autoSnapshot}</p>
           </div>
         </div>

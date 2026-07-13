@@ -68,7 +68,7 @@ export default function ExpenseReports() {
         </div>
         <button className="flex items-center gap-2 bg-primary text-on-primary px-5 py-2 rounded-lg font-label-md text-label-md shadow-sm hover:brightness-110 transition-all active:scale-95">
           <span className="material-symbols-outlined text-[18px]">file_download</span>
-          Export Data
+          Xuất Dữ liệu
         </button>
       </div>
 
@@ -237,7 +237,7 @@ export default function ExpenseReports() {
       {/* Detail Table */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-title-lg text-title-lg text-on-surface">Bảng Chi Tiết Theo Kỳ</h3>
+            <h3 className="font-title-lg text-title-lg text-on-surface">Chi tiết Theo Kỳ</h3>
           <div className="flex gap-2">
             <button className="p-2 border border-border-subtle rounded-lg hover:bg-surface-container-high transition-colors">
               <span className="material-symbols-outlined text-[20px] text-on-surface-variant">filter_list</span>
@@ -253,7 +253,7 @@ export default function ExpenseReports() {
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead className="bg-surface-muted border-b border-border-subtle sticky top-0">
                 <tr>
-                  {['Mã CT', 'Tên Project', 'Loại', 'Ngày', 'Chi phí (VNĐ)', 'Budget (VNĐ)', 'Variance', 'Health', 'Action'].map((h) => (
+                  {['Mã CT', 'Dự án', 'Loại', 'Ngày', 'Chi phí (VNĐ)', 'Budget (VNĐ)', 'Variance', 'Sức khỏe', 'Thao tác'].map((h) => (
                     <th
                       key={h}
                       className={`px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline ${
@@ -288,7 +288,7 @@ export default function ExpenseReports() {
                         <span className={`w-2 h-2 rounded-full ${
                           row.health === 'good' ? 'bg-success' : row.health === 'over' ? 'bg-danger' : 'bg-warning'
                         }`} />
-                        {row.health === 'good' ? 'Good' : row.health === 'over' ? 'Over-budget' : 'Neutral'}
+                        {row.health === 'good' ? 'Tốt' : row.health === 'over' ? 'Vượt ngân sách' : 'Trung bình'}
                       </div>
                     </td>
                     <td className="px-cell-padding-x py-cell-padding-y text-center">
@@ -304,9 +304,9 @@ export default function ExpenseReports() {
 
           {/* Pagination */}
           <div className="px-cell-padding-x py-cell-padding-y bg-surface-muted border-t border-border-subtle flex justify-between items-center">
-            <span className="text-body-sm text-outline">
-              Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong tổng số {data.totalProjects} dự án
-            </span>
+              <span className="text-body-sm text-outline">
+                Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong {data.totalProjects} dự án
+              </span>
             <div className="flex gap-2">
               <button
                 disabled={page === 1}

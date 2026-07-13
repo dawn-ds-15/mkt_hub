@@ -1,0 +1,283 @@
+import { useEffect, useState } from 'react';
+import { getWeeklyReport } from '../../services/api';
+
+const projects = ['All Projects', 'Q3 Brand Campaign', 'Social Media Audit', 'Email Automation'];
+const members = ['All Members', 'Nguyễn Văn A', 'Trần Thị B', 'Minh Tú', 'Hoàng Nam'];
+
+const priorityStyles = {
+  High: 'bg-primary-fixed text-primary',
+  Normal: 'bg-surface-container-highest text-on-surface-variant',
+};
+
+export default function WeeklyReport() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({ week: 23, year: 2026, project: 'All Projects', member: 'All Members' });
+
+  useEffect(() => {
+    getWeeklyReport(filters).then((res) => {
+      setData(res.data);
+      setLoading(false);
+    });
+  }, []);
+
+  const [log, setLog] = useState({ note: '', suggestion: '', lesson: '', reminder: '' });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    setSaving(true);
+    setTimeout(() => {
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }, 1000);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-on-surface-variant">Đang tải dữ liệu...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-gutter">
+      {/* Filter Bar */}
+      <section className="bg-white border border-outline-variant p-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Tuần</label>
+            <input
+              className="w-20 border border-outline-variant rounded p-1.5 text-body-md focus:border-primary focus:ring-0"
+              type="number" value={filters.week}
+              onChange={(e) => setFilters(p => ({ ...p, week: +e.target.value }))}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Năm</label>
+            <select className="border border-outline-variant rounded p-1.5 text-body-md focus:border-primary focus:ring-0 min-w-[100px]"
+              value={filters.year}
+              onChange={(e) => setFilters(p => ({ ...p, year: +e.target.value }))}>
+              <option>2026</option>
+              <option>2025</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Dự án</label>
+            <select className="border border-outline-variant rounded p-1.5 text-body-md focus:border-primary focus:ring-0 min-w-[180px]"
+              value={filters.project}
+              onChange={(e) => setFilters(p => ({ ...p, project: e.target.value }))}>
+              {projects.map(p => <option key={p}>{p}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+              <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Người phụ trách</label>
+            <select className="border border-outline-variant rounded p-1.5 text-body-md focus:border-primary focus:ring-0 min-w-[150px]"
+              value={filters.member}
+              onChange={(e) => setFilters(p => ({ ...p, member: e.target.value }))}>
+              {members.map(m => <option key={m}>{m}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="px-4 py-2 bg-surface-container-high text-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-surface-variant transition-colors border border-outline-variant">
+            <span className="material-symbols-outlined text-[18px]">bolt</span>
+            Tự động điền
+          </button>
+          <button className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-primary/90 transition-colors">
+            <span className="material-symbols-outlined text-[18px]">download</span>
+            Xuất TXT
+          </button>
+        </div>
+      </section>
+
+      {/* Report Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="font-headline-lg text-headline-lg text-primary flex items-center gap-3">
+          <span className="text-[32px]">📊</span> Báo cáo Tuần — Tuần {data.week}/{data.year}
+        </h3>
+          <span className="text-label-md font-medium text-on-surface-variant bg-surface-container px-3 py-1 rounded-full border border-outline-variant">
+            Trạng thái: {data.status}
+          </span>
+      </div>
+
+      {/* 4 Sections */}
+      <div className="space-y-gutter">
+        {/* Section 1: Completed */}
+        <section className="bg-white border border-outline-variant overflow-hidden">
+          <div className="bg-surface-container px-4 py-2 border-b border-outline-variant flex items-center gap-2">
+            <span className="text-green-600 material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            <h4 className="font-headline-sm text-headline-sm">Công việc đã hoàn thành</h4>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-surface-container-low border-b border-outline-variant">
+                <tr>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Mã công việc</th>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Tên công việc</th>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-center">Kết quả</th>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-right">Người phụ trách</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant">
+                {data.completed.map((item, i) => (
+                  <tr key={i} className="hover:bg-surface-container-low transition-colors">
+                    <td className="px-4 py-3 font-body-md text-body-md text-on-surface-variant">{item.code}</td>
+                    <td className="px-4 py-3 font-body-md text-body-md font-medium">{item.name}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-label-sm">{item.result}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-body-md text-body-md">{item.assignee}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Section 2: Next Week Plan */}
+        <section className="bg-white border border-outline-variant overflow-hidden">
+          <div className="bg-surface-container px-4 py-2 border-b border-outline-variant flex items-center gap-2">
+            <span className="text-primary material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>push_pin</span>
+            <h4 className="font-headline-sm text-headline-sm">Kế hoạch tuần tiếp theo</h4>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-surface-container-low border-b border-outline-variant">
+                <tr>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Thời gian</th>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Hạng mục</th>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Deadline</th>
+                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-right">Ưu tiên</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant">
+                {data.nextWeek.map((item, i) => (
+                  <tr key={i} className="hover:bg-surface-container-low transition-colors">
+                    <td className="px-4 py-3 font-body-md text-body-md text-on-surface-variant">{item.schedule}</td>
+                    <td className="px-4 py-3 font-body-md text-body-md font-medium">{item.item}</td>
+                    <td className="px-4 py-3 font-body-md text-body-md">{item.deadline}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={`${priorityStyles[item.priority] || priorityStyles.Normal} px-2 py-0.5 rounded-full text-label-sm`}>{item.priority}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Section 3: Backlog */}
+        <section className="bg-white border border-outline-variant overflow-hidden">
+          <div className="bg-surface-container px-4 py-2 border-b border-outline-variant flex items-center gap-2">
+            <span className="text-error material-symbols-outlined">construction</span>
+            <h4 className="font-headline-sm text-headline-sm">Backlog / Vấn đề</h4>
+          </div>
+          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {data.backlog.map((item, i) => (
+              <div key={i} className={`p-4 border border-outline-variant rounded ${item.cardClass}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <h5 className="font-body-lg font-bold text-on-surface">{item.title}</h5>
+                  <span className={`${item.tagClass} px-2 py-0.5 rounded text-[10px] font-bold`}>{item.tag}</span>
+                </div>
+                <p className="text-body-md mb-2">{item.description}</p>
+                <div className="flex items-center gap-2 text-label-sm text-on-surface-variant italic">
+                  <span className="material-symbols-outlined text-[14px]">{item.icon}</span>
+                  {item.note}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Section 4: BOD Support */}
+        <section className="bg-white border border-outline-variant overflow-hidden">
+          <div className="bg-surface-container px-4 py-2 border-b border-outline-variant flex items-center gap-2">
+            <span className="text-primary material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>handshake</span>
+            <h4 className="font-headline-sm text-headline-sm">Cần BOD hỗ trợ</h4>
+          </div>
+          <div className="p-4 space-y-3">
+            {data.bod.map((item, i) => (
+              <div key={i} className="flex gap-4 p-3 bg-surface-container-low rounded border-l-4 border-primary">
+                <div className="flex-1">
+                  <h5 className="font-body-md font-bold mb-1">{item.project}</h5>
+                  <p className="text-body-md text-on-surface-variant">{item.description}</p>
+                </div>
+                <button className="text-primary font-label-md flex items-center hover:underline">
+                  <span className="material-symbols-outlined mr-1 text-[18px]">chat</span> Thảo luận
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* Weekly Log */}
+      <section>
+        <div className="flex items-center justify-between mb-stack_md">
+          <h3 className="font-headline-md text-headline-md">Nhật ký Tuần</h3>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`px-6 py-2 rounded font-label-md text-label-md flex items-center gap-2 transition-all shadow-lg shadow-primary/20 ${
+              saved ? 'bg-green-600 text-on-primary' : 'bg-primary text-on-primary hover:opacity-90'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {saving ? 'sync' : saved ? 'check' : 'save'}
+            </span>
+            {saving ? 'Đang lưu...' : saved ? 'Đã lưu thành công' : 'Lưu Log'}
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+          <div className="flex flex-col gap-2">
+            <label className="font-label-md text-on-surface-variant flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">comment</span> Ghi chú chi tiết công việc
+            </label>
+            <textarea
+              className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
+              placeholder="Nhập chi tiết các đầu việc trong tuần..."
+              value={log.note}
+              onChange={(e) => setLog(p => ({ ...p, note: e.target.value }))}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-label-md text-on-surface-variant flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">trending_up</span> Đề xuất cải tiến quy trình
+            </label>
+            <textarea
+              className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
+              placeholder="Đề xuất các bước tối ưu hóa vận hành..."
+              value={log.suggestion}
+              onChange={(e) => setLog(p => ({ ...p, suggestion: e.target.value }))}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-label-md text-on-surface-variant flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">psychology</span> Bài học kinh nghiệm (Lesson Learned)
+            </label>
+            <textarea
+              className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
+              placeholder="Các bài học rút ra từ chiến dịch/dự án..."
+              value={log.lesson}
+              onChange={(e) => setLog(p => ({ ...p, lesson: e.target.value }))}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-label-md text-on-surface-variant flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">notifications_active</span> Thông báo / Nhắc nhở
+            </label>
+            <textarea
+              className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
+              placeholder="Các lưu ý quan trọng cho các phòng ban..."
+              value={log.reminder}
+              onChange={(e) => setLog(p => ({ ...p, reminder: e.target.value }))}
+            />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

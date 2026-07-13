@@ -1,34 +1,28 @@
 # Dependencies
 node_modules/
 
-# Build
-dist/
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# IDE
-.vscode/
+# IDEs and Editors
 .idea/
-*.swp
-*.swo
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-npm-debug.log*
-
-# Prisma
-prisma/migrations/
-
-# SQLite / databases
+# SQLite / database files
 *.db
 dev.db
 
-# Docker
-docker-compose.override.yml
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Local build / outputs
+dist/
+out/

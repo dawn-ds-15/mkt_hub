@@ -1,0 +1,332 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Member {
+  id           String   @id @default(uuid())
+  memberId     Int      @unique @default(0)
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("specialist")
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdProjects        Project[]
+  createdProjectsCreator Project[]         @relation("ProjectCreator")
+  ownedTasks             Task[]
+  createdKpiPlans        KpiPlan[]
+  createdKpiActuals      KpiActual[]
+  createdOpps            Opportunity[]
+  createdDeals           ClosedDeal[]
+  createdExpenses        ExpenseRecord[]
+  createdSystemConfigs   SystemConfig[]
+  createdWeeklyLogs      WeeklyReportLog[]
+  createdImports         ImportLog[]
+  createdBackups         BackupLog[]
+  auditLogs              AuditLog[]
+}
+
+model DropdownConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  label     String
+  values    String // Stored as JSON string or stringified array for SQLite
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id                     String    @id @default(uuid())
+  name                   String
+  type                   String
+  status                 String    @default("Planning")
+  ownerId                String
+  owner                  Member    @relation(fields: [ownerId], references: [id])
+  deadline               DateTime?
+  budgetPlanDirect       Decimal?
+  budgetPlanOverhead     Decimal?
+  actualCostDirect       Decimal?
+  actualCostOverhead     Decimal?
+  kpiRawLeadsPlan        Int?
+  kpiMqlPlan             Int?
+  kpiSqlPlan             Int?
+  kpiOppPlan             Int?
+  kpiClosedDealPlan      Int?
+  kpiPipelineValuePlan   Decimal?
+  kpiRawLeadsActual      Int?
+  kpiMqlActual           Int?
+  kpiSqlActual           Int?
+  kpiOppActual           Int?
+  kpiClosedDealActual    Int?
+  kpiPipelineValueActual Decimal?
+  budgetDirectNotes      String?
+  budgetOverheadNotes    String?
+  actualDirectNotes      String?
+  actualOverheadNotes    String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  createdBy              String?
+  createdByMember        Member?   @relation("ProjectCreator", fields: [createdBy], references: [id])
+
+  tasks            Task[]
+  kpiDistributions KpiDistribution[]
+  opportunities    Opportunity[]
+  closedDeals      ClosedDeal[]
+  expenseRecords   ExpenseRecord[]
+
+  @@index([status])
+  @@index([ownerId])
+}
+
+model Task {
+  id               String    @id @default(uuid())
+  name             String
+  description      String?
+  projectId        String
+  project          Project   @relation(fields: [projectId], references: [id])
+  assigneeId       String
+  assignee         Member    @relation(fields: [assigneeId], references: [id])
+  stakeholders     String? // Stored as stringified JSON array
+  status           String    @default("Planning")
+  priority         String    @default("Medium")
+  startDate        DateTime?
+  dueDate          DateTime
+  completedDate    DateTime?
+  execWeek         Int
+  execYear         Int
+  reason           String?
+  neededSupportBod String?
+  link             String?
+  remark           String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([projectId, status])
+  @@index([assigneeId])
+  @@index([execYear, execWeek])
+  @@index([dueDate])
+}
+
+model KpiPlan {
+  id                String   @id @default(uuid())
+  year              Int      @unique
+  totalRawLeads     Int
+  targetMql         Int
+  targetSql         Int
+  targetOpp         Int
+  targetClosedDeal  Int
+  targetPipelineVal Decimal
+  targetWonVal      Decimal
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  createdById       String
+  createdBy         Member   @relation(fields: [createdById], references: [id])
+}
+
+model KpiActual {
+  id             String   @id @default(uuid())
+  year           Int
+  week           Int
+  rawLeads       Int      @default(0)
+  mql            Int      @default(0)
+  sql            Int      @default(0)
+  oppCount       Int      @default(0)
+  closedCount    Int      @default(0)
+  planRawLeads   Int
+  planMql        Int
+  planSql        Int
+  planOpp        Int
+  planClosedDeal Int
+  rolloverLeads  Int      @default(0)
+  rolloverMql    Int      @default(0)
+  rolloverSql    Int      @default(0)
+  rolloverOpp    Int      @default(0)
+  rolloverClosed Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String
+  createdBy      Member   @relation(fields: [createdById], references: [id])
+
+  @@unique([year, week])
+}
+
+model KpiDistribution {
+  id            String   @id @default(uuid())
+  year          Int
+  week          Int
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id])
+  type          String // "plan" | "actual"
+  rawLeads      Int      @default(0)
+  mql           Int      @default(0)
+  sql           Int      @default(0)
+  oppCount      Int      @default(0)
+  closedCount   Int      @default(0)
+  pipelineValue Decimal  @default(0)
+  wonValue      Decimal  @default(0)
+  createdAt     DateTime @default(now())
+
+  @@unique([year, week, projectId, type])
+}
+
+model Opportunity {
+  id                String    @id @default(uuid())
+  companyName       String
+  size              String
+  projectId         String?
+  project           Project?  @relation(fields: [projectId], references: [id])
+  setupFee          Decimal
+  monthlyFee        Decimal
+  expectedCloseDate DateTime?
+  status            String    @default("active") // active | won | lost
+  wonDate           DateTime?
+  year              Int
+  week              Int
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  createdById       String
+  createdBy         Member    @relation(fields: [createdById], references: [id])
+
+  closedDeal ClosedDeal?
+}
+
+model ClosedDeal {
+  id            String       @id @default(uuid())
+  companyName   String
+  size          String
+  projectId     String?
+  project       Project?     @relation(fields: [projectId], references: [id])
+  setupFee      Decimal
+  monthlyFee    Decimal
+  closedDate    DateTime
+  year          Int
+  week          Int
+  opportunityId String?      @unique
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  createdById   String
+  createdBy     Member       @relation(fields: [createdById], references: [id])
+}
+
+model ExpenseRecord {
+  id            String   @id @default(uuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id])
+  month         Int
+  year          Int
+  directCost    Decimal  @default(0)
+  directNotes   String?
+  overheadCost  Decimal  @default(0)
+  overheadNotes String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String
+  createdBy     Member   @relation(fields: [createdById], references: [id])
+
+  @@unique([projectId, month, year])
+}
+
+model SystemConfig {
+  id            String   @id @default(uuid())
+  key           String // "churn_rate" | "gross_margin"
+  periodType    String // "month" | "quarter" | "year"
+  year          Int
+  periodValue   Int?
+  value         Decimal
+  effectiveFrom DateTime
+  notes         String?
+  createdAt     DateTime @default(now())
+  createdById   String
+  createdBy     Member   @relation(fields: [createdById], references: [id])
+
+  @@index([key, year, periodType, periodValue, effectiveFrom])
+}
+
+model WeeklyReportLog {
+  id           String   @id @default(uuid())
+  year         Int
+  week         Int
+  projectId    String?
+  memberId     String?
+  doneNotes    String?
+  planNotes    String?
+  backlogNotes String?
+  bodNotes     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+  createdBy    Member   @relation(fields: [createdById], references: [id])
+
+  @@index([year, week, projectId, memberId])
+}
+
+model SlackConfig {
+  id                   String   @id @default(uuid())
+  webhookUrl           String
+  channel              String
+  notificationsEnabled Boolean  @default(true)
+  sendTime             String   @default("08:00")
+  sendDays             String // Stored as stringified JSON array
+  alertDaysBefore      Int      @default(5)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model NotificationLog {
+  id            String   @id @default(uuid())
+  sentAt        DateTime
+  overdueCount  Int      @default(0)
+  upcomingCount Int      @default(0)
+  status        String // "success" | "error"
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+}
+
+model ImportLog {
+  id           String   @id @default(uuid())
+  importType   String // "task" | "kpi_history" | "closed_deal_history"
+  fileName     String
+  totalRows    Int
+  validRows    Int
+  errorRows    Int
+  errorDetails String? // Stored as stringified JSON
+  createdAt    DateTime @default(now())
+  createdById  String
+  createdBy    Member   @relation(fields: [createdById], references: [id])
+}
+
+model BackupLog {
+  id          String   @id @default(uuid())
+  fileName    String
+  filePath    String
+  fileSize    BigInt
+  createdAt   DateTime @default(now())
+  createdById String
+  createdBy   Member   @relation(fields: [createdById], references: [id])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String
+  user         Member   @relation(fields: [userId], references: [id])
+  action       String // "create" | "update" | "delete"
+  entityType   String // "project" | "task" | "kpi_entry" | "expense" | ...
+  entityId     String
+  fieldChanged String?
+  oldValue     String? // Stored as stringified JSON
+  newValue     String? // Stored as stringified JSON
+  createdAt    DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}

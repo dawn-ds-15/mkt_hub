@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MKT Hub - Team Members</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#484554",
+                    "surface-dim": "#131316",
+                    "primary-fixed": "#e6deff",
+                    "on-primary-fixed-variant": "#4723be",
+                    "on-primary-fixed": "#1c0062",
+                    "inverse-primary": "#6042d6",
+                    "secondary-container": "#25a55a",
+                    "inverse-on-surface": "#303033",
+                    "secondary": "#66dd8b",
+                    "surface-container-highest": "#353438",
+                    "surface-bright": "#39393c",
+                    "on-error": "#690005",
+                    "inverse-surface": "#e4e1e6",
+                    "on-surface": "#e4e1e6",
+                    "outline": "#938ea0",
+                    "surface-variant": "#353438",
+                    "secondary-fixed-dim": "#66dd8b",
+                    "on-primary": "#30009a",
+                    "tertiary-fixed": "#ffdbcf",
+                    "primary": "#cabeff",
+                    "on-secondary-fixed": "#00210c",
+                    "tertiary-container": "#a13a0f",
+                    "secondary-fixed": "#83fba5",
+                    "on-secondary": "#003919",
+                    "on-tertiary-fixed": "#380c00",
+                    "on-tertiary-container": "#ffc8b6",
+                    "surface-container-lowest": "#0e0e11",
+                    "on-secondary-fixed-variant": "#005227",
+                    "surface-container-high": "#2a2a2d",
+                    "on-tertiary": "#5c1a00",
+                    "primary-container": "#5d3fd3",
+                    "surface-container": "#1f1f22",
+                    "primary-fixed-dim": "#cabeff",
+                    "background": "#131316",
+                    "surface-container-low": "#1b1b1e",
+                    "surface": "#131316",
+                    "error-container": "#93000a",
+                    "tertiary-fixed-dim": "#ffb59c",
+                    "on-secondary-container": "#003115",
+                    "on-tertiary-fixed-variant": "#822800",
+                    "on-surface-variant": "#c9c4d7",
+                    "tertiary": "#ffb59c",
+                    "error": "#ffb4ab",
+                    "surface-tint": "#cabeff",
+                    "on-error-container": "#ffdad6",
+                    "on-primary-container": "#d8ceff",
+                    "on-background": "#e4e1e6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "sidebar-width-collapsed": "64px",
+                    "container-padding": "24px",
+                    "sidebar-width-expanded": "240px",
+                    "gutter": "16px",
+                    "unit": "4px",
+                    "bento-gap": "12px"
+            },
+            "fontFamily": {
+                    "title-md": ["Inter Tight"],
+                    "headline-lg": ["Inter Tight"],
+                    "label-caps": ["Inter Tight"],
+                    "headline-lg-mobile": ["Inter Tight"],
+                    "body-md": ["Inter Tight"],
+                    "display-lg": ["Inter Tight"],
+                    "data-mono": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "title-md": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "data-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #050505;
+            color: #e4e1e6;
+            -webkit-font-smoothing: antialiased;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .bento-card {
+            background-color: #16161A;
+            border: 1px solid rgba(72, 69, 84, 0.2);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .bento-card:hover {
+            border-color: rgba(202, 190, 255, 0.3);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #353438;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md overflow-hidden">
+<div class="flex min-h-screen">
+<!-- Updated SideNavBar: 5 Main Modules -->
+<aside class="w-sidebar-width-collapsed lg:w-sidebar-width-expanded h-screen sticky left-0 top-0 bg-surface-container-low border-r border-outline-variant/10 flex flex-col py-container-padding gap-gutter z-50 transition-all duration-300" id="sidebar">
+<div class="px-4 mb-8">
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tight truncate">MKT Hub</h1>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest opacity-60 mt-1 lg:block hidden">Enterprise Suite</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 group rounded-xl" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform" data-icon="dashboard">dashboard</span>
+<span class="lg:block hidden truncate">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 group rounded-xl" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform" data-icon="folder">folder</span>
+<span class="lg:block hidden truncate">Projects</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 group rounded-xl" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform" data-icon="leaderboard">leaderboard</span>
+<span class="lg:block hidden truncate">Leads</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 group rounded-xl" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform" data-icon="payments">payments</span>
+<span class="lg:block hidden truncate">Expenses</span>
+</a>
+<!-- ACTIVE MODULE: Data Management -->
+<a class="flex items-center gap-3 bg-primary-container text-on-primary-container rounded-xl px-4 py-2 border-l-4 border-primary transition-all duration-200 shadow-lg shadow-primary-container/20" href="#">
+<span class="material-symbols-outlined" data-icon="database" style="font-variation-settings: 'FILL' 1;">database</span>
+<span class="lg:block hidden font-medium truncate">Data Management</span>
+</a>
+</nav>
+<div class="px-4 pt-4 border-t border-outline-variant/10">
+<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-container-high cursor-pointer transition-colors">
+<div class="w-8 h-8 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold text-xs">JD</div>
+<div class="lg:flex flex-col hidden overflow-hidden">
+<span class="text-xs font-semibold truncate">James Doe</span>
+<span class="text-[10px] text-on-surface-variant truncate">Admin Account</span>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background relative overflow-hidden">
+<!-- Predicted TopAppBar -->
+<header class="bg-surface border-b border-outline-variant/10 flex flex-col w-full sticky top-0 z-40">
+<div class="flex justify-between items-center px-container-padding h-16">
+<div class="flex items-center gap-6">
+<span class="font-display-lg text-[24px] text-primary tracking-tighter">Pulse</span>
+<div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-secondary-container/10 border border-secondary-container/20">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="text-secondary text-xs font-medium">Status: Optimal</span>
+</div>
+</div>
+<div class="flex-1 max-w-xl mx-8 hidden lg:block">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary-container transition-all" placeholder="Search data points, logs, or team..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="account_circle" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</button>
+</div>
+</div>
+<!-- Secondary Top Nav Bar for Data Management -->
+<div class="px-container-padding border-t border-outline-variant/10 bg-surface-container-lowest/50 backdrop-blur-md overflow-x-auto scrollbar-hide">
+<nav class="flex items-center gap-8 h-12">
+<a class="text-on-surface-variant hover:text-on-surface text-sm font-medium transition-colors whitespace-nowrap py-3 border-b-2 border-transparent" href="#">Import Data</a>
+<a class="text-on-surface-variant hover:text-on-surface text-sm font-medium transition-colors whitespace-nowrap py-3 border-b-2 border-transparent" href="#">Export Data</a>
+<!-- ACTIVE TAB -->
+<a class="text-primary text-sm font-semibold transition-colors whitespace-nowrap py-3 border-b-2 border-primary" href="#">Team Members</a>
+<a class="text-on-surface-variant hover:text-on-surface text-sm font-medium transition-colors whitespace-nowrap py-3 border-b-2 border-transparent" href="#">Dropdown Config</a>
+<a class="text-on-surface-variant hover:text-on-surface text-sm font-medium transition-colors whitespace-nowrap py-3 border-b-2 border-transparent" href="#">Slack Settings</a>
+<a class="text-on-surface-variant hover:text-on-surface text-sm font-medium transition-colors whitespace-nowrap py-3 border-b-2 border-transparent" href="#">Backup &amp; Reset</a>
+</nav>
+</div>
+</header>
+<!-- Main Content Area -->
+<div class="flex-1 overflow-y-auto p-container-padding relative z-10">
+<div class="max-w-6xl mx-auto space-y-gutter">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Team Members</h2>
+<p class="text-on-surface-variant font-body-md">Manage your workspace access and roles</p>
+</div>
+<button class="bg-primary-container text-on-primary-container px-6 py-2.5 rounded-full font-title-md flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary-container/20" onclick="toggleDrawer()">
+<span class="material-symbols-outlined" data-icon="person_add">person_add</span>
+                        Thêm Member
+                    </button>
+</div>
+<!-- Smart Table Bento Card -->
+<div class="bento-card rounded-2xl overflow-hidden shadow-2xl">
+<div class="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-low/50">
+<span class="font-label-caps text-label-caps text-on-surface-variant">DIRECTORY • 4 MEMBERS</span>
+<div class="flex gap-2">
+<button class="p-1.5 rounded-lg hover:bg-surface-container-highest transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]" data-icon="filter_list">filter_list</span>
+</button>
+<button class="p-1.5 rounded-lg hover:bg-surface-container-highest transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="text-on-surface-variant/70 border-b border-outline-variant/10">
+<th class="px-6 py-4 font-label-caps text-label-caps">MEMBER</th>
+<th class="px-6 py-4 font-label-caps text-label-caps">EMAIL ADDRESS</th>
+<th class="px-6 py-4 font-label-caps text-label-caps">ROLE</th>
+<th class="px-6 py-4 font-label-caps text-label-caps">STATUS</th>
+<th class="px-6 py-4 font-label-caps text-label-caps text-right">ACTIONS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<!-- Member 1 -->
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 text-primary flex items-center justify-center font-bold font-data-mono border border-primary/20">AN</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-semibold">Anh Nguyen</span>
+<span class="text-[11px] text-on-surface-variant">Last active: 2m ago</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-data-mono text-on-surface-variant">anh.nguyen@mkthub.io</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-wider border border-primary/20">Manager</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-secondary"></div>
+</div>
+<span class="text-secondary text-[12px] font-medium">Active</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant transition-colors" title="Edit member">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-error-container/20 text-error transition-colors" title="Delete member">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Member 2 -->
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-container/20 text-secondary flex items-center justify-center font-bold font-data-mono border border-secondary-container/20">HL</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-semibold">Hoang Lam</span>
+<span class="text-[11px] text-on-surface-variant">Last active: 45m ago</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-data-mono text-on-surface-variant">lam.h@mkthub.io</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-1 rounded-md bg-outline-variant/20 text-on-surface-variant text-[11px] font-bold uppercase tracking-wider border border-outline-variant/30">Specialist</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-secondary"></div>
+</div>
+<span class="text-secondary text-[12px] font-medium">Active</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-error-container/20 text-error transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Member 3 -->
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-tertiary-container/20 text-tertiary flex items-center justify-center font-bold font-data-mono border border-tertiary-container/20">MT</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-semibold">Minh Tu</span>
+<span class="text-[11px] text-on-surface-variant">Last active: 3h ago</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-data-mono text-on-surface-variant">tu.m@mkthub.io</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-1 rounded-md bg-outline-variant/20 text-on-surface-variant text-[11px] font-bold uppercase tracking-wider border border-outline-variant/30">Specialist</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-secondary"></div>
+</div>
+<span class="text-on-surface-variant text-[12px] font-medium">Inactive</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-error-container/20 text-error transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Member 4 -->
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-fixed/20 text-primary-fixed flex items-center justify-center font-bold font-data-mono border border-primary-fixed/20">TV</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-semibold">Thai Vu</span>
+<span class="text-[11px] text-on-surface-variant">Last active: Yesterday</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-data-mono text-on-surface-variant">vu.t@mkthub.io</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-1 rounded-md bg-outline-variant/20 text-on-surface-variant text-[11px] font-bold uppercase tracking-wider border border-outline-variant/30">Specialist</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-secondary"></div>
+</div>
+<span class="text-secondary text-[12px] font-medium">Active</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-error-container/20 text-error transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-surface-container-low/30 flex items-center justify-between">
+<span class="text-xs text-on-surface-variant">Showing 1-4 of 4 team members</span>
+<div class="flex gap-1">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface-container-highest disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-primary-container text-on-primary-container font-medium text-xs">1</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface-container-highest disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Right Side Drawer Form -->
+<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] transition-opacity duration-300 pointer-events-none opacity-0" id="drawer-overlay"></div>
+<aside class="fixed right-0 top-0 h-screen w-full max-w-md bg-surface-container-low border-l border-outline-variant/10 shadow-2xl z-[70] translate-x-full transition-transform duration-300 flex flex-col" id="member-drawer">
+<div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center text-white">
+<span class="material-symbols-outlined" data-icon="person_add">person_add</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-on-surface">Add New Member</h3>
+<p class="text-[11px] text-on-surface-variant uppercase tracking-wider">Workspace Management</p>
+</div>
+</div>
+<button class="p-2 rounded-full hover:bg-surface-container-highest transition-colors text-on-surface-variant" onclick="toggleDrawer()">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-6">
+<div class="space-y-4">
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant/80 tracking-wide uppercase">Full Name</label>
+<input class="w-full bg-surface-container-lowest border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="e.g. Minh Anh Nguyen" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant/80 tracking-wide uppercase">Email Address</label>
+<input class="w-full bg-surface-container-lowest border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="email@mkthub.io" type="email"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant/80 tracking-wide uppercase">Workspace Role</label>
+<select class="w-full bg-surface-container-lowest border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container transition-all appearance-none cursor-pointer">
+<option value="specialist">Specialist</option>
+<option value="manager">Manager</option>
+<option value="admin">System Administrator</option>
+</select>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant/80 tracking-wide uppercase">Password</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border-outline-variant/20 rounded-xl px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="••••••••••••" type="password"/>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]" data-icon="visibility">visibility</span>
+</button>
+</div>
+<p class="text-[10px] text-on-surface-variant/60 italic">Temporary password will be sent to their email.</p>
+</div>
+</div>
+<div class="bg-surface-container-high/50 p-4 rounded-2xl border border-outline-variant/10 space-y-4">
+<div class="flex items-center justify-between">
+<div>
+<span class="block text-sm font-semibold text-on-surface">Member Status</span>
+<span class="text-[11px] text-on-surface-variant">Enable login access immediately</span>
+</div>
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="p-6 bg-surface-container-low border-t border-outline-variant/10 flex flex-col gap-3">
+<button class="w-full bg-primary-container text-on-primary-container py-3.5 rounded-xl font-bold hover:opacity-90 active:scale-95 transition-all shadow-xl shadow-primary-container/20">Create Member</button>
+<button class="w-full bg-transparent text-on-surface-variant py-3 rounded-xl font-medium hover:bg-surface-container-highest transition-all" onclick="toggleDrawer()">Cancel</button>
+</div>
+</aside>
+</div>
+<script>
+    const drawer = document.getElementById('member-drawer');
+    const overlay = document.getElementById('drawer-overlay');
+
+    function toggleDrawer() {
+        const isOpen = !drawer.classList.contains('translate-x-full');
+        if (isOpen) {
+            drawer.classList.add('translate-x-full');
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+            overlay.classList.remove('opacity-100');
+        } else {
+            drawer.classList.remove('translate-x-full');
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+            overlay.classList.add('opacity-100');
+        }
+    }
+
+    // Initialize with drawer open as per user request "active"
+    window.addEventListener('load', () => {
+        setTimeout(toggleDrawer, 300);
+    });
+
+    overlay.addEventListener('click', toggleDrawer);
+</script>
+</body></html>

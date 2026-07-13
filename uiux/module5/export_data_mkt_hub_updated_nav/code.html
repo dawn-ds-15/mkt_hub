@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Export Data | MKT Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline-variant": "#484554",
+                        "surface-dim": "#131316",
+                        "primary-fixed": "#e6deff",
+                        "on-primary-fixed-variant": "#4723be",
+                        "on-primary-fixed": "#1c0062",
+                        "inverse-primary": "#6042d6",
+                        "secondary-container": "#25a55a",
+                        "inverse-on-surface": "#303033",
+                        "secondary": "#66dd8b",
+                        "surface-container-highest": "#353438",
+                        "surface-bright": "#39393c",
+                        "on-error": "#690005",
+                        "inverse-surface": "#e4e1e6",
+                        "on-surface": "#e4e1e6",
+                        "outline": "#938ea0",
+                        "surface-variant": "#353438",
+                        "secondary-fixed-dim": "#66dd8b",
+                        "on-primary": "#30009a",
+                        "tertiary-fixed": "#ffdbcf",
+                        "primary": "#cabeff",
+                        "on-secondary-fixed": "#00210c",
+                        "tertiary-container": "#a13a0f",
+                        "secondary-fixed": "#83fba5",
+                        "on-secondary": "#003919",
+                        "on-tertiary-fixed": "#380c00",
+                        "on-tertiary-container": "#ffc8b6",
+                        "surface-container-lowest": "#0e0e11",
+                        "on-secondary-fixed-variant": "#005227",
+                        "surface-container-high": "#2a2a2d",
+                        "on-tertiary": "#5c1a00",
+                        "primary-container": "#5d3fd3",
+                        "surface-container": "#1f1f22",
+                        "primary-fixed-dim": "#cabeff",
+                        "background": "#131316",
+                        "surface-container-low": "#1b1b1e",
+                        "surface": "#131316",
+                        "error-container": "#93000a",
+                        "tertiary-fixed-dim": "#ffb59c",
+                        "on-secondary-container": "#003115",
+                        "on-tertiary-fixed-variant": "#822800",
+                        "on-surface-variant": "#c9c4d7",
+                        "tertiary": "#ffb59c",
+                        "error": "#ffb4ab",
+                        "surface-tint": "#cabeff",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-container": "#d8ceff",
+                        "on-background": "#e4e1e6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sidebar-width-collapsed": "64px",
+                        "container-padding": "24px",
+                        "sidebar-width-expanded": "240px",
+                        "gutter": "16px",
+                        "unit": "4px",
+                        "bento-gap": "12px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Inter Tight"],
+                        "headline-lg": ["Inter Tight"],
+                        "label-caps": ["Inter Tight"],
+                        "headline-lg-mobile": ["Inter Tight"],
+                        "body-md": ["Inter Tight"],
+                        "display-lg": ["Inter Tight"],
+                        "data-mono": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "title-md": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "data-mono": ["13px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #050505;
+            color: #e4e1e6;
+            -webkit-font-smoothing: antialiased;
+        }
+        .glass-panel {
+            background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(72, 69, 84, 0.2);
+            transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-panel:hover {
+            border-color: rgba(202, 190, 255, 0.3);
+            background: rgba(22, 22, 26, 0.85);
+        }
+        .bento-card {
+            border-radius: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .bento-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(202, 190, 255, 0.2), transparent);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #484554;
+            border-radius: 10px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .nav-tab-active {
+            color: #cabeff;
+            border-bottom: 2px solid #cabeff;
+        }
+    </style>
+</head>
+<body class="flex min-h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="w-sidebar-width-collapsed lg:w-sidebar-width-expanded h-screen sticky left-0 top-0 bg-surface-container-low dark:bg-surface-container-low border-r border-outline-variant/10 flex flex-col py-container-padding gap-gutter z-50">
+<div class="px-4 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+<div class="hidden lg:block">
+<h1 class="font-headline-lg text-[20px] leading-tight text-primary">MKT Hub</h1>
+<p class="font-body-md text-xs text-on-surface-variant opacity-70">Workspace</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-2 space-y-1 custom-scrollbar overflow-y-auto">
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 rounded-xl" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="hidden lg:block font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 rounded-xl" href="#">
+<span class="material-symbols-outlined">folder</span>
+<span class="hidden lg:block font-body-md">Projects</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 rounded-xl" href="#">
+<span class="material-symbols-outlined">person_search</span>
+<span class="hidden lg:block font-body-md">Leads</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 rounded-xl" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="hidden lg:block font-body-md">Expenses</span>
+</a>
+<a class="flex items-center gap-3 bg-primary-container text-on-primary-container rounded-xl px-4 py-2 border-l-4 border-primary transition-all duration-200 scale-[0.98]" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">database</span>
+<span class="hidden lg:block font-body-md">Data Management</span>
+</a>
+</nav>
+<div class="px-4 mt-auto pt-4 border-t border-outline-variant/10">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant/30">
+<img class="w-full h-full object-cover" data-alt="Close-up portrait of a professional male marketing director in his 30s with a focused expression, set against a blurred modern office background with neon purple and deep blue lighting accents to match the marketing dashboard aesthetic. High quality corporate headshot style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUj3aL81-NsVhqF8I7g8fMgS42IeanClOJzHdnpHZf0nG1qDPLx2t-FUCX4Wevi6sY4vAZ4t5zNwB93XoWK0ReKCtaYMsafF1ra5ABXxkM7WTXOLFEApo7_7EhQI7eje-Dazl_VboJ0A9jo5Ye2JOv7F3oxOOfrZKDmvM-7n6GVLvjrXEvN2mGJ4bIQLddh-buGCa3bpnDb4y59ywlqJA-O4ceyz30-SBmZtqqvLc4Precdevug4eK"/>
+</div>
+<div class="hidden lg:block overflow-hidden">
+<p class="font-title-md text-xs truncate">Alex Mitchell</p>
+<p class="font-body-md text-[10px] text-on-surface-variant">Workspace Admin</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="flex-1 flex flex-col h-screen overflow-hidden bg-background">
+<!-- TopAppBar -->
+<header class="h-16 flex justify-between items-center w-full px-container-padding sticky top-0 z-40 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/10">
+<div class="flex items-center gap-6">
+<div class="font-display-lg text-[24px] text-primary tracking-tighter font-bold">Pulse</div>
+<div class="hidden md:flex gap-4 items-center">
+<div class="h-4 w-px bg-outline-variant/30 mx-2"></div>
+<span class="text-on-surface-variant font-medium font-title-md text-sm">Status: Optimal</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-all duration-200">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-all duration-200">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Sub-navigation (Functional Tabs) -->
+<div class="bg-surface-container-low/50 border-b border-outline-variant/10 px-container-padding">
+<nav class="flex items-center gap-8 overflow-x-auto custom-scrollbar no-scrollbar">
+<a class="flex items-center gap-2 py-4 text-sm font-title-md text-on-surface-variant hover:text-primary transition-all whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">database_upload</span>
+                    Import Data
+                </a>
+<a class="flex items-center gap-2 py-4 text-sm font-title-md text-primary border-b-2 border-primary transition-all whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">database_spark</span>
+                    Export Data
+                </a>
+<a class="flex items-center gap-2 py-4 text-sm font-title-md text-on-surface-variant hover:text-primary transition-all whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">group</span>
+                    Team Members
+                </a>
+<a class="flex items-center gap-2 py-4 text-sm font-title-md text-on-surface-variant hover:text-primary transition-all whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">settings_input_component</span>
+                    Dropdown Config
+                </a>
+<a class="flex items-center gap-2 py-4 text-sm font-title-md text-on-surface-variant hover:text-primary transition-all whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">forum</span>
+                    Slack Settings
+                </a>
+<a class="flex items-center gap-2 py-4 text-sm font-title-md text-on-surface-variant hover:text-primary transition-all whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">settings_backup_restore</span>
+                    Backup &amp; Reset
+                </a>
+</nav>
+</div>
+<!-- Canvas Area -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-container-padding">
+<div class="max-w-6xl mx-auto space-y-bento-gap">
+<!-- Page Header -->
+<div class="mb-8">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Export Data Repository</h2>
+<p class="font-body-md text-on-surface-variant max-w-2xl">Generate and download comprehensive performance reports, raw data dumps, and dashboard snapshots for external analysis.</p>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-bento-gap">
+<!-- Section 1: Weekly Report (PDF) -->
+<section class="md:col-span-7 glass-panel bento-card p-6 flex flex-col h-full">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-error-container/20 flex items-center justify-center text-error">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md">Weekly Report</h3>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Document Format • PDF</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+<div class="space-y-1.5">
+<label class="font-label-caps text-on-surface-variant text-[10px]">SELECT WEEK &amp; YEAR</label>
+<div class="flex gap-2">
+<select class="flex-1 bg-surface-container-low border-outline-variant/30 rounded-lg text-body-md py-2 px-3 focus:ring-primary focus:border-primary transition-all">
+<option>Week 42</option>
+<option>Week 41</option>
+<option>Week 40</option>
+</select>
+<select class="w-24 bg-surface-container-low border-outline-variant/30 rounded-lg text-body-md py-2 px-3 focus:ring-primary focus:border-primary transition-all">
+<option>2023</option>
+<option>2024</option>
+</select>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="font-label-caps text-on-surface-variant text-[10px]">PROJECT CATEGORY</label>
+<select class="w-full bg-surface-container-low border-outline-variant/30 rounded-lg text-body-md py-2 px-3 focus:ring-primary focus:border-primary transition-all">
+<option>All Projects</option>
+<option>Growth Q4</option>
+<option>Retention Beta</option>
+</select>
+</div>
+<div class="space-y-1.5 sm:col-span-2">
+<label class="font-label-caps text-on-surface-variant text-[10px]">TEAM MEMBER FOCUS</label>
+<select class="w-full bg-surface-container-low border-outline-variant/30 rounded-lg text-body-md py-2 px-3 focus:ring-primary focus:border-primary transition-all">
+<option>Entire Team</option>
+<option>Design Ops</option>
+<option>Strategy Lead</option>
+</select>
+</div>
+</div>
+<div class="mt-8 flex items-center justify-between">
+<p class="font-body-md text-xs text-on-surface-variant italic">Estimated size: ~2.4MB</p>
+<button class="bg-surface-container-highest hover:bg-primary-container hover:text-on-primary-container text-on-surface-variant font-title-md text-sm py-3 px-6 rounded-xl flex items-center gap-2 transition-all active:scale-95 group">
+<span class="material-symbols-outlined text-[20px] group-hover:fill-current">picture_as_pdf</span>
+                                Xuất PDF
+                            </button>
+</div>
+</section>
+<!-- Section 2: Dashboard Report (Excel) -->
+<section class="md:col-span-5 glass-panel bento-card p-6 flex flex-col">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-10 h-10 rounded-lg bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">table_chart</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md">Dashboard Report</h3>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Data Sheets • XLSX</span>
+</div>
+</div>
+<div class="space-y-4 flex-1">
+<div class="space-y-1.5">
+<label class="font-label-caps text-on-surface-variant text-[10px]">REPORTING PERIOD</label>
+<div class="grid grid-cols-2 gap-2">
+<button class="bg-primary-container/20 border border-primary/30 text-primary py-2 px-3 rounded-lg text-xs font-title-md text-center">Monthly</button>
+<button class="bg-surface-container-low border border-outline-variant/30 text-on-surface-variant py-2 px-3 rounded-lg text-xs font-title-md text-center hover:bg-surface-container-high transition-colors">Quarterly</button>
+<button class="bg-surface-container-low border border-outline-variant/30 text-on-surface-variant py-2 px-3 rounded-lg text-xs font-title-md text-center hover:bg-surface-container-high transition-colors">Weekly</button>
+<button class="bg-surface-container-low border border-outline-variant/30 text-on-surface-variant py-2 px-3 rounded-lg text-xs font-title-md text-center hover:bg-surface-container-high transition-colors">Yearly</button>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="font-label-caps text-on-surface-variant text-[10px]">FISCAL YEAR</label>
+<select class="w-full bg-surface-container-low border-outline-variant/30 rounded-lg text-body-md py-2 px-3 focus:ring-primary transition-all">
+<option>2024 (Current)</option>
+<option>2023</option>
+<option>2022</option>
+</select>
+</div>
+</div>
+<button class="mt-6 w-full bg-secondary text-on-secondary font-title-md text-sm py-4 rounded-xl flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">analytics</span>
+                            📊 Xuất Excel
+                        </button>
+</section>
+<!-- Section 3: Backup (Full Data) -->
+<section class="md:col-span-12 glass-panel bento-card p-8 border-2 border-primary/10 relative overflow-hidden group">
+<!-- Decorative background element -->
+<div class="absolute -right-12 -bottom-12 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500"></div>
+<div class="relative z-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-8">
+<div class="flex-1 text-center md:text-left">
+<div class="flex items-center justify-center md:justify-start gap-3 mb-4">
+<div class="w-12 h-12 rounded-2xl bg-primary-container flex items-center justify-center text-on-primary-container shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+</div>
+<div>
+<h3 class="font-headline-lg text-2xl text-on-surface">System Archive &amp; Backup</h3>
+<div class="flex items-center justify-center md:justify-start gap-2">
+<span class="font-label-caps text-label-caps text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">Full Ecosystem</span>
+<span class="flex items-center gap-1 font-label-caps text-label-caps text-on-surface-variant">
+<span class="material-symbols-outlined text-xs">verified_user</span> 
+                                                MANAGER ONLY
+                                            </span>
+</div>
+</div>
+</div>
+<p class="font-body-md text-on-surface-variant max-w-xl text-balance leading-relaxed">
+                                    Perform a comprehensive system export including all active workspace data, team interactions, historical logs, and custom configuration settings. This action generates a compressed JSON archive for off-site disaster recovery or workspace migration.
+                                </p>
+<div class="mt-4 flex flex-wrap justify-center md:justify-start gap-4">
+<div class="flex items-center gap-2 text-xs text-on-surface-variant bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant/10">
+<span class="material-symbols-outlined text-[14px]">storage</span>
+                                        Est. 450 MB
+                                    </div>
+<div class="flex items-center gap-2 text-xs text-on-surface-variant bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant/10">
+<span class="material-symbols-outlined text-[14px]">history</span>
+                                        Last Backup: 2 days ago
+                                    </div>
+</div>
+</div>
+<div class="flex flex-col items-center gap-3 w-full md:w-auto">
+<button class="w-full md:w-64 bg-primary text-on-primary font-title-md text-lg py-5 px-8 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden" id="exportBtn" onclick="simulateExport()">
+<span class="material-symbols-outlined text-2xl" id="btnIcon">package_2</span>
+<span id="btnText">📦 Export Full Data</span>
+<div class="absolute inset-0 bg-primary-container transform -translate-x-full transition-transform duration-[3000ms] ease-out" id="progressOverlay"></div>
+</button>
+<p class="text-[10px] font-label-caps text-on-surface-variant opacity-50 text-center">ENCRYPTED AES-256 PACKAGING</p>
+</div>
+</div>
+</section>
+<!-- Preview Card (Contextual) -->
+<div class="md:col-span-12 glass-panel bento-card p-4 bg-surface-container-low/40 border-dashed border-outline-variant/30 flex items-center justify-center gap-6">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-primary/20 flex items-center justify-center text-[10px] font-bold">PDF</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-secondary/20 flex items-center justify-center text-[10px] font-bold">XLS</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-tertiary/20 flex items-center justify-center text-[10px] font-bold">JSON</div>
+</div>
+<p class="font-body-md text-xs text-on-surface-variant">Select a module above to initialize the data stream for export. All exports are logged for compliance.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        function simulateExport() {
+            const btn = document.getElementById('exportBtn');
+            const overlay = document.getElementById('progressOverlay');
+            const btnText = document.getElementById('btnText');
+            const btnIcon = document.getElementById('btnIcon');
+            
+            if (btn.classList.contains('processing')) return;
+            
+            btn.classList.add('processing');
+            overlay.style.transform = 'translateX(0)';
+            btnText.innerText = 'Processing...';
+            btnIcon.innerText = 'sync';
+            btnIcon.classList.add('animate-spin');
+            
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                btn.style.backgroundColor = '#25a55a'; // Success green
+                btn.style.color = '#ffffff';
+                btnText.innerText = 'Download Ready';
+                btnIcon.innerText = 'check_circle';
+                btnIcon.classList.remove('animate-spin');
+                
+                setTimeout(() => {
+                    // Reset
+                    overlay.style.transform = 'translateX(-100%)';
+                    overlay.style.opacity = '1';
+                    btn.style.backgroundColor = '';
+                    btn.style.color = '';
+                    btnText.innerText = '📦 Export Full Data';
+                    btnIcon.innerText = 'package_2';
+                    btn.classList.remove('processing');
+                }, 3000);
+            }, 3000);
+        }
+
+        // Sidebar active state logic
+        document.querySelectorAll('aside nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                document.querySelectorAll('aside nav a').forEach(l => {
+                    l.className = "flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 rounded-xl";
+                });
+                link.className = "flex items-center gap-3 bg-primary-container text-on-primary-container rounded-xl px-4 py-2 border-l-4 border-primary transition-all duration-200 scale-[0.98]";
+            });
+        });
+    </script>
+</body></html>

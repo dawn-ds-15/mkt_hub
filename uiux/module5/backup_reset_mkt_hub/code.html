@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MKT Hub - Backup &amp; Reset</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface": "#e4e1e6",
+                    "on-secondary-fixed-variant": "#005227",
+                    "error-container": "#93000a",
+                    "surface-dim": "#131316",
+                    "on-primary-fixed": "#1c0062",
+                    "primary-container": "#5d3fd3",
+                    "surface-container-lowest": "#0e0e11",
+                    "on-tertiary-fixed": "#380c00",
+                    "tertiary": "#ffb59c",
+                    "surface-tint": "#cabeff",
+                    "surface-variant": "#353438",
+                    "secondary-container": "#25a55a",
+                    "on-surface-variant": "#c9c4d7",
+                    "on-secondary": "#003919",
+                    "outline": "#938ea0",
+                    "inverse-surface": "#e4e1e6",
+                    "on-error-container": "#ffdad6",
+                    "on-secondary-fixed": "#00210c",
+                    "on-tertiary": "#5c1a00",
+                    "error": "#ffb4ab",
+                    "surface-container-high": "#2a2a2d",
+                    "surface-container": "#1f1f22",
+                    "on-tertiary-fixed-variant": "#822800",
+                    "on-primary-container": "#d8ceff",
+                    "inverse-on-surface": "#303033",
+                    "surface-bright": "#39393c",
+                    "surface-container-highest": "#353438",
+                    "surface-container-low": "#1b1b1e",
+                    "on-tertiary-container": "#ffc8b6",
+                    "on-primary-fixed-variant": "#4723be",
+                    "tertiary-container": "#a13a0f",
+                    "primary": "#cabeff",
+                    "primary-fixed-dim": "#cabeff",
+                    "outline-variant": "#484554",
+                    "on-error": "#690005",
+                    "on-background": "#e4e1e6",
+                    "tertiary-fixed": "#ffdbcf",
+                    "primary-fixed": "#e6deff",
+                    "tertiary-fixed-dim": "#ffb59c",
+                    "on-primary": "#30009a",
+                    "on-secondary-container": "#003115",
+                    "surface": "#131316",
+                    "secondary": "#66dd8b",
+                    "inverse-primary": "#6042d6",
+                    "secondary-fixed-dim": "#66dd8b",
+                    "secondary-fixed": "#83fba5",
+                    "background": "#131316"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "sidebar-width-collapsed": "64px",
+                    "container-padding": "24px",
+                    "gutter": "16px",
+                    "sidebar-width-expanded": "240px",
+                    "unit": "4px",
+                    "bento-gap": "12px"
+            },
+            "fontFamily": {
+                    "data-mono": ["JetBrains Mono"],
+                    "headline-lg": ["Inter Tight"],
+                    "body-md": ["Inter Tight"],
+                    "display-lg": ["Inter Tight"],
+                    "title-md": ["Inter Tight"],
+                    "label-caps": ["Inter Tight"],
+                    "headline-lg-mobile": ["Inter Tight"]
+            },
+            "fontSize": {
+                    "data-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "title-md": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #050505;
+            color: #e4e1e6;
+            font-family: 'Inter Tight', sans-serif;
+            overflow-x: hidden;
+        }
+        .glass-card {
+            background: rgba(22, 22, 26, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+        .glass-peek {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .sidebar-active-gradient {
+            background: linear-gradient(90deg, #5d3fd3 0%, rgba(93, 63, 211, 0) 100%);
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #131316;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #353438;
+            border-radius: 10px;
+        }
+        .top-light-border {
+            position: relative;
+        }
+        .top-light-border::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(202, 190, 255, 0.3), transparent);
+        }
+    </style>
+</head>
+<body class="flex min-h-screen">
+<!-- Side Navigation Shell -->
+<aside class="w-sidebar-width-collapsed lg:w-sidebar-width-expanded h-screen sticky left-0 top-0 bg-surface-container-low border-r border-outline-variant/10 flex flex-col py-container-padding gap-gutter z-50">
+<div class="px-6 mb-8">
+<span class="font-headline-lg text-headline-lg text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-4xl">analytics</span>
+<span class="hidden lg:block">MKT Hub</span>
+</span>
+<p class="text-on-surface-variant font-body-md text-[12px] mt-1 hidden lg:block">Data Management</p>
+</div>
+<nav class="flex flex-col gap-2 px-3">
+<a class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-container-highest transition-colors duration-200 px-4 py-2 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="hidden lg:block font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-container-highest transition-colors duration-200 px-4 py-2 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="rocket">rocket</span>
+<span class="hidden lg:block font-body-md text-body-md">Projects</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-container-highest transition-colors duration-200 px-4 py-2 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="person_search">person_search</span>
+<span class="hidden lg:block font-body-md text-body-md">Leads</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-container-highest transition-colors duration-200 px-4 py-2 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="hidden lg:block font-body-md text-body-md">Expenses</span>
+</a>
+<!-- Active Section -->
+<a class="flex items-center gap-3 bg-primary-container text-on-primary-container rounded-xl px-4 py-2 border-l-4 border-primary shadow-lg shadow-primary/20 transition-all duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+<span class="hidden lg:block font-body-md text-body-md">Data Management</span>
+</a>
+</nav>
+<div class="mt-auto px-4">
+<div class="flex items-center gap-3 p-2 rounded-xl hover:bg-surface-container-highest transition-all">
+<img class="w-8 h-8 rounded-full border border-primary/30" data-alt="A futuristic professional avatar with purple glowing accents, high-tech background, cinematic lighting, marketing executive portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLprMFByKXHBUz2gYEHEeN_NQbTzW4TF-NE3M8K2mnKAzMCMZvQJfRdzTjfTk-_L_MymdOJMUN-iR0ZqQJrOxomeIDINvI-6h_OObxO8jqWSrshaHQFnQmNfJWijVc2OY4GUnEqg_Xlf_30WNWKG16r-v9EiquveycDoq29sSbRXFegm1BqPZ_j6FPPVsccVFMasZ4DIvlVPEoHhM7H5FR6rDG_QrqhEei65tDl0Bib1oQayMHgZ3v"/>
+<div class="hidden lg:block overflow-hidden">
+<p class="font-title-md text-[14px] truncate">Admin Workspace</p>
+<p class="text-[11px] text-on-surface-variant">Pro Plan</p>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col bg-background relative">
+<!-- Background Animation -->
+
+<!-- Top AppBar -->
+<header class="bg-surface/80 backdrop-blur-xl sticky top-0 z-40 border-b border-outline-variant/10 flex justify-between items-center w-full px-container-padding h-16 shadow-sm">
+<div class="flex items-center gap-8">
+<span class="font-display-lg text-display-lg text-primary tracking-tighter">Pulse</span>
+<nav class="hidden md:flex gap-6">
+<a class="text-on-surface-variant hover:text-primary transition-all duration-200 font-title-md text-title-md" href="#">Import Data</a>
+<a class="text-on-surface-variant hover:text-primary transition-all duration-200 font-title-md text-title-md" href="#">Export Data</a>
+<a class="text-on-surface-variant hover:text-primary transition-all duration-200 font-title-md text-title-md" href="#">Team Members</a>
+<a class="text-on-surface-variant hover:text-primary transition-all duration-200 font-title-md text-title-md" href="#">Dropdown Config</a>
+<a class="text-on-surface-variant hover:text-primary transition-all duration-200 font-title-md text-title-md" href="#">Slack Settings</a>
+<!-- Active Tab -->
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-title-md text-title-md" href="#">Backup &amp; Reset</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="px-3 py-1 bg-secondary-container/10 border border-secondary/20 rounded-full flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="text-secondary font-data-mono text-[11px]">Status: Optimal</span>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container-highest">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container-highest">account_circle</button>
+</div>
+</header>
+<!-- Content Canvas -->
+<section class="p-container-padding flex flex-col gap-gutter flex-1 relative z-10">
+<div class="flex justify-between items-end mb-4">
+<div>
+<h1 class="font-headline-lg text-headline-lg">Backup &amp; Reset</h1>
+<p class="text-on-surface-variant font-body-md mt-1">Manage system snapshots and workspace restoration environments.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 bg-primary-container text-on-primary-container px-6 py-2.5 rounded-full font-title-md hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined" data-icon="cloud_upload">cloud_upload</span>
+                        Create Backup
+                    </button>
+</div>
+</div>
+<!-- Main Bento Layout -->
+<div class="bento-grid flex-1">
+<!-- Recent Backups List -->
+<div class="col-span-12 lg:col-span-8 glass-card rounded-xl p-6 flex flex-col gap-4 overflow-hidden relative top-light-border">
+<div class="flex justify-between items-center mb-2">
+<h2 class="font-label-caps text-label-caps text-on-surface-variant tracking-[0.2em] uppercase">Snapshot History</h2>
+<span class="text-primary font-data-mono text-[12px]">3 Backups Stored (1.2GB)</span>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Backup Item -->
+<div class="flex items-center justify-between p-4 bg-surface-container-low border border-outline-variant/10 rounded-xl hover:bg-surface-container transition-all group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">folder_zip</span>
+</div>
+<div>
+<p class="font-title-md text-on-surface">MKT_Hub_Full_Backup_2023_10_24</p>
+<p class="text-on-surface-variant font-data-mono text-[11px]">OCT 24, 2023 • 14:32 • 412 MB • <span class="text-secondary">Verified</span></p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all material-symbols-outlined" title="Download">download</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-all material-symbols-outlined" title="Delete">delete</button>
+</div>
+</div>
+<!-- Backup Item -->
+<div class="flex items-center justify-between p-4 bg-surface-container-low border border-outline-variant/10 rounded-xl hover:bg-surface-container transition-all group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">folder_zip</span>
+</div>
+<div>
+<p class="font-title-md text-on-surface">MKT_Hub_Incremental_2023_10_22</p>
+<p class="text-on-surface-variant font-data-mono text-[11px]">OCT 22, 2023 • 09:15 • 128 MB • <span class="text-secondary">Verified</span></p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all material-symbols-outlined" title="Download">download</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-all material-symbols-outlined" title="Delete">delete</button>
+</div>
+</div>
+<!-- Backup Item -->
+<div class="flex items-center justify-between p-4 bg-surface-container-low border border-outline-variant/10 rounded-xl hover:bg-surface-container transition-all group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">folder_zip</span>
+</div>
+<div>
+<p class="font-title-md text-on-surface">MKT_Hub_System_Init_Base</p>
+<p class="text-on-surface-variant font-data-mono text-[11px]">SEP 15, 2023 • 00:01 • 650 MB • <span class="text-secondary">Verified</span></p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all material-symbols-outlined" title="Download">download</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-all material-symbols-outlined" title="Delete">delete</button>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-6 flex justify-center">
+<button class="text-on-surface-variant hover:text-primary font-body-md flex items-center gap-1 transition-all underline underline-offset-4 decoration-primary/30">
+                            View All Archived Snapshots
+                        </button>
+</div>
+</div>
+<!-- Restore Section -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-gutter">
+<!-- Restore Upload Zone -->
+<div class="glass-card rounded-xl p-6 flex-1 flex flex-col relative overflow-hidden group border-dashed border-2 border-outline-variant/30 hover:border-primary/50 transition-all">
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<h2 class="font-label-caps text-label-caps text-on-surface-variant tracking-[0.2em] uppercase mb-4">Restore Data</h2>
+<div class="flex-1 flex flex-col items-center justify-center text-center gap-4 py-8">
+<div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-4xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">upload_file</span>
+</div>
+<div>
+<p class="font-title-md text-on-surface">Drop backup file here</p>
+<p class="text-on-surface-variant text-[13px] mt-1 px-4">Upload a .zip file from a previous export to restore workspace state.</p>
+</div>
+<button class="mt-4 px-6 py-2 border border-outline text-on-surface hover:bg-white/5 transition-all rounded-full font-body-md">
+                                Select File
+                            </button>
+</div>
+</div>
+<!-- Sandbox Reset (Danger Zone) -->
+<div class="glass-card rounded-xl p-6 border-l-4 border-error/50 bg-error/5 relative overflow-hidden">
+<h2 class="font-label-caps text-label-caps text-error tracking-[0.2em] uppercase mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+                            Reset Sandbox
+                        </h2>
+<p class="text-on-surface-variant text-[13px] mb-6">
+                            This will purge all marketing campaign data, lead history, and workspace configurations in the sandbox environment. This action <span class="text-error font-bold">cannot be undone</span>.
+                        </p>
+<div class="flex flex-col gap-4">
+<div>
+<label class="text-[11px] font-label-caps text-on-surface-variant mb-2 block">TYPE 'RESET' TO CONFIRM</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl px-4 py-3 font-data-mono text-center tracking-[0.5em] focus:ring-2 focus:ring-error focus:outline-none transition-all" id="reset-confirm" placeholder="RESET" type="text"/>
+</div>
+<button class="w-full py-3 bg-error/10 border border-error/20 text-error/50 font-bold rounded-xl transition-all cursor-not-allowed uppercase tracking-widest text-[13px]" disabled="" id="reset-btn">
+                                Reset to Default
+                            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Stats Grid (Small Bento Cells) -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-bento-gap">
+<div class="glass-peek rounded-xl p-4 flex items-center gap-4">
+<span class="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg">history</span>
+<div>
+<p class="text-[11px] font-label-caps text-on-surface-variant opacity-70">LAST BACKUP</p>
+<p class="font-data-mono text-[13px]">4h ago</p>
+</div>
+</div>
+<div class="glass-peek rounded-xl p-4 flex items-center gap-4">
+<span class="material-symbols-outlined text-secondary bg-secondary/10 p-2 rounded-lg">verified</span>
+<div>
+<p class="text-[11px] font-label-caps text-on-surface-variant opacity-70">INTEGRITY CHECK</p>
+<p class="font-data-mono text-[13px]">Passed (100%)</p>
+</div>
+</div>
+<div class="glass-peek rounded-xl p-4 flex items-center gap-4">
+<span class="material-symbols-outlined text-tertiary bg-tertiary/10 p-2 rounded-lg">storage</span>
+<div>
+<p class="text-[11px] font-label-caps text-on-surface-variant opacity-70">DISK USAGE</p>
+<p class="font-data-mono text-[13px]">4.2 / 50 GB</p>
+</div>
+</div>
+<div class="glass-peek rounded-xl p-4 flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant bg-surface-container-highest p-2 rounded-lg">schedule</span>
+<div>
+<p class="text-[11px] font-label-caps text-on-surface-variant opacity-70">AUTO-SNAPSHOT</p>
+<p class="font-data-mono text-[13px]">Daily @ 00:00</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<script>
+        // Simple micro-interaction for the reset confirmation
+        const resetInput = document.getElementById('reset-confirm');
+        const resetBtn = document.getElementById('reset-btn');
+
+        resetInput.addEventListener('input', (e) => {
+            if (e.target.value === 'RESET') {
+                resetBtn.disabled = false;
+                resetBtn.classList.remove('bg-error/10', 'border-error/20', 'text-error/50', 'cursor-not-allowed');
+                resetBtn.classList.add('bg-error', 'text-on-error', 'hover:brightness-110', 'active:scale-95', 'shadow-lg', 'shadow-error/30');
+            } else {
+                resetBtn.disabled = true;
+                resetBtn.classList.add('bg-error/10', 'border-error/20', 'text-error/50', 'cursor-not-allowed');
+                resetBtn.classList.remove('bg-error', 'text-on-error', 'hover:brightness-110', 'active:scale-95', 'shadow-lg', 'shadow-error/30');
+            }
+        });
+
+        // Hover peek interaction simulation
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+    </script>
+</body></html>

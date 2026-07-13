@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MKT Hub - Import Data</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#484554",
+                    "surface-dim": "#131316",
+                    "primary-fixed": "#e6deff",
+                    "on-primary-fixed-variant": "#4723be",
+                    "on-primary-fixed": "#1c0062",
+                    "inverse-primary": "#6042d6",
+                    "secondary-container": "#25a55a",
+                    "inverse-on-surface": "#303033",
+                    "secondary": "#66dd8b",
+                    "surface-container-highest": "#353438",
+                    "surface-bright": "#39393c",
+                    "on-error": "#690005",
+                    "inverse-surface": "#e4e1e6",
+                    "on-surface": "#e4e1e6",
+                    "outline": "#938ea0",
+                    "surface-variant": "#353438",
+                    "secondary-fixed-dim": "#66dd8b",
+                    "on-primary": "#30009a",
+                    "tertiary-fixed": "#ffdbcf",
+                    "primary": "#cabeff",
+                    "on-secondary-fixed": "#00210c",
+                    "tertiary-container": "#a13a0f",
+                    "secondary-fixed": "#83fba5",
+                    "on-secondary": "#003919",
+                    "on-tertiary-fixed": "#380c00",
+                    "on-tertiary-container": "#ffc8b6",
+                    "surface-container-lowest": "#0e0e11",
+                    "on-secondary-fixed-variant": "#005227",
+                    "surface-container-high": "#2a2a2d",
+                    "on-tertiary": "#5c1a00",
+                    "primary-container": "#5d3fd3",
+                    "surface-container": "#1f1f22",
+                    "primary-fixed-dim": "#cabeff",
+                    "background": "#131316",
+                    "surface-container-low": "#1b1b1e",
+                    "surface": "#131316",
+                    "error-container": "#93000a",
+                    "tertiary-fixed-dim": "#ffb59c",
+                    "on-secondary-container": "#003115",
+                    "on-tertiary-fixed-variant": "#822800",
+                    "on-surface-variant": "#c9c4d7",
+                    "tertiary": "#ffb59c",
+                    "error": "#ffb4ab",
+                    "surface-tint": "#cabeff",
+                    "on-error-container": "#ffdad6",
+                    "on-primary-container": "#d8ceff",
+                    "on-background": "#e4e1e6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "sidebar-width-collapsed": "64px",
+                    "container-padding": "24px",
+                    "sidebar-width-expanded": "240px",
+                    "gutter": "16px",
+                    "unit": "4px",
+                    "bento-gap": "12px"
+            },
+            "fontFamily": {
+                    "title-md": ["Inter Tight"],
+                    "headline-lg": ["Inter Tight"],
+                    "label-caps": ["Inter Tight"],
+                    "body-md": ["Inter Tight"],
+                    "display-lg": ["Inter Tight"],
+                    "data-mono": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "title-md": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "data-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #050505;
+            color: #e4e1e6;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(72, 69, 84, 0.15);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .bento-cell {
+            background: #16161a;
+            border: 1px solid rgba(72, 69, 84, 0.1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bento-cell:hover {
+            border-color: rgba(93, 63, 211, 0.4);
+            background: #1c1c21;
+        }
+        .indigo-glow {
+            box-shadow: 0 0 20px rgba(93, 63, 211, 0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #484554; border-radius: 10px; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+    </style>
+</head>
+<body class="font-body-md text-body-md selection:bg-primary/30">
+<div class="flex min-h-screen">
+<!-- Sidebar Navigation -->
+<aside class="w-sidebar-width-collapsed lg:w-sidebar-width-expanded h-screen sticky left-0 top-0 bg-surface-container-low border-r border-outline-variant/10 flex flex-col py-container-padding gap-gutter z-50">
+<div class="px-6 mb-8">
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tighter hidden lg:block">MKT Hub</h1>
+<div class="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center lg:hidden">
+<span class="material-symbols-outlined text-on-primary-container">database</span>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1 px-3">
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 rounded-xl group" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="dashboard">dashboard</span>
+<span class="hidden lg:block whitespace-nowrap">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 rounded-xl group" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="tactic">tactic</span>
+<span class="hidden lg:block whitespace-nowrap">Projects</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 rounded-xl group" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="person_search">person_search</span>
+<span class="hidden lg:block whitespace-nowrap">Leads</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-colors duration-200 rounded-xl group" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="payments">payments</span>
+<span class="hidden lg:block whitespace-nowrap">Expenses</span>
+</a>
+<!-- Active Module: Data Management -->
+<a class="relative flex items-center gap-3 bg-primary-container text-on-primary-container rounded-xl px-4 py-2 border-l-4 border-primary group overflow-hidden" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="database">database</span>
+<span class="hidden lg:block whitespace-nowrap">Data Management</span>
+</a>
+</nav>
+<div class="px-3 mt-auto border-t border-outline-variant/10 pt-4">
+<div class="flex items-center gap-3 px-4 py-2">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a marketing analyst in a dark-themed tech workspace, soft purple ambient lighting, high quality portrait photography, tech-savvy vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAyWyxPFtLpXzpu5rWTjx0fXN43Ti1WuOdCik1N1HtqbpMwLtX-gjAsBjcmRIqzbml5BGwExUorgPUbt63mEOPx6eXZ9z2dUFyD3AX_v_TX0GjRSyK-9X6MT2F-wnQ2u0VVaUTv70RfpiAAn0JZIOWWctYd_66dXlejZXKS3Fz3pX474TOzbOP_eUJyUzjeFNtE0qrluvj9l5a_R6-9FJ0mqJZutd40I2sxKfzbNCM8KyVVfYsjvH9"/>
+</div>
+<div class="hidden lg:block overflow-hidden">
+<p class="text-on-surface font-bold truncate">Workspace Admin</p>
+<p class="text-on-surface-variant text-xs truncate">MKT Hub Elite</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-background relative overflow-y-auto custom-scrollbar">
+<!-- Background Decoration -->
+<div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+<div class="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]"></div>
+<div class="absolute top-[40%] -left-[5%] w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[100px]"></div>
+</div>
+<!-- Top Header & Tabs -->
+<header class="sticky top-0 z-40 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/10 flex flex-col w-full">
+<div class="flex justify-between items-center px-container-padding h-16 w-full">
+<div class="flex items-center gap-gutter">
+<span class="font-display-lg text-display-lg text-primary tracking-tighter">Pulse</span>
+<div class="h-4 w-[1px] bg-outline-variant/30"></div>
+<div class="flex items-center gap-2 px-3 py-1 bg-secondary/10 rounded-full border border-secondary/20">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="text-secondary font-title-md text-sm">Status: Optimal</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center bg-surface-container-high rounded-full px-4 py-1.5 border border-outline-variant/20 focus-within:border-primary/50 transition-all duration-300">
+<span class="material-symbols-outlined text-on-surface-variant text-sm mr-2">search</span>
+<input class="bg-transparent border-none outline-none text-on-surface text-sm w-48 placeholder:text-on-surface-variant/50" placeholder="Search datasets..." type="text"/>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+<!-- Secondary Navigation Tabs -->
+<div class="px-container-padding flex items-center gap-8 h-12 overflow-x-auto no-scrollbar border-t border-outline-variant/5">
+<a class="h-full flex items-center text-primary font-medium border-b-2 border-primary px-1" href="#">Import Data</a>
+<a class="h-full flex items-center text-on-surface-variant hover:text-on-surface transition-colors px-1" href="#">Export Data</a>
+<a class="h-full flex items-center text-on-surface-variant hover:text-on-surface transition-colors px-1" href="#">Team Members</a>
+<a class="h-full flex items-center text-on-surface-variant hover:text-on-surface transition-colors px-1" href="#">Dropdown Config</a>
+<a class="h-full flex items-center text-on-surface-variant hover:text-on-surface transition-colors px-1" href="#">Slack Settings</a>
+<a class="h-full flex items-center text-on-surface-variant hover:text-on-surface transition-colors px-1" href="#">Backup &amp; Reset</a>
+</div>
+</header>
+<!-- Main Content Grid -->
+<div class="flex-1 p-container-padding grid grid-cols-12 gap-bento-gap relative z-10">
+<!-- Section 1: Configuration -->
+<div class="col-span-12 bento-cell p-6 rounded-3xl flex flex-wrap gap-6 items-end glass-panel">
+<div class="flex-1 min-w-[240px]">
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-2">LOẠI DỮ LIỆU</label>
+<div class="relative group">
+<select class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all">
+<option>Task History</option>
+<option>KPI History</option>
+<option>Closed Deal History</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+</div>
+</div>
+<div class="w-40">
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-2">NĂM DỮ LIỆU</label>
+<div class="relative group">
+<select class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all">
+<option>2024</option>
+<option>2023</option>
+<option>2022</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">calendar_month</span>
+</div>
+</div>
+<div class="flex items-center bg-primary-container/10 border border-primary-container/20 rounded-xl px-4 py-3 gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="info" style="font-variation-settings: 'FILL' 1;">info</span>
+<p class="text-primary text-xs leading-tight">Vui lòng đảm bảo định dạng file CSV chuẩn UTF-8 để tránh lỗi phông chữ.</p>
+</div>
+</div>
+<!-- Section 2: Drag & Drop Zone -->
+<div class="col-span-12 lg:col-span-8 bento-cell p-1 rounded-3xl overflow-hidden glass-panel flex flex-col">
+<div class="flex-1 border-2 border-dashed border-outline-variant/40 rounded-[calc(1.5rem-4px)] m-2 flex flex-col items-center justify-center gap-4 transition-all duration-300 group hover:border-primary/50 hover:bg-primary/5 cursor-pointer relative overflow-hidden" id="dropZone">
+<div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 24px 24px;"></div>
+<div class="w-20 h-20 rounded-full bg-primary-container/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300 animate-float">
+<span class="material-symbols-outlined text-5xl" data-icon="cloud_upload">cloud_upload</span>
+</div>
+<div class="text-center z-10">
+<h3 class="font-title-md text-title-md text-on-surface mb-1">Kéo thả file CSV/Excel vào đây</h3>
+<p class="text-on-surface-variant">hoặc click để chọn tệp từ máy tính của bạn</p>
+</div>
+<div class="flex gap-4 mt-2 z-10">
+<div class="flex items-center gap-1.5 text-xs text-on-surface-variant bg-surface-container-highest px-3 py-1.5 rounded-full border border-outline-variant/20">
+<span class="material-symbols-outlined text-base">description</span> MAX 50MB
+                        </div>
+<div class="flex items-center gap-1.5 text-xs text-on-surface-variant bg-surface-container-highest px-3 py-1.5 rounded-full border border-outline-variant/20">
+<span class="material-symbols-outlined text-base">table_chart</span> .CSV, .XLSX
+                        </div>
+</div>
+</div>
+</div>
+<!-- Section 4: Status Indicators -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-bento-gap">
+<div class="bento-cell flex-1 p-6 rounded-3xl glass-panel relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-secondary">check_circle</span>
+</div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-4 uppercase tracking-widest">TỔNG QUAN XỬ LÝ</label>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between items-end mb-2">
+<span class="text-secondary font-title-md text-2xl font-data-mono">1,248</span>
+<span class="text-on-surface-variant text-xs">Hợp lệ</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[92%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-end mb-2">
+<span class="text-error font-title-md text-2xl font-data-mono">42</span>
+<span class="text-on-surface-variant text-xs">Lỗi định dạng</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error w-[8%]"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="bento-cell h-48 p-5 rounded-3xl glass-panel flex flex-col">
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-3 uppercase tracking-widest">DANH SÁCH LỖI</label>
+<div class="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
+<div class="flex items-start gap-3 p-2 rounded-lg bg-error/5 border border-error/10">
+<span class="material-symbols-outlined text-error text-sm mt-0.5">error</span>
+<div class="text-xs">
+<p class="text-on-surface font-medium">Dòng 24: Sai định dạng ngày tháng</p>
+<p class="text-on-surface-variant opacity-70">Giá trị: "2024/13/45"</p>
+</div>
+</div>
+<div class="flex items-start gap-3 p-2 rounded-lg bg-error/5 border border-error/10">
+<span class="material-symbols-outlined text-error text-sm mt-0.5">error</span>
+<div class="text-xs">
+<p class="text-on-surface font-medium">Dòng 102: Thiếu trường bắt buộc</p>
+<p class="text-on-surface-variant opacity-70">Cột: Deal_Value</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 3: Data Preview Table -->
+<div class="col-span-12 bento-cell rounded-3xl glass-panel overflow-hidden">
+<div class="px-6 py-4 border-b border-outline-variant/10 flex justify-between items-center">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">XEM TRƯỚC DỮ LIỆU (5 DÒNG ĐẦU)</label>
+<span class="text-xs text-on-surface-variant font-data-mono">CSV_Import_2024_05_22.csv</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high/50">
+<th class="px-6 py-3 font-label-caps text-label-caps text-on-primary-fixed border-b border-outline-variant/10">ID</th>
+<th class="px-6 py-3 font-label-caps text-label-caps text-on-primary-fixed border-b border-outline-variant/10">TASK NAME</th>
+<th class="px-6 py-3 font-label-caps text-label-caps text-on-primary-fixed border-b border-outline-variant/10">OWNER</th>
+<th class="px-6 py-3 font-label-caps text-label-caps text-on-primary-fixed border-b border-outline-variant/10 text-right">VALUE (VND)</th>
+<th class="px-6 py-3 font-label-caps text-label-caps text-on-primary-fixed border-b border-outline-variant/10">DUE DATE</th>
+<th class="px-6 py-3 font-label-caps text-label-caps text-on-primary-fixed border-b border-outline-variant/10">STATUS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-primary/5 transition-colors">
+<td class="px-6 py-4 font-data-mono text-on-surface-variant">#001024</td>
+<td class="px-6 py-4 text-on-surface">Digital Campaign Q2</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] text-blue-400">AM</div>
+<span>Alex Miller</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-data-mono text-primary">45,000,000</td>
+<td class="px-6 py-4 font-data-mono text-on-surface-variant">2024-06-15</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full text-[10px] bg-secondary/10 text-secondary border border-secondary/20">Active</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors">
+<td class="px-6 py-4 font-data-mono text-on-surface-variant">#001025</td>
+<td class="px-6 py-4 text-on-surface">Brand Relaunch Strategy</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] text-purple-400">SK</div>
+<span>Sarah King</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-data-mono text-primary">120,500,000</td>
+<td class="px-6 py-4 font-data-mono text-on-surface-variant">2024-07-01</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full text-[10px] bg-secondary/10 text-secondary border border-secondary/20">Active</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors">
+<td class="px-6 py-4 font-data-mono text-on-surface-variant">#001026</td>
+<td class="px-6 py-4 text-on-surface">SEO Backlink Audit</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-[10px] text-emerald-400">JT</div>
+<span>John Tan</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-data-mono text-primary">12,200,000</td>
+<td class="px-6 py-4 font-data-mono text-on-surface-variant">2024-05-30</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full text-[10px] bg-secondary/10 text-secondary border border-secondary/20">Active</span>
+</td>
+</tr>
+<tr class="bg-error/5 hover:bg-error/10 transition-colors">
+<td class="px-6 py-4 font-data-mono text-error">#ERROR</td>
+<td class="px-6 py-4 text-error">--- Invalid Content ---</td>
+<td class="px-6 py-4">
+<span class="text-error italic">N/A</span>
+</td>
+<td class="px-6 py-4 text-right font-data-mono text-error">NULL</td>
+<td class="px-6 py-4 font-data-mono text-error">2024/13/45</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full text-[10px] bg-error/10 text-error border border-error/20">Error</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors">
+<td class="px-6 py-4 font-data-mono text-on-surface-variant">#001027</td>
+<td class="px-6 py-4 text-on-surface">Social Media Blitz</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center text-[10px] text-orange-400">RW</div>
+<span>Ray White</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-data-mono text-primary">35,000,000</td>
+<td class="px-6 py-4 font-data-mono text-on-surface-variant">2024-06-22</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full text-[10px] bg-secondary/10 text-secondary border border-secondary/20">Active</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Action Footer -->
+<footer class="sticky bottom-0 w-full p-container-padding bg-surface/80 backdrop-blur-xl border-t border-outline-variant/10 z-40 flex flex-wrap gap-4 items-center">
+<button class="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-all duration-200 px-4 py-2 hover:bg-surface-container-highest rounded-xl group">
+<span class="material-symbols-outlined group-hover:translate-y-0.5 transition-transform">download</span>
+<span class="font-medium">Download Template</span>
+</button>
+<div class="ml-auto flex gap-4">
+<button class="px-6 py-2.5 text-on-surface-variant hover:text-on-surface transition-all border border-outline-variant/30 hover:border-outline rounded-xl font-medium">
+                    ✕ Hủy
+                </button>
+<button class="px-8 py-2.5 bg-primary text-on-primary font-bold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/20 indigo-glow flex items-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                    Xác nhận Import
+                </button>
+</div>
+</footer>
+</main>
+</div>
+<!-- Scripts -->
+<script>
+    const dropZone = document.getElementById('dropZone');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('bg-primary/10', 'border-primary');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('bg-primary/10', 'border-primary');
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        console.log('Files dropped:', files);
+        alert('File received: ' + files[0].name + '. Starting simulation preview...');
+    }
+
+    dropZone.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.csv,.xlsx';
+        input.onchange = _ => {
+            let files = Array.from(input.files);
+            console.log(files);
+        };
+        input.click();
+    });
+</script>
+</body></html>

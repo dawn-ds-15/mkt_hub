@@ -1,0 +1,786 @@
+export const mockDashboard = {
+  kpis: [
+    { id: 1, label: 'Raw Leads', value: '1,240', trend: 'up', percentage: 104, suffix: 'vs Plan', barColor: 'bg-success', barWidth: '100%' },
+    { id: 2, label: 'MQL', value: '840', trend: 'up', percentage: 102, suffix: 'vs Plan', barColor: 'bg-success', barWidth: '100%' },
+    { id: 3, label: 'SQL', value: '320', trend: 'flat', percentage: 88, suffix: 'vs Plan', barColor: 'bg-warning', barWidth: '88%' },
+    { id: 4, label: 'Opp', value: '115', trend: 'down', percentage: 74, suffix: 'vs Plan', barColor: 'bg-danger', barWidth: '74%' },
+    { id: 5, label: 'Closed Deal', value: '42', trend: 'up', percentage: 110, suffix: 'vs Plan', barColor: 'bg-success', barWidth: '100%' },
+    { id: 6, label: 'Pipeline Value', value: '$4.2M', trend: null, percentage: 94, suffix: 'vs Plan', barColor: 'bg-warning', barWidth: '94%' },
+    { id: 7, label: 'CAC / LTV', value: '1:4.8', trend: null, percentage: null, suffix: 'Healthy', barColor: 'bg-primary', barWidth: '100%' },
+  ],
+  funnel: [
+    { stage: 'RAW LEADS', value: 1240, percent: '100%', color: 'bg-primary' },
+    { stage: 'MQL', value: 840, percent: '67.7%', color: 'bg-secondary', cv: '67.7%', cvColor: 'text-success' },
+    { stage: 'SQL', value: 320, percent: '25.8%', color: 'bg-secondary-container', cv: '38.1% (từ MQL)', cvColor: 'text-warning' },
+    { stage: 'OPP', value: 115, percent: '9.3%', color: 'bg-surface-tint', cv: '35.9% (từ SQL)', cvColor: 'text-danger' },
+    { stage: 'CLOSED', value: 42, percent: '3.4%', color: 'bg-success', cv: '36.5% (từ OPP)', cvColor: 'text-success' },
+  ],
+  marketingActivities: [
+    { label: 'Event', plan: 80, actual: 72 },
+    { label: 'Social', plan: 60, actual: 65 },
+    { label: 'Paid Ads', plan: 95, actual: 88 },
+    { label: 'Email', plan: 40, actual: 30 },
+    { label: 'SEO', plan: 70, actual: 72 },
+  ],
+  projectProgress: [
+    { name: 'Chiến dịch Tết 2024', progress: 85, color: 'bg-success' },
+    { name: 'Rebranding Website', progress: 42, color: 'bg-secondary-container' },
+    { name: 'Lead Gen Q1', progress: 60, color: 'bg-primary' },
+    { name: 'SEO Audit', progress: 92, color: 'bg-success' },
+    { name: 'Product Launch Event', progress: 15, color: 'bg-danger' },
+  ],
+  taskStatus: {
+    total: 124,
+    completed: 65,
+    inProgress: 40,
+    pending: 15,
+    overdue: 4,
+  },
+  alerts: [
+    {
+      type: 'error',
+      title: 'Quá hạn: Phê duyệt Landing Page',
+      assignee: 'An Nguyen',
+      due: '24/05/2024',
+      icon: 'error',
+    },
+    {
+      type: 'warning',
+      title: 'Sắp tới: Gửi báo cáo tuần Q1',
+      assignee: 'Linh Tran',
+      due: 'Today, 17:00',
+      icon: 'schedule',
+    },
+    {
+      type: 'warning',
+      title: 'Sắp tới: Review chiến dịch SEO',
+      assignee: 'Son Le',
+      due: 'May 26',
+      icon: 'schedule',
+    },
+  ],
+};
+
+export const mockProjects = [
+  {
+    id: 1,
+    name: 'Q4 Content Strategy',
+    type: 'Social Media',
+    owner: 'Alex Morgan',
+    deadline: 'Oct 30, 2023',
+    status: 'near_deadline',
+    tasksCompleted: 12,
+    tasksTotal: 18,
+    progress: 67,
+    tasks: [
+      { name: 'Instagram Ad Creative Set', assignee: 'Sarah J.', due: 'Oct 24', status: 'done' },
+      { name: 'Blog Post Copywriting', assignee: 'Mike L.', due: 'Oct 28', status: 'in_progress' },
+      { name: 'Facebook Campaign Setup', assignee: 'Alex M.', due: 'Oct 30', status: 'pending' },
+    ],
+  },
+  {
+    id: 2,
+    name: 'Website Redesign 2.0',
+    type: 'Web Tech',
+    owner: 'Elena Vance',
+    deadline: 'Dec 15, 2023',
+    status: 'on_track',
+    tasksCompleted: 4,
+    tasksTotal: 24,
+    progress: 16,
+    tasks: [],
+  },
+];
+
+export const mockTasks = [
+  { id: 1, title: 'Phê duyệt Landing Page', project: 'Chiến dịch Tết 2024', status: 'overdue', assignee: 'An Nguyen', due: '24/05/2024' },
+  { id: 2, title: 'Gửi báo cáo tuần Q1', project: 'Lead Gen Q1', status: 'pending', assignee: 'Linh Tran', due: 'Today, 17:00' },
+  { id: 3, title: 'Review chiến dịch SEO', project: 'SEO Audit', status: 'pending', assignee: 'Son Le', due: 'May 26' },
+];
+
+export const mockTaskList = [
+  {
+    id: 1,
+    project: 'Social Q4',
+    taskName: 'Design Facebook Banners for Halloween',
+    assignee: { initials: 'AN', name: 'An Nguyen' },
+    stakeholders: 'Marketing Lead',
+    status: 'overdue',
+    priority: 'high',
+    start: '20 Oct',
+    due: '25 Oct',
+    done: null,
+    link: null,
+    remark: 'Need assets from team',
+  },
+  {
+    id: 2,
+    project: 'Web Redesign',
+    taskName: 'QA Testing Landing Page v1.2',
+    assignee: { initials: 'ML', name: 'Minh Le' },
+    stakeholders: 'Dev Team',
+    status: 'processing',
+    priority: 'medium',
+    start: '28 Oct',
+    due: '02 Nov',
+    done: null,
+    link: null,
+    remark: 'Wait for staging deploy',
+  },
+  {
+    id: 3,
+    project: 'PR Hub',
+    taskName: 'Draft Press Release: Product Launch',
+    assignee: { initials: 'TH', name: 'Thu Ha' },
+    stakeholders: 'CEO, Marketing',
+    status: 'planning',
+    priority: 'low',
+    start: '01 Nov',
+    due: '15 Nov',
+    done: null,
+    link: null,
+    remark: 'Collecting quotes',
+  },
+  {
+    id: 4,
+    project: 'Campaigns',
+    taskName: 'Finalize Budget for Q4 Promo',
+    assignee: { initials: 'FD', name: 'Finance Dept' },
+    stakeholders: 'Finance',
+    status: 'done',
+    priority: 'medium',
+    start: '15 Oct',
+    due: '20 Oct',
+    done: '19 Oct',
+    link: { type: 'link', url: '#' },
+    remark: 'Approved',
+  },
+  {
+    id: 5,
+    project: 'Social Q4',
+    taskName: 'Video Edit: Customer Testimonials',
+    assignee: { initials: 'KV', name: 'Khoa Vo' },
+    stakeholders: 'CS Team',
+    status: 'in_progress',
+    priority: 'high',
+    start: '25 Oct',
+    due: '10 Nov',
+    done: null,
+    link: null,
+    remark: 'Raw footage received',
+  },
+  {
+    id: 6,
+    project: 'Web Redesign',
+    taskName: 'Homepage Hero Section Redesign',
+    assignee: { initials: 'TM', name: 'Trang Mai' },
+    stakeholders: 'Design Team',
+    status: 'planning',
+    priority: 'medium',
+    start: '05 Nov',
+    due: '20 Nov',
+    done: null,
+    link: null,
+    remark: 'Brief received',
+  },
+  {
+    id: 7,
+    project: 'Campaigns',
+    taskName: 'Email Sequence Setup for Black Friday',
+    assignee: { initials: 'AN', name: 'An Nguyen' },
+    stakeholders: 'CRM Team',
+    status: 'processing',
+    priority: 'high',
+    start: '22 Oct',
+    due: '30 Oct',
+    done: null,
+    link: null,
+    remark: 'Waiting for copy',
+  },
+  {
+    id: 8,
+    project: 'Social Q4',
+    taskName: 'LinkedIn Content Calendar Nov',
+    assignee: { initials: 'ML', name: 'Minh Le' },
+    stakeholders: 'Content Team',
+    status: 'overdue',
+    priority: 'medium',
+    start: '15 Oct',
+    due: '28 Oct',
+    done: null,
+    link: null,
+    remark: 'Need approval on topics',
+  },
+  {
+    id: 9,
+    project: 'PR Hub',
+    taskName: 'Media List Update for Q4',
+    assignee: { initials: 'TH', name: 'Thu Ha' },
+    stakeholders: 'PR Agency',
+    status: 'done',
+    priority: 'low',
+    start: '10 Oct',
+    due: '18 Oct',
+    done: '17 Oct',
+    link: { type: 'open_in_new', url: '#' },
+    remark: 'Published',
+  },
+  {
+    id: 10,
+    project: 'Campaigns',
+    taskName: 'A/B Test Subject Lines - BFCM',
+    assignee: { initials: 'KV', name: 'Khoa Vo' },
+    stakeholders: 'Growth Team',
+    status: 'in_progress',
+    priority: 'medium',
+    start: '27 Oct',
+    due: '08 Nov',
+    done: null,
+    link: null,
+    remark: 'Test running',
+  },
+  {
+    id: 11,
+    project: 'Web Redesign',
+    taskName: 'SEO Meta Tags for New Pages',
+    assignee: { initials: 'TM', name: 'Trang Mai' },
+    stakeholders: 'SEO Team',
+    status: 'planning',
+    priority: 'low',
+    start: '12 Nov',
+    due: '25 Nov',
+    done: null,
+    link: null,
+    remark: 'Keyword research pending',
+  },
+  {
+    id: 12,
+    project: 'Social Q4',
+    taskName: 'Instagram Reel: Behind the Scenes',
+    assignee: { initials: 'AN', name: 'An Nguyen' },
+    stakeholders: 'Creative Team',
+    status: 'overdue',
+    priority: 'high',
+    start: '18 Oct',
+    due: '24 Oct',
+    done: null,
+    link: null,
+    remark: 'Reshoot needed',
+  },
+];
+
+// ============================================
+// MOCK DATA - Leads & KPIs Module
+// ============================================
+
+export const mockPlanKPIs = {
+  year: 2024,
+  targetLeads: 5000,
+  mqlTarget: 2500,
+  sqlTarget: 1000,
+  opportunityCount: 300,
+  closedDealCount: 120,
+  pipelineValue: 2500000,
+  wonValue: 1800000,
+};
+
+export const mockActuals = {
+  week: '2024-W20',
+  rawLeads: 420,
+  mqlActual: 210,
+  sqlActual: 85,
+};
+
+export const mockOpportunities = [
+  {
+    id: 1,
+    companyName: 'Tập đoàn Vingroup',
+    size: 'L',
+    project: 'Marketing Strategy',
+    fees: 25000,
+    expectedCloseDate: '2024-06-15',
+    status: 'open',
+  },
+  {
+    id: 2,
+    companyName: 'Công ty CP FPT',
+    size: 'M',
+    project: 'Digital Transformation',
+    fees: 15000,
+    expectedCloseDate: '2024-05-30',
+    status: 'open',
+  },
+  {
+    id: 3,
+    companyName: 'Samsung Vietnam',
+    size: 'L',
+    project: 'Brand Refresh',
+    fees: 45000,
+    expectedCloseDate: '2024-07-20',
+    status: 'open',
+  },
+];
+
+export const mockExpenseSystemParams = [
+  { id: 1, period: 'T10/2023', churnRate: 4.8, grossMargin: 62, note: 'Điều chỉnh cuối quý' },
+  { id: 2, period: 'T09/2023', churnRate: 5.1, grossMargin: 60, note: '' },
+  { id: 3, period: 'T08/2023', churnRate: 4.9, grossMargin: 61, note: 'Cập nhật số liệu thực tế' },
+];
+
+export const mockExpenseList = [
+  {
+    id: 1,
+    project: 'Project Alpha - SEO',
+    period: 'T10/2023',
+    directCost: 45000000,
+    overhead: 12500000,
+    total: 57500000,
+    status: 'approved',
+    directNote: 'Chi phí nhân sự, tool SEO',
+    overheadNote: 'Chi phí vận hành chung',
+  },
+  {
+    id: 2,
+    project: 'Project Alpha - SEO',
+    period: 'T09/2023',
+    directCost: 42000000,
+    overhead: 12500000,
+    total: 54500000,
+    status: 'approved',
+    directNote: 'Chi phí nhân sự',
+    overheadNote: 'Chi phí vận hành chung',
+  },
+  {
+    id: 3,
+    project: 'Project Alpha - SEO',
+    period: 'T08/2023',
+    directCost: 48200000,
+    overhead: 14000000,
+    total: 62200000,
+    status: 'pending',
+    directNote: 'Chi phí nhân sự, quảng cáo',
+    overheadNote: 'Chi phí vận hành chung, văn phòng',
+  },
+  {
+    id: 4,
+    project: 'Project Beta - Ads',
+    period: 'T10/2023',
+    directCost: 35000000,
+    overhead: 8000000,
+    total: 43000000,
+    status: 'approved',
+    directNote: 'Chi phí quảng cáo Facebook, Google',
+    overheadNote: 'Chi phí vận hành',
+  },
+  {
+    id: 5,
+    project: 'Project Gamma - Content',
+    period: 'T09/2023',
+    directCost: 28000000,
+    overhead: 5000000,
+    total: 33000000,
+    status: 'pending',
+    directNote: 'Chi phí sản xuất content',
+    overheadNote: 'Chi phí vận hành',
+  },
+];
+
+export const mockProjectsDropdown = [
+  { id: 1, name: 'Project Alpha - SEO' },
+  { id: 2, name: 'Project Beta - Ads' },
+  { id: 3, name: 'Project Gamma - Content' },
+];
+
+export const mockClosedDeals = [
+  {
+    id: 1,
+    customer: 'Tập đoàn Vingroup',
+    contract: 'Consulting v1.2',
+    finalFees: 25000,
+    signedDate: '2024-05-12',
+    status: 'completed',
+  },
+  {
+    id: 2,
+    customer: 'Công ty CP VNG',
+    contract: 'SEO Package',
+    finalFees: 8500,
+    signedDate: '2024-04-28',
+    status: 'completed',
+  },
+];
+
+export const mockExpenseReports = {
+  costByProjectType: [
+    { type: 'Online Campaign', percentage: 45, color: 'bg-primary', value: 540000000 },
+    { type: 'Workshop', percentage: 30, color: 'bg-secondary', value: 360000000 },
+    { type: 'Production', percentage: 25, color: 'bg-tertiary', value: 300000000 },
+  ],
+  trendData: [
+    { month: 'Jan', expense: 180000000, cac: 32000 },
+    { month: 'Feb', expense: 260000000, cac: 28000 },
+    { month: 'Mar', expense: 140000000, cac: 35000 },
+    { month: 'Apr', expense: 220000000, cac: 30000 },
+    { month: 'May', expense: 290000000, cac: 25000 },
+    { month: 'Jun', expense: 170000000, cac: 38000 },
+  ],
+  budgetVsActual: [
+    {
+      project: 'Project Summer Sale 2024', budget: 500000000, actual: 460000000,
+      budgetPct: 80, actualPct: 74, budgetUsed: 92, status: 'normal',
+    },
+    {
+      project: 'Brand Awareness Q2', budget: 300000000, actual: 345000000,
+      budgetPct: 60, actualPct: 70, budgetUsed: 115, status: 'over',
+    },
+    {
+      project: 'Workshop Digital 101', budget: 100000000, actual: 45000000,
+      budgetPct: 40, actualPct: 18, budgetUsed: 45, status: 'normal',
+    },
+  ],
+  detailRows: [
+    {
+      id: '#CAM-001', project: 'Summer Campaign 2024', type: 'Online', date: '12/06/2024',
+      cost: 450000000, budget: 500000000, variance: 10, health: 'good',
+    },
+    {
+      id: '#WRK-042', project: 'Workshop Digital 101', type: 'Workshop', date: '08/06/2024',
+      cost: 115000000, budget: 100000000, variance: -15, health: 'over',
+    },
+    {
+      id: '#PRO-105', project: 'Video Production July', type: 'Production', date: '01/06/2024',
+      cost: 300000000, budget: 300000000, variance: 0, health: 'neutral',
+    },
+  ],
+  totalProjects: 42,
+};
+
+export const mockExpenseOverview = {
+  kpis: [
+    { label: 'Tổng Chi Phí Kỳ', value: '142M', suffix: 'VNĐ', color: 'primary' },
+    { label: 'CAC', value: '9.46M', suffix: 'VNĐ/KH', color: 'primary' },
+    { label: 'LTV', value: '163.8M', suffix: 'Dự kiến 12 tháng', color: 'primary' },
+    { label: 'LTV:CAC', value: '17.3', suffix: 'Hiệu quả cao', color: 'success', badge: '🟢 Tỷ lệ vàng' },
+    { label: 'Khách Hàng Mới', value: '15', suffix: 'Tăng 20% vs tháng trước', color: 'primary' },
+  ],
+  budgetAllocation: [
+    { channel: 'Google Ads', percent: 65 },
+    { channel: 'Facebook Ads', percent: 25 },
+    { channel: 'TikTok Ads', percent: 10 },
+  ],
+  projectExpenses: [
+    { project: 'Summer Promo 26', type: 'Google Ads', budgetPlan: 50000000, actualCost: 45000000, variance: 5000000, newCust: 6, cac: 7500000 },
+    { project: 'Brand Identity', type: 'Facebook Ads', budgetPlan: 30000000, actualCost: 32500000, variance: -2500000, newCust: 3, cac: 10833333 },
+    { project: 'Influencer Campaign', type: 'TikTok Ads', budgetPlan: 40000000, actualCost: 38000000, variance: 2000000, newCust: 4, cac: 9500000 },
+    { project: 'Newsletter Growth', type: 'Email Mkt', budgetPlan: 22000000, actualCost: 26500000, variance: -4500000, newCust: 2, cac: 13250000 },
+    { project: 'SEO Overhaul Q2', type: 'SEO', budgetPlan: 35000000, actualCost: 32000000, variance: 3000000, newCust: 5, cac: 6400000 },
+    { project: 'Retargeting Campaign', type: 'Google Ads', budgetPlan: 28000000, actualCost: 31000000, variance: -3000000, newCust: 3, cac: 10333333 },
+    { project: 'Product Launch Video', type: 'Production', budgetPlan: 45000000, actualCost: 42000000, variance: 3000000, newCust: 0, cac: 0 },
+    { project: 'LinkedIn Lead Gen', type: 'Social Ads', budgetPlan: 18000000, actualCost: 19500000, variance: -1500000, newCust: 2, cac: 9750000 },
+    { project: 'Affiliate Program', type: 'Partnership', budgetPlan: 15000000, actualCost: 12000000, variance: 3000000, newCust: 8, cac: 1500000 },
+    { project: 'Webinar Series Q3', type: 'Event', budgetPlan: 25000000, actualCost: 28500000, variance: -3500000, newCust: 7, cac: 4071429 },
+    { project: 'Podcast Sponsorship', type: 'Audio', budgetPlan: 12000000, actualCost: 12000000, variance: 0, newCust: 1, cac: 12000000 },
+    { project: 'Community Building', type: 'Organic', budgetPlan: 8000000, actualCost: 9500000, variance: -1500000, newCust: 12, cac: 791667 },
+  ],
+  totalProjects: 12,
+};
+
+export const mockKanbanColumns = [
+  {
+    id: 'planning',
+    title: 'PLANNING',
+    badgeCount: 4,
+    badgeColor: 'bg-blue-50 text-blue-600',
+    tasks: [
+      {
+        id: 101,
+        title: 'Market Analysis Research',
+        project: 'Winter Campaign',
+        assignee: 'Alex M.',
+        priority: 'High',
+        due: 'Oct 10',
+        dueColor: 'text-red-500',
+        statusIcon: 'error',
+        statusColor: 'text-red-500',
+        avatar: 'AM',
+        overdue: true,
+      },
+      {
+        id: 102,
+        title: 'Competitor Keyword Audit',
+        project: 'SEO Growth',
+        assignee: 'Sarah J.',
+        priority: 'Medium',
+        due: 'Oct 25',
+        dueColor: 'text-gray-400',
+        statusIcon: 'swap_horiz',
+        statusColor: 'text-gray-400',
+        avatar: 'SJ',
+        overdue: false,
+      },
+      {
+        id: 103,
+        title: 'Content Calendar Q4 Planning',
+        project: 'Social Media',
+        assignee: 'Linh T.',
+        priority: 'Medium',
+        due: 'Nov 5',
+        dueColor: 'text-gray-400',
+        statusIcon: 'swap_horiz',
+        statusColor: 'text-gray-400',
+        avatar: 'LT',
+        overdue: false,
+      },
+      {
+        id: 104,
+        title: 'Budget Review FY2024',
+        project: 'Finance',
+        assignee: 'Mike L.',
+        priority: 'Low',
+        due: 'Nov 12',
+        dueColor: 'text-gray-400',
+        statusIcon: 'swap_horiz',
+        statusColor: 'text-gray-400',
+        avatar: 'ML',
+        overdue: false,
+      },
+    ],
+  },
+  {
+    id: 'processing',
+    title: 'PROCESSING',
+    badgeCount: 2,
+    badgeColor: 'bg-blue-50 text-blue-600',
+    tasks: [
+      {
+        id: 201,
+        title: 'Social Media Asset Creation',
+        project: 'Brand Refresh',
+        assignee: 'Ngoc H.',
+        priority: 'Medium',
+        due: 'Tomorrow',
+        dueColor: 'text-amber-500',
+        statusIcon: 'east',
+        statusColor: 'text-amber-500',
+        avatar: 'NH',
+        overdue: false,
+      },
+      {
+        id: 202,
+        title: 'A/B Test Landing Page v2',
+        project: 'Web Redesign',
+        assignee: 'Khoa V.',
+        priority: 'High',
+        due: 'Oct 28',
+        dueColor: 'text-red-500',
+        statusIcon: 'east',
+        statusColor: 'text-amber-500',
+        avatar: 'KV',
+        overdue: false,
+      },
+    ],
+  },
+  {
+    id: 'done',
+    title: 'DONE',
+    badgeCount: 12,
+    badgeColor: 'bg-green-50 text-green-600',
+    tasks: [
+      {
+        id: 301,
+        title: 'Draft Pitch Deck v1',
+        project: 'Series B Prep',
+        assignee: 'Elena V.',
+        priority: 'High',
+        due: 'Completed',
+        dueColor: 'text-green-600',
+        statusIcon: 'check_circle',
+        statusColor: 'text-green-600',
+        avatar: 'EV',
+        done: true,
+      },
+      {
+        id: 302,
+        title: 'Finalize Budget Q4 Promo',
+        project: 'Campaigns',
+        assignee: 'An N.',
+        priority: 'High',
+        due: 'Completed',
+        dueColor: 'text-green-600',
+        statusIcon: 'check_circle',
+        statusColor: 'text-green-600',
+        avatar: 'AN',
+        done: true,
+      },
+      {
+        id: 303,
+        title: 'Thiết kế Banner Facebook',
+        project: 'Social Media',
+        assignee: 'Khoa V.',
+        priority: 'Medium',
+        due: 'Completed',
+        dueColor: 'text-green-600',
+        statusIcon: 'check_circle',
+        statusColor: 'text-green-600',
+        avatar: 'KV',
+        done: true,
+      },
+    ],
+  },
+];
+
+// ============================================
+// MOCK DATA - Weekly Report Module
+// ============================================
+
+export const mockWeeklyReport = {
+  week: 23,
+  year: 2026,
+  project: 'Q3 Brand Campaign',
+  member: 'All Members',
+  status: 'Draft',
+  completed: [
+    { code: 'TASK-102', name: 'Finalize Q3 Budget Proposal', result: '100% Done', assignee: 'Minh Tú' },
+    { code: 'TASK-115', name: 'Monthly Social Report May', result: 'Approved', assignee: 'Hoàng Nam' },
+    { code: 'TASK-108', name: 'Content Calendar Update', result: '100% Done', assignee: 'Lan Anh' },
+    { code: 'TASK-121', name: 'Landing Page A/B Test Setup', result: 'Approved', assignee: 'Tuấn Phong' },
+  ],
+  nextWeek: [
+    { schedule: 'Mon, 15 Jun', item: 'Launch TikTok Series Phase 1', deadline: '18/06/2026', priority: 'High' },
+    { schedule: 'Wed, 17 Jun', item: 'A/B Testing Email Subject Lines', deadline: '20/06/2026', priority: 'Normal' },
+    { schedule: 'Fri, 19 Jun', item: 'Google Ads Performance Review', deadline: '22/06/2026', priority: 'Normal' },
+    { schedule: 'Mon, 22 Jun', item: 'Influencer Outreach Campaign', deadline: '25/06/2026', priority: 'High' },
+  ],
+  backlog: [
+    {
+      title: 'Delayed: Website Re-design',
+      tag: 'BLOCKER',
+      tagClass: 'bg-error text-on-error',
+      description: 'Technical issues with API integration from third-party vendor.',
+      note: 'Reason: Vendor support response delay (>48h)',
+      icon: 'info',
+      cardClass: 'bg-error-container/10 border-error/20',
+    },
+    {
+      title: 'Postponed: Influencer Briefing',
+      tag: 'WAITING',
+      tagClass: 'bg-outline text-white',
+      description: 'Contracts pending legal review from the partner side.',
+      note: 'Moved to Week 24',
+      icon: 'history',
+      cardClass: 'bg-surface-container-low',
+    },
+  ],
+  bod: [
+    {
+      project: 'Dự án: Mở rộng VP Đại diện miền Nam',
+      description: 'Phê duyệt ngân sách bổ sung (15%) cho chi phí decor đột xuất.',
+    },
+    {
+      project: 'Dự án: Kênh Youtube Corporate',
+      description: 'Hỗ trợ kết nối với KOL cấp C (Mentor level) cho series phỏng vấn tháng 7.',
+    },
+  ],
+};
+
+// ============================================
+// MOCK DATA - Data Management Module
+// ============================================
+
+export const mockBackupData = {
+  snapshots: [
+    { id: 1, name: 'MKT_Hub_Full_Backup_2023_10_24', date: 'OCT 24, 2023', time: '14:32', size: '412 MB' },
+    { id: 2, name: 'MKT_Hub_Incremental_2023_10_22', date: 'OCT 22, 2023', time: '09:15', size: '128 MB' },
+    { id: 3, name: 'MKT_Hub_System_Init_Base', date: 'SEP 15, 2023', time: '00:01', size: '650 MB' },
+  ],
+  totalSize: '1.2 GB',
+  lastBackup: '2026-07-13T10:00:00',
+  integrityCheck: 'Passed (100%)',
+  diskUsage: '4.2 / 50 GB',
+  autoSnapshot: 'Daily @ 00:00',
+};
+
+// ============================================
+// MOCK DATA - Dropdown Config
+// ============================================
+
+let dropdownValueIdCounter = 100;
+
+export const mockDropdownKeys = [
+  {
+    id: 1,
+    label: 'Project Type',
+    values: [
+      { id: 1, label: 'Strategic Campaign' },
+      { id: 2, label: 'Content Marketing' },
+      { id: 3, label: 'Paid Performance' },
+      { id: 4, label: 'SEO Optimization' },
+      { id: 5, label: 'Influencer Collaboration' },
+    ],
+  },
+  {
+    id: 2,
+    label: 'Project Status',
+    values: [
+      { id: 6, label: 'Planning' },
+      { id: 7, label: 'In Progress' },
+      { id: 8, label: 'On Hold' },
+      { id: 9, label: 'Completed' },
+    ],
+  },
+  {
+    id: 3,
+    label: 'Task Status',
+    values: [
+      { id: 10, label: 'To Do' },
+      { id: 11, label: 'In Progress' },
+      { id: 12, label: 'Done' },
+    ],
+  },
+  {
+    id: 4,
+    label: 'Priority Levels',
+    values: [
+      { id: 13, label: 'Critical' },
+      { id: 14, label: 'High' },
+      { id: 15, label: 'Medium' },
+      { id: 16, label: 'Low' },
+    ],
+  },
+  {
+    id: 5,
+    label: 'Marketing Channels',
+    values: [
+      { id: 17, label: 'Social Media' },
+      { id: 18, label: 'Email' },
+      { id: 19, label: 'Paid Ads' },
+      { id: 20, label: 'SEO' },
+      { id: 21, label: 'Events' },
+      { id: 22, label: 'Content' },
+      { id: 23, label: 'Affiliate' },
+      { id: 24, label: 'PR' },
+      { id: 25, label: 'Direct Mail' },
+      { id: 26, label: 'SMS' },
+      { id: 27, label: 'Webinar' },
+      { id: 28, label: 'Podcast' },
+    ],
+  },
+  {
+    id: 6,
+    label: 'Region',
+    values: [
+      { id: 29, label: 'North America' },
+      { id: 30, label: 'Europe' },
+      { id: 31, label: 'Asia Pacific' },
+      { id: 32, label: 'Latin America' },
+      { id: 33, label: 'Middle East' },
+      { id: 34, label: 'Africa' },
+      { id: 35, label: 'Oceania' },
+    ],
+  },
+];
+
+export const addDropdownValueMock = (keyId, label) => {
+  dropdownValueIdCounter += 1;
+  return { id: dropdownValueIdCounter, label };
+};

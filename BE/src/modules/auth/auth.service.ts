@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuditService } from '../audit/audit.service';
 
@@ -90,6 +91,28 @@ export class AuthService {
     });
 
     return { message: 'Đổi mật khẩu thành công' };
+  }
+
+  async register(dto: RegisterDto) {
+    const existing = await this.prisma.member.findUnique({
+      where: { email: dto.email },
+    });
+    if (existing) {
+      throw new BadRequestException('Email đã được sử dụng');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const user = await this.prisma.member.create({
+      data: {
+        email: dto.email,
+        name: dto.name,
+        passwordHash: hashedPassword,
+        role: 'specialist',
+      },
+    });
+
+    const { passwordHash, ...result } = user;
+    return result;
   }
 
   async logout(userId: string) {

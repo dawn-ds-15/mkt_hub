@@ -80,9 +80,7 @@ export class TaskImportService {
       if (!Number.isInteger(execWeek) || execWeek < 1 || execWeek > 53) {
         errors.push('exec_week phải từ 1 đến 53');
       }
-      if (status === 'Backlog' && !reason) {
-        errors.push('reason là bắt buộc với Backlog');
-      }
+
 
       return {
         row: index + 2,

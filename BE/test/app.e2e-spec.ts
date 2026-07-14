@@ -29,7 +29,7 @@ describe('AppController (e2e)', () => {
   it('supports the Projects & Tasks core flow', async () => {
     const login = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'admin@mkthub.com', password: 'admin123' })
+      .send({ email: 'a.nguyen@company.com', password: 'demo123' })
       .expect(200);
     const token = login.body.access_token as string;
     const ownerId = login.body.user.id as string;

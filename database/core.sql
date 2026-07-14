@@ -87,18 +87,18 @@ WITH (oids = false);
 CREATE UNIQUE INDEX idx_members_email ON core.members USING btree (email);
 
 INSERT INTO "members" ("id", "name", "email", "role", "avatar_url", "is_active", "created_at", "password_hash", "updated_at") VALUES
-(1,	'Nguyen Van A',	'a.nguyen@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.230727',	NULL,	'2026-07-13 08:40:09.230727'),
-(2,	'Tran Thi B',	'b.tran@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.233592',	NULL,	'2026-07-13 08:40:09.233592'),
-(3,	'Le Van C',	'c.le@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.235345',	NULL,	'2026-07-13 08:40:09.235345'),
-(8,	'Nguyen Minh H',	'h.nguyen@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.239302',	NULL,	'2026-07-13 08:40:09.239302'),
-(11,	'Bui Minh K',	'k.bui@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.242411',	NULL,	'2026-07-13 08:40:09.242411'),
-(4,	'Pham Minh D',	'd.pham@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.119449',	NULL,	'2026-07-13 08:41:44.119449'),
-(5,	'Hoang Thi E',	'e.hoang@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.122284',	NULL,	'2026-07-13 08:41:44.122284'),
-(6,	'Vu Hoang F',	'f.vu@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.124455',	NULL,	'2026-07-13 08:41:44.124455'),
-(7,	'Do Thi G',	'g.do@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.126821',	NULL,	'2026-07-13 08:41:44.126821'),
-(9,	'Tran Van I',	'i.tran@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.130471',	NULL,	'2026-07-13 08:41:44.130471'),
-(10,	'Dang Thi J',	'j.dang@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.132531',	NULL,	'2026-07-13 08:41:44.132531'),
-(12,	'Ngo Thi L',	'l.ngo@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.13538',	NULL,	'2026-07-13 08:41:44.13538');
+(1,	'Nguyen Van A',	'a.nguyen@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.230727',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:40:09.230727'),
+(2,	'Tran Thi B',	'b.tran@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.233592',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:40:09.233592'),
+(3,	'Le Van C',	'c.le@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.235345',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:40:09.235345'),
+(8,	'Nguyen Minh H',	'h.nguyen@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.239302',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:40:09.239302'),
+(11,	'Bui Minh K',	'k.bui@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.242411',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:40:09.242411'),
+(4,	'Pham Minh D',	'd.pham@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.119449',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:41:44.119449'),
+(5,	'Hoang Thi E',	'e.hoang@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.122284',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:41:44.122284'),
+(6,	'Vu Hoang F',	'f.vu@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.124455',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:41:44.124455'),
+(7,	'Do Thi G',	'g.do@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.126821',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:41:44.126821'),
+(9,	'Tran Van I',	'i.tran@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.130471',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:41:44.130471'),
+(10,	'Dang Thi J',	'j.dang@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.132531',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:41:44.132531'),
+(12,	'Ngo Thi L',	'l.ngo@company.com',	'specialist',	NULL,	'1',	'2026-07-13 08:41:44.13538',	'$2b$10$sBMD1MV1.A2W7pzHOeo/A.2qAg91lnkOSBLLAbDUazodu/ojRZF/u',	'2026-07-13 08:41:44.13538');
 
 DROP TABLE IF EXISTS "projects";
 DROP SEQUENCE IF EXISTS "core".projects_id_seq;

@@ -169,8 +169,8 @@ async function main() {
   // 7. Migrate KPI Actuals
   const rawKpiActuals: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM marketing.kpi_actuals`);
   for (const ka of rawKpiActuals) {
-    const planRow = rawKpiPlans.find((p) => Number(p.id) === Number(ka.plan_id));
-    const year = planRow ? Number(planRow.year) : 2026;
+    const year = 2026;
+    const planRow = rawKpiPlans.find((p) => Number(p.year) === 2026) || rawKpiPlans[0];
     const id = toUuid(4, ka.id);
     await prisma.kpiActual.create({
       data: {

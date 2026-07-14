@@ -270,12 +270,6 @@ export class DashboardService {
       actual.sql += a.sql;
       actual.oppCount += a.oppCount;
       actual.closedCount += a.closedCount;
-
-      plan.rawLeads += a.planRawLeads;
-      plan.mql += a.planMql;
-      plan.sql += a.planSql;
-      plan.oppCount += a.planOpp;
-      plan.closedCount += a.planClosedDeal;
     }
 
     const opps = await this.prisma.opportunity.findMany({
@@ -298,13 +292,28 @@ export class DashboardService {
       actual.wonValue += Number(d.setupFee) + Number(d.monthlyFee) * 12;
     }
 
-    const kpiPlan = await this.prisma.kpiPlan.findFirst({
-      where: { year },
-    });
+    const kpiPlan =
+      (await this.prisma.kpiPlan.findFirst({
+        where: { year },
+      })) || (await this.prisma.kpiPlan.findFirst());
+
     if (kpiPlan) {
       const factor = weekNumbers.length / 52;
+      plan.rawLeads = Math.round(Number(kpiPlan.totalRawLeads) * factor);
+      plan.mql = Math.round(Number(kpiPlan.targetMql) * factor);
+      plan.sql = Math.round(Number(kpiPlan.targetSql) * factor);
+      plan.oppCount = Math.round(Number(kpiPlan.targetOpp) * factor);
+      plan.closedCount = Math.round(Number(kpiPlan.targetClosedDeal) * factor);
       plan.pipelineValue = Number(kpiPlan.targetPipelineVal) * factor;
       plan.wonValue = Number(kpiPlan.targetWonVal) * factor;
+    } else {
+      for (const a of actuals) {
+        plan.rawLeads += a.planRawLeads;
+        plan.mql += a.planMql;
+        plan.sql += a.planSql;
+        plan.oppCount += a.planOpp;
+        plan.closedCount += a.planClosedDeal;
+      }
     }
 
     const calcPercentVsPlan = (act: number, pl: number) => {

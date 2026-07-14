@@ -21,11 +21,11 @@ export class WeeklyReportsService {
         include,
       }),
       this.prisma.task.findMany({
-        where: { ...nextScope, status: { in: ['Planning', 'Processing'] } },
+        where: { ...nextScope, status: { in: ['To Do', 'In Progress', 'Review'] } },
         include,
       }),
       this.prisma.task.findMany({
-        where: { ...currentScope, status: 'Backlog' },
+        where: { ...currentScope, status: { not: 'Done' }, reason: { not: null } },
         include,
       }),
       this.prisma.task.findMany({

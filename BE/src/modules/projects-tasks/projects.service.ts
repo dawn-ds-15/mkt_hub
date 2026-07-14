@@ -181,7 +181,7 @@ export class ProjectsService {
           name: EVENT_CHECKLIST[index],
           projectId,
           assigneeId,
-          status: 'Planning',
+          status: 'To Do',
           priority: 'Medium',
           dueDate,
           execWeek: week,
@@ -211,10 +211,10 @@ export class ProjectsService {
     const now = this.startOfToday();
     const done = tasks.filter((task) => task.status === 'Done').length;
     const processing = tasks.filter(
-      (task) => task.status === 'Processing',
+      (task) => task.status === 'In Progress',
     ).length;
     const overdue = tasks.filter(
-      (task) => task.dueDate < now && !['Done', 'Cancel'].includes(task.status),
+      (task) => task.dueDate < now && task.status !== 'Done',
     ).length;
     const percentage = tasks.length
       ? Number(((done / tasks.length) * 100).toFixed(1))

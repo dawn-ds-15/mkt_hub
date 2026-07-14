@@ -1,12 +1,7 @@
 export const PROJECT_TYPES = [
-  'Lead Generation',
-  'Online Campaign',
-  'Workshop',
-  'Event',
-  'Exhibition',
-  'Webinar',
-  'Awards',
-  'Production',
+  'Internal',
+  'Client',
+  'Research',
 ] as const;
 
 export const PROJECT_STATUSES = [
@@ -18,15 +13,13 @@ export const PROJECT_STATUSES = [
 ] as const;
 
 export const TASK_STATUSES = [
-  'Planning',
-  'Processing',
+  'To Do',
+  'In Progress',
+  'Review',
   'Done',
-  'Pending',
-  'Backlog',
-  'Cancel',
 ] as const;
 
-export const TASK_PRIORITIES = ['High', 'Medium', 'Low'] as const;
+export const TASK_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
 export const STAKEHOLDERS = [
   'BOD',
   'Sales Team',

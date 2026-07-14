@@ -51,14 +51,14 @@ describe('TasksService', () => {
       {
         id: '1',
         name: 'Old',
-        status: 'Processing',
+        status: 'In Progress',
         dueDate: yesterday,
         stakeholders: null,
       },
       {
         id: '2',
         name: 'Today',
-        status: 'Processing',
+        status: 'In Progress',
         dueDate: start,
         stakeholders: null,
       },

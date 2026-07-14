@@ -748,12 +748,10 @@ export class DashboardService {
       return {
         total: 0,
         byStatus: {
+          'To Do': 0,
+          'In Progress': 0,
+          Review: 0,
           Done: 0,
-          Processing: 0,
-          Planning: 0,
-          Pending: 0,
-          Backlog: 0,
-          Cancel: 0,
         },
       };
     }
@@ -771,12 +769,10 @@ export class DashboardService {
     });
 
     const statusCounts = {
+      'To Do': 0,
+      'In Progress': 0,
+      Review: 0,
       Done: 0,
-      Processing: 0,
-      Planning: 0,
-      Pending: 0,
-      Backlog: 0,
-      Cancel: 0,
     };
     let total = 0;
 

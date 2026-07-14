@@ -34,7 +34,7 @@ describe('TaskImportService', () => {
       'task_name,assignee,status,priority,due_date,exec_week,remark';
     const rows = Array.from(
       { length: 6 },
-      (_, index) => `Task ${index + 1},Alice,Planning,Medium,2026-07-14,29,`,
+      (_, index) => `Task ${index + 1},Alice,To Do,Medium,2026-07-14,29,`,
     );
     const file = {
       originalname: 'tasks.csv',

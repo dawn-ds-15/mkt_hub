@@ -56,7 +56,7 @@ export class TaskImportService {
       const assigneeName = this.text(data.assignee);
       const assignee = memberByName.get(assigneeName.toLowerCase());
       const status = this.canonical(
-        this.text(data.status) || 'Planning',
+        this.text(data.status) || 'To Do',
         TASK_STATUSES,
       );
       const priority = this.canonical(
@@ -91,7 +91,7 @@ export class TaskImportService {
           name: this.text(data.task_name),
           projectId,
           assigneeId: assignee?.id ?? '',
-          status: status ?? 'Planning',
+          status: status ?? 'To Do',
           priority: priority ?? 'Medium',
           startDate: startDate ? startDate.toISOString() : undefined,
           dueDate: dueDate ? dueDate.toISOString() : '',

@@ -64,7 +64,7 @@ export class TasksService {
   }
 
   async create(dto: CreateTaskDto) {
-    this.validateBusinessRules(dto.status ?? 'Planning', dto.reason);
+    this.validateBusinessRules(dto.status ?? 'To Do', dto.reason);
     const data = this.toCreateData(dto);
     const task = await this.prisma.task.create({
       data,
@@ -111,7 +111,7 @@ export class TasksService {
   }
 
   toCreateData(dto: CreateTaskDto): Prisma.TaskUncheckedCreateInput {
-    const status = dto.status ?? 'Planning';
+    const status = dto.status ?? 'To Do';
     return {
       ...dto,
       status,
@@ -197,9 +197,9 @@ export class TasksService {
   private sortRank(task: PresentedTask) {
     if (task.isOverdue) return 0;
     if (task.isUpcoming) return 1;
-    if (task.status === 'Processing') return 2;
-    if (task.status === 'Planning') return 3;
-    if (['Pending', 'Backlog'].includes(task.status)) return 4;
+    if (task.status === 'In Progress') return 2;
+    if (task.status === 'To Do') return 3;
+    if (task.status === 'Review') return 4;
     return 5;
   }
 

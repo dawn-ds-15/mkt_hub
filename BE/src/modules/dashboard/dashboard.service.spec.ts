@@ -10,10 +10,14 @@ describe('DashboardService', () => {
     project: {
       findMany: jest.fn(),
     },
-    kpiDistribution: {
-      findFirst: jest.fn(),
-      groupBy: jest.fn(),
+    kpiActual: {
       findMany: jest.fn(),
+    },
+    opportunity: {
+      findMany: jest.fn(),
+    },
+    kpiPlan: {
+      findFirst: jest.fn(),
     },
     task: {
       findFirst: jest.fn(),
@@ -22,11 +26,12 @@ describe('DashboardService', () => {
       groupBy: jest.fn(),
     },
     closedDeal: {
-      count: jest.fn(),
-      aggregate: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+      aggregate: jest.fn().mockResolvedValue({ _avg: {} }),
     },
     expenseRecord: {
-      aggregate: jest.fn(),
+      aggregate: jest.fn().mockResolvedValue({ _sum: {} }),
     },
     systemConfig: {
       findFirst: jest.fn(),
@@ -67,6 +72,10 @@ describe('DashboardService', () => {
     it('should return empty widgets but keep dashboard available when no active projects exist', async () => {
       mockPrismaService.project.findMany.mockResolvedValue([]);
       mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.kpiActual.findMany.mockResolvedValue([]);
+      mockPrismaService.opportunity.findMany.mockResolvedValue([]);
+      mockPrismaService.closedDeal.findMany.mockResolvedValue([]);
+      mockPrismaService.kpiPlan.findFirst.mockResolvedValue(null);
 
       const result = await service.getOverview('week', '10', '2026');
       expect(result.success).toBe(true);
@@ -86,33 +95,30 @@ describe('DashboardService', () => {
           assignee: { name: 'Alice' },
         },
       ]);
-      mockPrismaService.kpiDistribution.groupBy.mockResolvedValue([
+      mockPrismaService.kpiActual.findMany.mockResolvedValue([
         {
-          type: 'actual',
-          _sum: {
-            rawLeads: 100,
-            mql: 40,
-            sql: 20,
-            oppCount: 10,
-            closedCount: 4,
-            pipelineValue: 1000,
-            wonValue: 800,
-          },
-        },
-        {
-          type: 'plan',
-          _sum: {
-            rawLeads: 200,
-            mql: 80,
-            sql: 40,
-            oppCount: 20,
-            closedCount: 8,
-            pipelineValue: 2000,
-            wonValue: 1600,
-          },
+          rawLeads: 100,
+          mql: 40,
+          sql: 20,
+          oppCount: 10,
+          closedCount: 4,
+          planRawLeads: 200,
+          planMql: 80,
+          planSql: 40,
+          planOpp: 20,
+          planClosedDeal: 8,
         },
       ]);
-      mockPrismaService.kpiDistribution.findMany.mockResolvedValue([]);
+      mockPrismaService.opportunity.findMany.mockResolvedValue([
+        { setupFee: 200, monthlyFee: 50 }, // 200 + 50 * 12 = 800
+      ]);
+      mockPrismaService.closedDeal.findMany.mockResolvedValue([
+        { setupFee: 200, monthlyFee: 50 }, // 200 + 50 * 12 = 800
+      ]);
+      mockPrismaService.kpiPlan.findFirst.mockResolvedValue({
+        targetPipelineVal: 104000, // 104000 * 1/52 = 2000
+        targetWonVal: 83200, // 83200 * 1/52 = 1600
+      });
       mockPrismaService.expenseRecord.aggregate.mockResolvedValue({
         _sum: { directCost: 1000, overheadCost: 500 },
       });

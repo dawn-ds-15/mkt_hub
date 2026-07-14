@@ -232,33 +232,16 @@ export class DashboardService {
   ) {
     const weekNumbers = this.getWeekNumbers(periodType, periodValue, year);
 
-    // Get active projects
     const activeProjects = await this.prisma.project.findMany({
       where: { status: 'Active' },
       select: { id: true },
     });
     const activeProjectIds = activeProjects.map((p) => p.id);
 
-    if (activeProjectIds.length === 0) {
-      return this.emptyKpiCards();
-    }
-
-    // Get aggregated distributions
-    const aggregations = await this.prisma.kpiDistribution.groupBy({
-      by: ['type'],
+    const actuals = await this.prisma.kpiActual.findMany({
       where: {
         year,
         week: { in: weekNumbers },
-        projectId: { in: activeProjectIds },
-      },
-      _sum: {
-        rawLeads: true,
-        mql: true,
-        sql: true,
-        oppCount: true,
-        closedCount: true,
-        pipelineValue: true,
-        wonValue: true,
       },
     });
 
@@ -281,17 +264,47 @@ export class DashboardService {
       wonValue: 0,
     };
 
-    for (const group of aggregations) {
-      const target = group.type === 'actual' ? actual : plan;
-      target.rawLeads = group._sum.rawLeads || 0;
-      target.mql = group._sum.mql || 0;
-      target.sql = group._sum.sql || 0;
-      target.oppCount = group._sum.oppCount || 0;
-      target.closedCount = group._sum.closedCount || 0;
-      target.pipelineValue = group._sum.pipelineValue
-        ? Number(group._sum.pipelineValue)
-        : 0;
-      target.wonValue = group._sum.wonValue ? Number(group._sum.wonValue) : 0;
+    for (const a of actuals) {
+      actual.rawLeads += a.rawLeads;
+      actual.mql += a.mql;
+      actual.sql += a.sql;
+      actual.oppCount += a.oppCount;
+      actual.closedCount += a.closedCount;
+
+      plan.rawLeads += a.planRawLeads;
+      plan.mql += a.planMql;
+      plan.sql += a.planSql;
+      plan.oppCount += a.planOpp;
+      plan.closedCount += a.planClosedDeal;
+    }
+
+    const opps = await this.prisma.opportunity.findMany({
+      where: {
+        year,
+        week: { in: weekNumbers },
+      },
+    });
+    for (const o of opps) {
+      actual.pipelineValue += Number(o.setupFee) + Number(o.monthlyFee) * 12;
+    }
+
+    const deals = await this.prisma.closedDeal.findMany({
+      where: {
+        year,
+        week: { in: weekNumbers },
+      },
+    });
+    for (const d of deals) {
+      actual.wonValue += Number(d.setupFee) + Number(d.monthlyFee) * 12;
+    }
+
+    const kpiPlan = await this.prisma.kpiPlan.findFirst({
+      where: { year },
+    });
+    if (kpiPlan) {
+      const factor = weekNumbers.length / 52;
+      plan.pipelineValue = Number(kpiPlan.targetPipelineVal) * factor;
+      plan.wonValue = Number(kpiPlan.targetWonVal) * factor;
     }
 
     const calcPercentVsPlan = (act: number, pl: number) => {
@@ -609,50 +622,28 @@ export class DashboardService {
       return [];
     }
 
-    const activeProjectIds = activeProjects.map((p) => p.id);
-    const projectTypeMap = new Map<string, string>();
-    for (const p of activeProjects) {
-      projectTypeMap.set(p.id, p.type);
-    }
-
-    const distributions = await this.prisma.kpiDistribution.findMany({
+    const actuals = await this.prisma.kpiActual.findMany({
       where: {
         year,
         week: { in: weekNumbers },
-        projectId: { in: activeProjectIds },
       },
+      select: { rawLeads: true, planRawLeads: true },
     });
+    const totalActualLeads = actuals.reduce((sum, a) => sum + a.rawLeads, 0);
+    const totalPlanLeads = actuals.reduce((sum, a) => sum + a.planRawLeads, 0);
 
-    const typeStats = new Map<string, { plan: number; actual: number }>();
-
-    for (const project of activeProjects) {
-      if (!typeStats.has(project.type)) {
-        typeStats.set(project.type, { plan: 0, actual: 0 });
-      }
-    }
-
-    for (const d of distributions) {
-      const projType = projectTypeMap.get(d.projectId);
-      if (!projType) continue;
-
-      if (!typeStats.has(projType)) {
-        typeStats.set(projType, { plan: 0, actual: 0 });
-      }
-
-      const stats = typeStats.get(projType)!;
-      if (d.type === 'plan') {
-        stats.plan += d.rawLeads || 0;
-      } else {
-        stats.actual += d.rawLeads || 0;
-      }
+    const typeCount = new Map<string, number>();
+    for (const p of activeProjects) {
+      typeCount.set(p.type, (typeCount.get(p.type) || 0) + 1);
     }
 
     const result = [];
-    for (const [type, stats] of typeStats.entries()) {
+    for (const [type, count] of typeCount.entries()) {
+      const ratio = count / activeProjects.length;
       result.push({
         type,
-        plan: stats.plan,
-        actual: stats.actual,
+        plan: Math.round(totalPlanLeads * ratio),
+        actual: Math.round(totalActualLeads * ratio),
       });
     }
 

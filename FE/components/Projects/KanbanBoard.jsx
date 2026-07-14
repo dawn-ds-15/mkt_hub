@@ -146,7 +146,8 @@ export default function KanbanBoard() {
 
   const [projectFilter, setProjectFilter] = useState('All Projects');
   const [assigneeFilter, setAssigneeFilter] = useState('Everyone');
-  const [dateRange, setDateRange] = useState('12/10 - 28/10/2023');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   if (loading) {
     return (
@@ -161,24 +162,50 @@ export default function KanbanBoard() {
       <div className="flex flex-wrap items-end gap-5 bg-white p-4 rounded-lg border border-gray-200">
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Dự án</label>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded text-sm cursor-pointer hover:border-gray-400 transition-colors">
-            <span className="font-medium text-gray-800">{projectFilter}</span>
-            <span className="material-symbols-outlined text-lg text-gray-400">expand_more</span>
-          </div>
+          <select
+            className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm font-medium outline-none cursor-pointer"
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+          >
+            <option>All Projects</option>
+            <option>Q3 Brand Campaign</option>
+            <option>Social Media Audit</option>
+            <option>Email Automation</option>
+          </select>
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Người phụ trách</label>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded text-sm cursor-pointer hover:border-gray-400 transition-colors">
-            <span className="font-medium text-gray-800">{assigneeFilter}</span>
-            <span className="material-symbols-outlined text-lg text-gray-400">expand_more</span>
-          </div>
+          <select
+            className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm font-medium outline-none cursor-pointer"
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+          >
+            <option>Everyone</option>
+            <option>Nguyễn Văn A</option>
+            <option>Trần Thị B</option>
+            <option>Minh Tú</option>
+            <option>Hoàng Nam</option>
+          </select>
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Khoảng thời gian</label>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded text-sm cursor-pointer hover:border-gray-400 transition-colors">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded text-sm">
             <span className="material-symbols-outlined text-lg text-gray-400">calendar_today</span>
-            <span className="font-medium text-gray-800">{dateRange}</span>
-            <span className="material-symbols-outlined text-lg text-gray-400">expand_more</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="border-none bg-transparent focus:ring-0 outline-none text-xs w-[130px]"
+              placeholder="Từ ngày"
+            />
+            <span className="text-gray-400">-</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="border-none bg-transparent focus:ring-0 outline-none text-xs w-[130px]"
+              placeholder="Đến ngày"
+            />
           </div>
         </div>
       </div>

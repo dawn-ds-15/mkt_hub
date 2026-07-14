@@ -3,9 +3,9 @@ import { getTaskList } from '../../services/api';
 
 const statusStyles = {
   overdue: { bg: 'bg-red-100', text: 'text-red-700', label: 'Quá hạn', row: 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100', icon: 'error', iconColor: 'text-red-600', fill: true },
-  processing: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Đang xử lý', row: 'bg-amber-50/50 hover:bg-amber-100/50', icon: 'priority_high', iconColor: 'text-amber-500' },
-  in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Đang thực hiện', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
-  planning: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Lên kế hoạch', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
+  todo: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Chưa bắt đầu', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
+  in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Đang làm', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
+  review: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Đang review', row: 'hover:bg-surface-container-low', icon: 'visibility', iconColor: 'text-amber-500' },
   done: { bg: 'bg-green-100', text: 'text-green-700', label: 'Hoàn thành', row: 'opacity-70 hover:opacity-100', icon: 'check_circle', iconColor: 'text-green-600' },
 };
 
@@ -23,16 +23,16 @@ const priorityLabels = {
 
 const statsMeta = [
   { key: 'total', label: 'Tổng cộng', color: 'text-primary' },
-  { key: 'planning', label: 'Lên kế hoạch', color: 'text-secondary' },
-  { key: 'processing', label: 'Đang xử lý', color: 'text-primary-container' },
+  { key: 'todo', label: 'Chưa bắt đầu', color: 'text-secondary' },
+  { key: 'in_progress', label: 'Đang làm', color: 'text-primary-container' },
+  { key: 'review', label: 'Đang review', color: 'text-amber-600' },
   { key: 'done', label: 'Hoàn thành', color: 'text-green-700' },
   { key: 'overdue', label: 'Quá hạn', color: 'text-red-700' },
-  { key: 'near_deadline', label: 'Sắp hạn', color: 'text-amber-700' },
 ];
 
 const filterDefs = [
   { key: 'project', label: 'Dự án:', options: ['Tất cả', 'Social Q4', 'Web Redesign', 'PR Hub', 'Chiến dịch'] },
-  { key: 'status', label: 'Trạng thái:', options: ['Tất cả', 'planning', 'processing', 'in_progress', 'done', 'overdue'] },
+  { key: 'status', label: 'Trạng thái:', options: ['Tất cả', 'todo', 'in_progress', 'review', 'done', 'overdue'] },
   { key: 'priority', label: 'Ưu tiên:', options: ['Tất cả', 'high', 'medium', 'low'] },
   { key: 'assignee', label: 'Người phụ trách:', options: ['Tất cả', 'An Nguyen', 'Minh Le', 'Thu Ha', 'Khoa Vo', 'Trang Mai'] },
 ];
@@ -47,6 +47,8 @@ export default function TaskList() {
     status: 'Tất cả',
     priority: 'Tất cả',
     assignee: 'Tất cả',
+    dateFrom: '',
+    dateTo: '',
   });
   const perPage = 10;
 
@@ -80,25 +82,28 @@ export default function TaskList() {
     if (filters.assignee !== 'Tất cả') {
       result = result.filter(t => t.assignee.name === filters.assignee);
     }
+    if (filters.dateFrom) {
+      result = result.filter(t => t.due && t.due !== '-' && new Date(t.due) >= new Date(filters.dateFrom));
+    }
+    if (filters.dateTo) {
+      result = result.filter(t => t.due && t.due !== '-' && new Date(t.due) <= new Date(filters.dateTo));
+    }
     setFilteredTasks(result);
     setPage(1);
   }, [filters, tasks]);
 
   const stats = useCallback(() => {
     const total = tasks.length;
-    const planning = tasks.filter(t => t.status === 'planning').length;
-    const processing = tasks.filter(t => t.status === 'processing' || t.status === 'in_progress').length;
+    const todo = tasks.filter(t => t.status === 'todo').length;
+    const in_progress = tasks.filter(t => t.status === 'in_progress').length;
+    const review = tasks.filter(t => t.status === 'review').length;
     const done = tasks.filter(t => t.status === 'done').length;
     const overdue = tasks.filter(t => t.status === 'overdue').length;
-    const nearDeadline = tasks.filter(t =>
-      !['done', 'overdue'].includes(t.status) &&
-      parseInt(t.due?.split(' ')[0]) <= new Date().getDate() + 3
-    ).length;
-    return { total, planning, processing, done, overdue, near_deadline: nearDeadline };
+    return { total, todo, in_progress, review, done, overdue };
   }, [tasks]);
 
   const clearFilters = () => {
-    setFilters({ project: 'Tất cả', status: 'Tất cả', priority: 'Tất cả', assignee: 'Tất cả' });
+    setFilters({ project: 'Tất cả', status: 'Tất cả', priority: 'Tất cả', assignee: 'Tất cả', dateFrom: '', dateTo: '' });
   };
 
   const totalPages = Math.ceil(filteredTasks.length / perPage);
@@ -167,7 +172,7 @@ export default function TaskList() {
               onChange={(e) => setFilters(prev => ({ ...prev, [def.key]: e.target.value }))}
             >
               {def.options.map((opt) => {
-                const statusLabels = { 'Tất cả': 'Tất cả', planning: 'Lên kế hoạch', processing: 'Đang xử lý', in_progress: 'Đang thực hiện', done: 'Hoàn thành', overdue: 'Quá hạn' };
+                const statusLabels = { 'Tất cả': 'Tất cả', todo: 'Chưa bắt đầu', in_progress: 'Đang làm', review: 'Đang review', done: 'Hoàn thành', overdue: 'Quá hạn' };
                 const priorityLabelsMap = { 'Tất cả': 'Tất cả', high: 'Cao', medium: 'Trung bình', low: 'Thấp' };
                 const label = def.key === 'status' ? (statusLabels[opt] || opt) : def.key === 'priority' ? (priorityLabelsMap[opt] || opt) : opt;
                 return (
@@ -180,10 +185,23 @@ export default function TaskList() {
             <span className="material-symbols-outlined text-sm absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
           </div>
         ))}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm cursor-pointer hover:bg-surface-container-high transition-colors relative group">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm">
           <span className="material-symbols-outlined text-sm text-outline">calendar_today</span>
-          <span className="font-semibold">Chọn khoảng</span>
-          <span className="material-symbols-outlined text-sm text-outline">expand_more</span>
+          <input
+            type="date"
+            value={filters.dateFrom || ''}
+            onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+            className="border-none bg-transparent focus:ring-0 outline-none text-xs w-[130px]"
+            placeholder="Từ ngày"
+          />
+          <span className="text-outline">-</span>
+          <input
+            type="date"
+            value={filters.dateTo || ''}
+            onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+            className="border-none bg-transparent focus:ring-0 outline-none text-xs w-[130px]"
+            placeholder="Đến ngày"
+          />
         </div>
         <button
           onClick={clearFilters}

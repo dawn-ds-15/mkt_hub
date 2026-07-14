@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const navItems = [
   { label: 'Tổng quan', href: '/' },
@@ -8,13 +8,9 @@ const navItems = [
   { label: 'Quản lý Dữ liệu', href: '/data' },
 ];
 
-const bottomLinks = [
-  { label: 'Cài đặt', href: '/settings' },
-  { label: 'Trợ giúp', href: '/help' },
-];
-
 export default function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
   return (
     <aside className="fixed left-0 top-0 h-full w-sidebar-width bg-sidebar-bg flex flex-col p-4 overflow-y-auto z-50">
@@ -64,15 +60,17 @@ export default function Sidebar() {
       </div>
 
       <div className="pt-6 border-t border-slate-700 space-y-1">
-        {bottomLinks.map((item) => (
-          <a
-            key={item.label}
-            href={item.href}
-            className="text-outline-variant hover:text-white flex items-center gap-3 px-3 py-2 transition-colors"
-          >
-            <span className="font-body-md text-body-md">{item.label}</span>
-          </a>
-        ))}
+        <button
+          onClick={() => {
+            localStorage.removeItem('mkt_hub_token');
+            localStorage.removeItem('mkt_hub_user');
+            navigate('/login');
+          }}
+          className="w-full text-left text-outline-variant hover:text-white flex items-center gap-3 px-3 py-2 transition-colors"
+        >
+          <span className="material-symbols-outlined text-[18px]">logout</span>
+          <span className="font-body-md text-body-md">Đăng xuất</span>
+        </button>
       </div>
     </aside>
   );

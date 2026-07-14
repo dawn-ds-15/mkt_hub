@@ -4,6 +4,7 @@ import ProjectsPage from '../components/Projects';
 import KanbanBoard from '../components/Projects/KanbanBoard';
 import TaskList from '../components/Projects/TaskList';
 import WeeklyReport from '../components/Projects/WeeklyReport';
+import CreateProjectForm from '../components/Projects/CreateProjectForm';
 
 const tabs = [
   { label: 'Danh sách Task', key: 'tasks' },
@@ -14,6 +15,7 @@ const tabs = [
 
 export default function ProjectsTasks() {
   const [activeTab, setActiveTab] = useState('tasks');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -58,7 +60,24 @@ export default function ProjectsTasks() {
         {renderContent()}
       </div>
 
-      <button className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="relative max-w-lg w-full mx-4">
+            <button
+              onClick={() => setShowCreateModal(false)}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow flex items-center justify-center hover:bg-gray-100 z-10"
+            >
+              <span className="material-symbols-outlined text-lg">close</span>
+            </button>
+            <CreateProjectForm onSuccess={() => setShowCreateModal(false)} onClose={() => setShowCreateModal(false)} />
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={() => { setActiveTab('projects'); setShowCreateModal(true); }}
+        className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40"
+      >
         <span className="material-symbols-outlined text-[28px]">add</span>
       </button>
     </Layout>

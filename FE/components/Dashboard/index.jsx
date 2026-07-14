@@ -5,12 +5,13 @@ import KPICard from './KPICard';
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    getDashboardData().then((res) => {
-      setData(res);
-      setLoading(false);
-    });
+    getDashboardData()
+      .then(setData)
+      .catch((err) => setError(err?.message || 'Không thể tải dữ liệu'))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
@@ -21,16 +22,32 @@ export default function Dashboard() {
     );
   }
 
+  if (error || !data) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-danger">{error || 'Không có dữ liệu'}</p>
+      </div>
+    );
+  }
+
   const chartMax = Math.max(
     ...data.marketingActivities.map((a) => Math.max(a.plan, a.actual))
   );
 
-  const donutData = [
-    { color: '#10B981', offset: 25 },
-    { color: '#2170E4', offset: 65 },
-    { color: '#F59E0B', offset: 85 },
-    { color: '#EF4444', offset: 96 },
-  ];
+  const ts = data.taskStatus;
+  const donutOffsets = (() => {
+    const total = ts.total || 1;
+    const completed = (ts.completed / total) * 100;
+    const inProgress = (ts.inProgress / total) * 100;
+    const pending = (ts.pending / total) * 100;
+    const overdue = (ts.overdue / total) * 100;
+    return [
+      { color: '#10B981', offset: 100 - completed },
+      { color: '#2170E4', offset: 100 - completed - inProgress },
+      { color: '#F59E0B', offset: 100 - completed - inProgress - pending },
+      { color: '#EF4444', offset: 100 - completed - inProgress - pending - overdue },
+    ];
+  })();
 
   return (
     <div>
@@ -120,7 +137,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-lg card-shadow border border-border-light p-widget-padding">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-headline-sm text-headline-sm text-on-surface">Tiến Độ Dự Án</h3>
-              <span className="text-primary font-bold text-headline-sm">68%</span>
+              <span className="text-primary font-bold text-headline-sm">{data.totalPct}%</span>
             </div>
             <div className="space-y-5">
               {data.projectProgress.map((project) => (
@@ -143,10 +160,10 @@ export default function Dashboard() {
               <div className="relative w-32 h-32">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                   <circle cx="18" cy="18" fill="none" r="16" stroke="#E2E8F0" strokeWidth="4" />
-                  <circle cx="18" cy="18" fill="none" r="16" stroke="#10B981" strokeDasharray="100" strokeDashoffset={donutData[0].offset} strokeWidth="4" />
-                  <circle cx="18" cy="18" fill="none" r="16" stroke="#2170E4" strokeDasharray="100" strokeDashoffset={donutData[1].offset} strokeWidth="4" />
-                  <circle cx="18" cy="18" fill="none" r="16" stroke="#F59E0B" strokeDasharray="100" strokeDashoffset={donutData[2].offset} strokeWidth="4" />
-                  <circle cx="18" cy="18" fill="none" r="16" stroke="#EF4444" strokeDasharray="100" strokeDashoffset={donutData[3].offset} strokeWidth="4" />
+                  <circle cx="18" cy="18" fill="none" r="16" stroke="#10B981" strokeDasharray="100" strokeDashoffset={donutOffsets[0].offset} strokeWidth="4" />
+                  <circle cx="18" cy="18" fill="none" r="16" stroke="#2170E4" strokeDasharray="100" strokeDashoffset={donutOffsets[1].offset} strokeWidth="4" />
+                  <circle cx="18" cy="18" fill="none" r="16" stroke="#F59E0B" strokeDasharray="100" strokeDashoffset={donutOffsets[2].offset} strokeWidth="4" />
+                  <circle cx="18" cy="18" fill="none" r="16" stroke="#EF4444" strokeDasharray="100" strokeDashoffset={donutOffsets[3].offset} strokeWidth="4" />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-headline-md font-bold text-primary">{data.taskStatus.total}</span>

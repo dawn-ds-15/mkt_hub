@@ -7,8 +7,10 @@ const statusConfig = {
 
 const taskStatusConfig = {
   done: { label: 'Hoàn thành', bg: 'bg-green-100', text: 'text-green-700' },
-  in_progress: { label: 'Đang thực hiện', bg: 'bg-amber-100', text: 'text-amber-700' },
-  pending: { label: 'Chờ xử lý', bg: 'bg-slate-100', text: 'text-slate-600' },
+  in_progress: { label: 'Đang làm', bg: 'bg-blue-100', text: 'text-blue-700' },
+  todo: { label: 'Chưa bắt đầu', bg: 'bg-slate-100', text: 'text-slate-600' },
+  review: { label: 'Đang review', bg: 'bg-amber-100', text: 'text-amber-700' },
+  overdue: { label: 'Quá hạn', bg: 'bg-red-100', text: 'text-red-700' },
 };
 
 export default function ProjectCard({ project }) {
@@ -86,7 +88,7 @@ export default function ProjectCard({ project }) {
                   </thead>
                   <tbody className="divide-y divide-outline-variant">
                     {project.tasks.map((task, idx) => {
-                      const ts = taskStatusConfig[task.status] || taskStatusConfig.pending;
+                      const ts = taskStatusConfig[task.status] || taskStatusConfig.todo;
                       return (
                         <tr key={idx} className="hover:bg-surface-container-low transition-colors">
                           <td className="px-4 py-3 font-body-md text-on-surface">{task.name}</td>

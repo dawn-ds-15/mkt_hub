@@ -1,0 +1,31 @@
+sequenceDiagram
+    actor User
+    participant UI as Import UI
+    participant API as Data API
+    participant Parser as File Parser
+    participant Queue as Job Queue
+    participant Worker as Import Worker
+    participant DB as Database
+    participant Audit as Audit Service
+
+    User->>UI: Chọn loại + upload CSV/Excel
+    UI->>API: POST /imports/preview
+    API->>Parser: Parse, map, validate
+    Parser-->>API: 5 dòng mẫu + valid/errors
+    API-->>UI: PreviewResult
+    UI-->>User: Hiển thị thống kê và lỗi
+    User->>UI: Xác nhận import dòng hợp lệ
+    UI->>API: POST /imports/{token}/confirm
+    API->>Queue: Enqueue import job
+    Queue-->>API: jobId
+    API-->>UI: 202 Accepted + jobId
+    Queue->>Worker: Process job
+    loop Theo batch
+      Worker->>DB: Insert/update valid rows trong transaction
+      Worker->>Audit: Ghi audit summary
+    end
+    Worker-->>Queue: completed(validCount, errorCount)
+    UI->>API: GET /jobs/{jobId}
+    API-->>UI: Progress/result
+    UI-->>User: Toast kết quả import
+

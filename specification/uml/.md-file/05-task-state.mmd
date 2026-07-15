@@ -1,0 +1,32 @@
+stateDiagram-v2
+    [*] --> Planning : tạo task
+    Planning --> Processing
+    Planning --> Pending
+    Planning --> Backlog : [reason bắt buộc]
+    Planning --> Cancel : [reason khuyến nghị]
+    Processing --> Done : completedDate = today
+    Processing --> Pending : [reason]
+    Processing --> Backlog : [reason bắt buộc]
+    Processing --> Cancel : [reason]
+    Pending --> Processing
+    Pending --> Backlog : [reason bắt buộc]
+    Pending --> Cancel : [reason]
+    Backlog --> Processing
+    Backlog --> Cancel : [reason]
+    Done --> [*]
+    Cancel --> [*]
+
+    state "Overdue (trạng thái dẫn xuất)" as Overdue
+    Planning --> Overdue : dueDate < today
+    Processing --> Overdue : dueDate < today
+    Pending --> Overdue : dueDate < today
+    Backlog --> Overdue : dueDate < today
+    Overdue --> Done : hoàn tất
+    Overdue --> Cancel : hủy
+    Overdue --> Processing : đổi dueDate >= today
+
+    note right of Overdue
+      Không nên lưu như trạng thái nghiệp vụ độc lập.
+      Tính từ dueDate và status != Done/Cancel.
+    end note
+

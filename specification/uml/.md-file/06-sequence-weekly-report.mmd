@@ -1,0 +1,31 @@
+sequenceDiagram
+    actor User as Manager/Specialist
+    participant UI as Weekly Report UI
+    participant API as Report API
+    participant Auth as JWT/RBAC
+    participant Task as Task Service
+    participant DB as Database
+
+    User->>UI: Chọn tuần, năm, project, member
+    User->>UI: Auto-fill
+    UI->>API: GET /weekly-reports?filters
+    API->>Auth: Xác thực và kiểm quyền
+    Auth-->>API: Cho phép
+    API->>Task: buildWeeklyReport(filters)
+    Task->>DB: Lấy task Done trong tuần
+    DB-->>Task: completed tasks
+    Task->>DB: Lấy task kế hoạch tuần kế tiếp
+    DB-->>Task: planned tasks
+    Task->>DB: Lấy Backlog/Pending/Cancel + reason
+    DB-->>Task: blocked tasks
+    Task->>DB: Lấy task có bodSupport
+    DB-->>Task: support requests
+    Task-->>API: 4 sections + weekly logs
+    API-->>UI: Report DTO
+    UI-->>User: Hiển thị báo cáo
+    opt Xuất TXT/PDF
+      User->>UI: Export
+      UI->>API: POST /exports/weekly-report
+      API-->>UI: File hoặc jobId
+    end
+

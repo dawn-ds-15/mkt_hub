@@ -1,0 +1,33 @@
+sequenceDiagram
+    actor User as Manager/Specialist
+    participant UI as Leads UI
+    participant API as Leads API
+    participant Auth as JWT/RBAC
+    participant Lead as Lead Service
+    participant DB as Database
+    participant Sync as Sync Engine
+    participant Audit as Audit Service
+
+    User->>UI: Chọn "Chuyển → Won"
+    UI->>API: POST /opportunities/{id}/convert
+    API->>Auth: Kiểm tra quyền
+    Auth-->>API: Cho phép
+    API->>Lead: convertToWon(id, closedDate)
+    Lead->>DB: BEGIN TRANSACTION + lock Opportunity
+    DB-->>Lead: Opportunity hiện tại
+    alt Không tồn tại hoặc đã chuyển
+      Lead->>DB: ROLLBACK
+      Lead-->>API: 404/409
+      API-->>UI: Hiển thị lỗi
+    else Hợp lệ
+      Lead->>DB: Tạo ClosedDeal từ snapshot OPP
+      Lead->>DB: Đánh dấu Opportunity = WON
+      Lead->>DB: Cập nhật weekly KPI/value liên quan
+      Lead->>Audit: Ghi conversion event
+      Lead->>DB: COMMIT
+      Lead->>Sync: Recalculate dashboard/expense views
+      Lead-->>API: ClosedDeal DTO
+      API-->>UI: 201 Created
+      UI-->>User: Pipeline giảm, Won tăng
+    end
+

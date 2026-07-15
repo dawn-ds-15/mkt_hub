@@ -1,0 +1,41 @@
+flowchart TB
+    Browser["Web Browser / SPA"]
+    API["API Gateway + JWT/RBAC"]
+
+    subgraph App["Application Services"]
+      Dashboard["Dashboard Query Service"]
+      Project["Project & Task Service"]
+      Lead["Lead & KPI Service"]
+      Expense["Expense & Analytics Service"]
+      Data["Data Management Service"]
+      Report["Report / Export Service"]
+      Notify["Notification Service"]
+      Audit["Audit Service"]
+      Sync["Sync / Dependency Engine"]
+    end
+
+    DB[("SQLite MVP\nPostgreSQL khi scale")]
+    Queue[("Background Job Queue")]
+    Slack["Slack Webhook"]
+    Storage["Backup / Export Storage"]
+
+    Browser --> API
+    API --> Dashboard & Project & Lead & Expense & Data
+    Dashboard --> DB
+    Project --> DB
+    Lead --> DB
+    Expense --> DB
+    Data --> DB
+    Project --> Sync
+    Lead --> Sync
+    Expense --> Sync
+    Sync --> Dashboard
+    Data --> Queue
+    Queue --> Report & Notify
+    Report --> DB
+    Report --> Storage
+    Notify --> DB
+    Notify --> Slack
+    Project & Lead & Expense & Data --> Audit
+    Audit --> DB
+

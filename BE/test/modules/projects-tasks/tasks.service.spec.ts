@@ -1,8 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { PrismaService } from '../../prisma/prisma.service';
-import { startOfBusinessToday } from '../../common/utils/date.util';
-import { TasksService } from './tasks.service';
+import { PrismaService } from '../../../src/prisma/prisma.service';
+import { startOfBusinessToday } from '../../../src/common/utils/date.util';
+import { TasksService } from '../../../src/modules/projects-tasks/tasks.service';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -26,6 +26,18 @@ describe('TasksService', () => {
 
   it('rejects Backlog without reason (BR-001)', () => {
     expect(() => service.validateBusinessRules('Backlog', '   ')).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('rejects Pending without reason', () => {
+    expect(() => service.validateBusinessRules('Pending', '')).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('rejects Cancel without reason', () => {
+    expect(() => service.validateBusinessRules('Cancel', ' ')).toThrow(
       BadRequestException,
     );
   });

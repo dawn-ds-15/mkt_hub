@@ -13,10 +13,16 @@ export const PROJECT_STATUSES = [
 ] as const;
 
 export const TASK_STATUSES = [
+  'Planning',
+  'Processing',
+  'Done',
+  'Pending',
+  'Cancel',
+  'Overdue',
+  'Backlog',
   'To Do',
   'In Progress',
   'Review',
-  'Done',
 ] as const;
 
 export const TASK_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
@@ -25,6 +31,7 @@ export const STAKEHOLDERS = [
   'Sales Team',
   'Dev Team',
   'CS Team',
+  'Partner',
 ] as const;
 
 export const EVENT_PROJECT_TYPES = [

@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
-import { PrismaService } from '../../prisma/prisma.service';
-import { TaskImportService } from './task-import.service';
-import { TasksService } from './tasks.service';
+import { PrismaService } from '../../../src/prisma/prisma.service';
+import { TaskImportService } from '../../../src/modules/projects-tasks/task-import.service';
+import { TasksService } from '../../../src/modules/projects-tasks/tasks.service';
 
 describe('TaskImportService', () => {
   const projectId = '00000000-0000-4000-8000-000000000001';

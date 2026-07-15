@@ -111,7 +111,7 @@ export class TasksService {
   }
 
   toCreateData(dto: CreateTaskDto): Prisma.TaskUncheckedCreateInput {
-    const status = dto.status ?? 'To Do';
+    const status = dto.status ?? 'Planning';
     return {
       ...dto,
       status,
@@ -128,9 +128,9 @@ export class TasksService {
   }
 
   validateBusinessRules(status: string, reason?: string | null) {
-    if (status === 'Backlog' && !reason?.trim()) {
+    if ((status === 'Backlog' || status === 'Pending' || status === 'Cancel') && !reason?.trim()) {
       throw new BadRequestException(
-        'Reason là bắt buộc khi task có status Backlog',
+        `Reason là bắt buộc khi task có status ${status}`,
       );
     }
   }

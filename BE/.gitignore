@@ -32,3 +32,8 @@ dev.db
 
 # Docker
 docker-compose.override.yml
+
+# Test coverage
+coverage/
+cov/
+*.info

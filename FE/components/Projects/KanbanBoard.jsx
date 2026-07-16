@@ -144,8 +144,8 @@ export default function KanbanBoard() {
     setDraggedFromCol(null);
   }, [draggedTaskId, draggedFromCol]);
 
-  const [projectFilter, setProjectFilter] = useState('All Projects');
-  const [assigneeFilter, setAssigneeFilter] = useState('Everyone');
+  const [projectFilter, setProjectFilter] = useState('Tất cả dự án');
+  const [assigneeFilter, setAssigneeFilter] = useState('Tất cả mọi người');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
@@ -167,7 +167,7 @@ export default function KanbanBoard() {
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
           >
-            <option>All Projects</option>
+            <option>Tất cả dự án</option>
             <option>Q3 Brand Campaign</option>
             <option>Social Media Audit</option>
             <option>Email Automation</option>
@@ -180,7 +180,7 @@ export default function KanbanBoard() {
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
           >
-            <option>Everyone</option>
+            <option>Tất cả mọi người</option>
             <option>Nguyễn Văn A</option>
             <option>Trần Thị B</option>
             <option>Minh Tú</option>
@@ -210,7 +210,7 @@ export default function KanbanBoard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6" style={{ minHeight: 'calc(100vh - 280px)' }}>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" style={{ minHeight: 'calc(100vh - 280px)' }}>
         {columns.map((column) => (
           <KanbanColumn
             key={column.id}

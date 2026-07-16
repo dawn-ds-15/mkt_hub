@@ -27,7 +27,7 @@ function getInitials(name) {
 
 function taskStatusToMock(status, isOverdue) {
   if (isOverdue) return 'overdue';
-  const map = { Done: 'done', 'In Progress': 'in_progress', Review: 'review', 'To Do': 'todo' };
+  const map = { Done: 'done', 'In Progress': 'in_progress', Review: 'review', 'To Do': 'todo', Backlog: 'backlog' };
   return map[status] || 'todo';
 }
 
@@ -61,44 +61,89 @@ function formatCurrency(num) {
 }
 
 function getKpiTrend(percentVsPlan) {
+  if (percentVsPlan == null) return null;
   if (percentVsPlan > 100) return 'up';
   if (percentVsPlan === 100) return 'flat';
   return 'down';
 }
 
 function getKpiBarColor(percentVsPlan) {
+  if (percentVsPlan == null) return 'bg-primary';
   if (percentVsPlan >= 100) return 'bg-success';
   if (percentVsPlan >= 80) return 'bg-warning';
   return 'bg-danger';
 }
 
 function getKpiBarWidth(percentVsPlan) {
+  if (percentVsPlan == null) return null;
   return `${Math.min(percentVsPlan, 100)}%`;
 }
+
+function getLtvCacBadge(ratio) {
+  if (ratio < 1.5) return { label: 'Nguy hiểm', textColor: 'text-red-700', bgColor: 'bg-red-50', icon: 'dangerous' };
+  if (ratio <= 2.5) return { label: 'Cần tối ưu', textColor: 'text-amber-700', bgColor: 'bg-amber-50', icon: 'warning' };
+  if (ratio <= 4.0) return { label: 'Tỷ lệ vàng', textColor: 'text-green-700', bgColor: 'bg-green-50', icon: 'check_circle' };
+  return { label: 'Tăng ngân sách', textColor: 'text-blue-700', bgColor: 'bg-blue-50', icon: 'trending_up' };
+}
+
+const kpiLabelVi = {
+  'Raw Leads': 'Raw Leads',
+  'MQL': 'MQL',
+  'SQL': 'SQL',
+  'Closed Deal': 'Closed Deal',
+  'Pipeline Value': 'Giá trị Pipeline',
+  'CAC / LTV': 'CAC / LTV',
+};
+
+const kpiDisplayMeta = {
+  'Raw Leads': { emoji: '🔵', accent: 'blue', planLabel: 'KH' },
+  'MQL': { emoji: '🟡', accent: 'yellow', planLabel: 'KH' },
+  'SQL': { emoji: '🟠', accent: 'orange', planLabel: 'KH' },
+  'Closed Deal': { emoji: '🟢', accent: 'green', planLabel: 'KH' },
+  'Pipeline Value': { emoji: '💰', accent: 'purple', planLabel: 'KH' },
+  'CAC / LTV': { emoji: '💎', accent: 'purple', planLabel: null },
+};
 
 function transformKpiCards(kpiCards) {
   return kpiCards.map((kpi, idx) => {
     if (kpi.label === 'CAC / LTV') {
+      const ratio = kpi.ratio != null ? kpi.ratio : 0;
+      const badge = getLtvCacBadge(ratio);
+      const meta = kpiDisplayMeta['CAC / LTV'] || {};
       return {
         id: idx + 1,
         label: 'CAC / LTV',
-        value: `1:${kpi.ratio}`,
+        emoji: meta.emoji,
+        accent: meta.accent,
+        value: `1:${ratio.toFixed(1)}`,
         trend: null,
         percentage: null,
-        suffix: kpi.ratio >= 3 ? 'Healthy' : 'Warning',
+        badge,
+        planValue: kpi.plan != null ? formatCurrency(kpi.plan) : null,
+        planLabel: 'LTV',
         barColor: 'bg-primary',
         barWidth: '100%',
       };
     }
+    const viLabel = kpiLabelVi[kpi.label] || kpi.label;
+    const meta = kpiDisplayMeta[kpi.label] || { emoji: '📊', accent: 'blue', planLabel: 'KH' };
+    const actual = kpi.actual ?? kpi.value ?? 0;
+    const plan = kpi.plan ?? 0;
+    const pct = kpi.percentVsPlan ?? kpi.ratio ?? null;
+    const isCurrency = kpi.label === 'Pipeline Value';
     return {
       id: idx + 1,
-      label: kpi.label,
-      value: kpi.label === 'Pipeline Value' ? formatCurrency(kpi.actual) : formatNumber(kpi.actual),
-      trend: getKpiTrend(kpi.percentVsPlan),
-      percentage: Math.round(kpi.percentVsPlan),
-      suffix: 'vs Plan',
-      barColor: getKpiBarColor(kpi.percentVsPlan),
-      barWidth: getKpiBarWidth(kpi.percentVsPlan),
+      label: viLabel,
+      emoji: meta.emoji,
+      accent: meta.accent,
+      value: isCurrency ? formatCurrency(actual) : formatNumber(actual),
+      trend: getKpiTrend(pct),
+      percentage: pct != null ? Math.round(pct) : null,
+      suffix: 'so với KH',
+      planValue: kpi.plan != null ? (isCurrency ? formatCurrency(kpi.plan) : formatNumber(kpi.plan)) : null,
+      planLabel: meta.planLabel,
+      barColor: getKpiBarColor(pct),
+      barWidth: getKpiBarWidth(pct),
     };
   });
 }
@@ -107,22 +152,32 @@ const funnelColors = ['bg-primary', 'bg-secondary', 'bg-secondary-container', 'b
 
 function transformFunnel(funnel) {
   const firstActual = funnel[0]?.actual || 1;
-  return funnel.map((item, idx) => ({
-    stage: item.step.toUpperCase(),
-    value: item.actual,
-    percent: ((item.actual / firstActual) * 100).toFixed(1) + '%',
-    color: funnelColors[idx] || 'bg-primary',
-    cv: item.convPct != null ? `${item.convPct}%` : undefined,
-    cvColor: item.convPct != null
-      ? item.convPct >= 50 ? 'text-success'
-        : item.convPct >= 30 ? 'text-warning'
-          : 'text-danger'
-      : undefined,
-  }));
+  return funnel.map((item, idx) => {
+    const cv = item.convPct;
+    const isNa = cv === '—' || cv === 'N/A';
+    return {
+      stage: item.step.toUpperCase(),
+      value: item.actual,
+      percent: ((item.actual / firstActual) * 100).toFixed(1) + '%',
+      color: funnelColors[idx] || 'bg-primary',
+      cv: cv != null ? (isNa ? cv : `${cv}%`) : undefined,
+      cvColor: cv != null
+        ? isNa ? 'text-gray-400'
+          : cv >= 50 ? 'text-success'
+            : cv >= 30 ? 'text-warning'
+              : 'text-danger'
+        : undefined,
+      cvTooltip: isNa ? 'Không thể tính tỷ lệ chuyển đổi do dữ liệu đầu vào bằng 0' : undefined,
+    };
+  });
 }
 
 function transformActivities(activities) {
-  return activities.map((a) => ({ label: a.type, plan: a.plan, actual: a.actual }));
+  return activities.map((a) => ({
+    label: a.type || a.label || a.name || a.channel || 'N/A',
+    plan: Number(a.plan) || 0,
+    actual: Number(a.actual) || 0,
+  }));
 }
 
 function transformProjectProgress(progress) {
@@ -140,8 +195,11 @@ function transformProjectProgress(progress) {
 }
 
 function transformTaskStatus(taskStatus) {
+  if (!taskStatus || !taskStatus.byStatus) {
+    return { total: 0, completed: 0, inProgress: 0, pending: 0, overdue: 0 };
+  }
   return {
-    total: taskStatus.total,
+    total: taskStatus.total ?? 0,
     completed: taskStatus.byStatus.Done || 0,
     inProgress: (taskStatus.byStatus['In Progress'] || 0) + (taskStatus.byStatus.Review || 0),
     pending: taskStatus.byStatus['To Do'] || 0,
@@ -151,11 +209,13 @@ function transformTaskStatus(taskStatus) {
 
 function transformAlerts(alerts) {
   const result = [];
-  for (const a of alerts.overdue || []) {
-    result.push({ type: 'error', title: `Quá hạn: ${a.taskName}`, assignee: a.assigneeName, due: a.dueDate, icon: 'error' });
+  const overdue = Array.isArray(alerts) ? alerts : alerts?.overdue ?? [];
+  const upcoming = Array.isArray(alerts) ? [] : alerts?.upcoming ?? [];
+  for (const a of overdue) {
+    result.push({ type: 'error', title: `Quá hạn: ${a.taskName || a.title || a.name || ''}`, assignee: a.assigneeName || a.assignee || '', due: a.dueDate || a.due || '', icon: 'error' });
   }
-  for (const a of alerts.upcoming || []) {
-    result.push({ type: 'warning', title: `Sắp tới: ${a.taskName}`, assignee: a.assigneeName, due: a.dueDate, icon: 'schedule' });
+  for (const a of upcoming) {
+    result.push({ type: 'warning', title: `Sắp tới: ${a.taskName || a.title || a.name || ''}`, assignee: a.assigneeName || a.assignee || '', due: a.dueDate || a.due || '', icon: 'schedule' });
   }
   return result;
 }
@@ -166,15 +226,15 @@ export const getDashboardData = async (periodType = 'year', periodValue = '2026'
   const res = await api.get('/v1/dashboard/overview', {
     params: { period_type: periodType, period_value: periodValue, year },
   });
-  const d = res.data.data;
+  const d = res.data?.data ?? res.data ?? {};
   return {
-    kpis: transformKpiCards(d.kpiCards),
-    funnel: transformFunnel(d.funnel),
-    marketingActivities: transformActivities(d.activities),
-    projectProgress: transformProjectProgress(d.progress).projects,
-    totalPct: d.progress.totalPct,
-    taskStatus: transformTaskStatus(d.taskStatus),
-    alerts: transformAlerts(d.alerts),
+    kpis: transformKpiCards(d.kpiCards ?? d.kpi_cards ?? []),
+    funnel: transformFunnel(d.funnel ?? []),
+    marketingActivities: transformActivities(d.activities ?? d.marketingActivities ?? d.marketing_activities ?? []),
+    projectProgress: transformProjectProgress(d.progress ?? {}).projects,
+    totalPct: d.progress?.totalPct ?? 0,
+    taskStatus: transformTaskStatus(d.taskStatus ?? d.task_status ?? {}),
+    alerts: transformAlerts(d.alerts ?? []),
   };
 };
 
@@ -218,7 +278,8 @@ export const getProjects = async () => {
         name: t.name,
         assignee: t.assignee?.name || 'Unknown',
         due: t.dueDate ? formatDate(t.dueDate) : '-',
-        status: taskStatusToMock(t.status, t.isOverdue),
+      status: taskStatusToMock(t.status, t.isOverdue),
+      statusLabel: t.status,
       })),
     })),
   };
@@ -264,13 +325,17 @@ export const getTaskList = async (filters = {}) => {
       id: t.id,
       project: t.project?.name || '-',
       taskName: t.name,
+      description: t.description || '',
       assignee: { initials: getInitials(t.assignee?.name || ''), name: t.assignee?.name || 'Unknown' },
-      stakeholders: (t.stakeholders || []).join(', ') || '-',
+      stakeholders: (t.stakeholders || []).join(', '),
       status: taskStatusToMock(t.status, t.isOverdue),
       priority: t.priority?.toLowerCase() || 'medium',
       start: t.startDate ? formatDate(t.startDate) : '-',
+      startDate: t.startDate || '',
       due: t.dueDate ? formatDate(t.dueDate) : '-',
+      dueDate: t.dueDate || '',
       done: t.completedDate ? formatDate(t.completedDate) : null,
+      completedDate: t.completedDate || '',
       link: t.link ? { type: 'link', url: t.link } : null,
       remark: t.remark || '',
     })),
@@ -308,6 +373,11 @@ const columnMeta = {
   'In Progress': { title: 'ĐANG LÀM', badgeColor: 'bg-blue-50 text-blue-600' },
   Review: { title: 'ĐANG REVIEW', badgeColor: 'bg-amber-50 text-amber-600' },
   Done: { title: 'HOÀN THÀNH', badgeColor: 'bg-green-50 text-green-600' },
+  Planning: { title: 'LẬP KẾ HOẠCH', badgeColor: 'bg-blue-50 text-blue-600' },
+  Processing: { title: 'ĐANG XỬ LÝ', badgeColor: 'bg-blue-50 text-blue-600' },
+  Pending: { title: 'ĐANG CHỜ', badgeColor: 'bg-purple-50 text-purple-600' },
+  Cancel: { title: 'ĐÃ HUỶ', badgeColor: 'bg-gray-100 text-gray-600' },
+  Overdue: { title: 'QUÁ HẠN', badgeColor: 'bg-red-50 text-red-600' },
 };
 
 const priorityBorders = { High: 'border-l-red-500', Medium: 'border-l-amber-300', Low: 'border-l-gray-200' };

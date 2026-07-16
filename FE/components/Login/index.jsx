@@ -133,9 +133,6 @@ export default function Login() {
                 {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </button>
 
-              <div className="pt-4 border-t border-border-light space-y-1">
-                <p className="text-[11px] text-outline text-center">Demo: a.nguyen@company.com / demo123</p>
-              </div>
             </form>
           ) : (
             <form onSubmit={handleRegister} className="space-y-5">

@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { createProject, getMembers } from '../../services/api';
 
-const typeMap = { 'Nội bộ': 'Internal', 'Khách hàng': 'Client', 'Nghiên cứu': 'Research' };
+const typeMap = {
+  'Nội bộ': 'Internal', 'Khách hàng': 'Client', 'Nghiên cứu': 'Research',
+  'Workshop': 'Workshop', 'Event': 'Event', 'Exhibition': 'Exhibition', 'Webinar': 'Webinar',
+};
 const statusMap = { 'Lên kế hoạch': 'Planning', 'Đang thực hiện': 'Active', 'Tạm dừng': 'On Hold', 'Hoàn thành': 'Completed', 'Đã huỷ': 'Cancelled' };
+const eventTypes = ['Workshop', 'Event', 'Exhibition', 'Webinar'];
 
 const isUUID = (s) => s && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 
@@ -17,12 +21,27 @@ export default function CreateProjectForm({ onClose, onSuccess }) {
   const [overhead, setOverhead] = useState('');
   const [kpiPlan, setKpiPlan] = useState('');
   const [kpiActual, setKpiActual] = useState('');
+  const [applyChecklist, setApplyChecklist] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     getMembers().then(res => setMembers(res.data)).catch(() => {});
   }, []);
+
+  const resetForm = () => {
+    setName('');
+    setType('Nội bộ');
+    setStatus('Lên kế hoạch');
+    setOwnerId('');
+    setDeadline('');
+    setBudget('');
+    setOverhead('');
+    setKpiPlan('');
+    setKpiActual('');
+    setApplyChecklist(false);
+    setError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,6 +63,7 @@ export default function CreateProjectForm({ onClose, onSuccess }) {
         kpiRawLeadsPlan: parseFloat(kpiPlan) || 0,
         kpiRawLeadsActual: parseFloat(kpiActual) || 0,
       });
+      resetForm();
       if (onSuccess) onSuccess();
       if (onClose) onClose();
     } catch (err) {
@@ -89,6 +109,17 @@ export default function CreateProjectForm({ onClose, onSuccess }) {
             </select>
           </div>
         </div>
+        {eventTypes.includes(type) && (
+          <label className="flex items-center gap-3 p-3 bg-surface-container-low rounded-lg border border-outline-variant cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={applyChecklist}
+              onChange={(e) => setApplyChecklist(e.target.checked)}
+              className="w-4 h-4 accent-primary"
+            />
+            <span className="text-body-md font-medium text-on-surface">Áp dụng checklist sự kiện chuẩn</span>
+          </label>
+        )}
         <div className="space-y-1">
           <label className="text-label-sm font-bold text-on-surface-variant uppercase">Chủ sở hữu</label>
           <div className="relative">
@@ -155,7 +186,7 @@ export default function CreateProjectForm({ onClose, onSuccess }) {
           </div>
         )}
         <button className="w-full py-3 bg-primary text-on-primary rounded font-bold text-label-md mt-6 hover:shadow-lg transition-all active:scale-[0.98]" type="submit" disabled={saving}>
-          {saving ? 'Đang lưu...' : 'Lưu Thay đổi'}
+          {saving ? 'Đang lưu...' : 'Tạo dự án'}
         </button>
       </form>
     </div>

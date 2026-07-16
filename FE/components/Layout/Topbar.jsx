@@ -35,10 +35,7 @@ export default function Topbar({ title = 'Tổng quan' }) {
     <header className="fixed top-0 right-0 h-topbar-height bg-surface border-b border-border-light flex justify-between items-center px-container-margin w-[calc(100%-260px)] ml-auto z-40">
       <div className="flex items-center gap-4">
         <h2 className="font-headline-sm text-headline-sm text-primary font-bold">{title}</h2>
-        <span className="px-2 py-0.5 bg-surface-container text-[10px] font-bold text-secondary rounded flex items-center gap-1">
-          <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
-          Đang đồng bộ...
-        </span>
+
       </div>
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-4">

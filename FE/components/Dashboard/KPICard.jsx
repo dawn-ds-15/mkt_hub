@@ -1,37 +1,35 @@
-const trendIcons = {
-  up: 'trending_up',
-  flat: 'trending_flat',
-  down: 'trending_down',
+const trendSymbols = { up: '▲', flat: '—', down: '▼' };
+const trendColors = { up: 'text-success', flat: 'text-warning', down: 'text-danger' };
+const accentBorders = {
+  blue: 'bg-[#2563EB]',
+  yellow: 'bg-[#F59E0B]',
+  orange: 'bg-[#F97316]',
+  green: 'bg-[#10B981]',
+  purple: 'bg-[#8B5CF6]',
 };
 
-const trendColors = {
-  up: 'text-success',
-  flat: 'text-warning',
-  down: 'text-danger',
-};
-
-export default function KPICard({ label, value, trend, percentage, suffix, barColor, barWidth }) {
+export default function KPICard({ label, value, emoji, accent, trend, percentage, suffix, badge, planValue, planLabel, barColor, barWidth }) {
   return (
-    <div className="bg-white p-4 rounded-lg card-shadow flex flex-col justify-between relative overflow-hidden border border-border-light h-32">
-      <div>
-        <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{label}</p>
-        <h3 className="text-data-display font-data-display text-primary mt-1">{value}</h3>
+    <div className={`bg-white rounded-xl border border-border-light p-4 relative overflow-hidden`}>
+      <div className={`absolute top-0 left-0 right-0 h-[3px] ${accentBorders[accent] || 'bg-primary'}`} />
+      <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">{emoji} {label}</div>
+      <div className="text-[26px] font-extrabold text-gray-900 tracking-tight mb-1">{value}</div>
+      <div className={`flex items-center gap-1 text-[11px] ${trend ? trendColors[trend] : 'text-gray-400'}`}>
+        {badge ? (
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${badge.bgColor} ${badge.textColor}`}>
+            <span className="material-symbols-outlined text-[14px]">{badge.icon}</span>
+            {badge.label}
+          </span>
+        ) : trend ? (
+          <>{trendSymbols[trend]} {percentage}% {suffix}</>
+        ) : null}
       </div>
-      <div className="flex justify-between items-end">
-        {trend ? (
-          <div className={`flex items-center gap-1 ${trendColors[trend]}`}>
-            <span className="material-symbols-outlined text-sm">{trendIcons[trend]}</span>
-            <span className="text-data-subtext">{percentage}% {suffix}</span>
-          </div>
-        ) : (
-          <div className={`flex items-center gap-1 ${suffix === 'Healthy' ? 'text-success font-bold' : 'text-on-surface-variant'}`}>
-            <span className="text-data-subtext">{suffix}</span>
-          </div>
-        )}
-      </div>
+      {planValue != null && (
+        <div className="text-[11px] text-gray-400 mt-1">{planLabel}: {planValue}</div>
+      )}
       {barWidth && (
-        <div className="absolute bottom-0 left-0 w-full h-1 bg-surface-container">
-          <div className={`h-full ${barColor}`} style={{ width: barWidth }} />
+        <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${barColor}`} style={{ width: barWidth }} />
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useDashboard } from '../../contexts/DashboardContext';
 
 const navItems = [
   { label: 'Tổng quan', href: '/' },
@@ -12,6 +13,7 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+  const { year, setYear } = useDashboard();
   return (
     <aside className="fixed left-0 top-0 h-full w-sidebar-width bg-sidebar-bg flex flex-col p-4 overflow-y-auto z-50">
       <div className="mb-8 px-2 flex items-center gap-3">
@@ -44,9 +46,14 @@ export default function Sidebar() {
         <div className="space-y-3 px-3">
           <div className="space-y-1">
             <label className="text-[11px] text-slate-400">Năm</label>
-            <select className="w-full bg-slate-800 border-none rounded text-white text-xs py-1.5 focus:ring-1 focus:ring-primary">
-              <option>2024</option>
-              <option>2023</option>
+            <select
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              className="w-full bg-slate-800 border-none rounded text-white text-xs py-1.5 focus:ring-1 focus:ring-primary"
+            >
+              {[2026, 2025, 2024, 2023].map((y) => (
+                <option key={y}>{y}</option>
+              ))}
             </select>
           </div>
           <div className="space-y-1">

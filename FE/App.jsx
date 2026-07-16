@@ -7,6 +7,7 @@ import LeadsKPIs from './pages/LeadsKPIs';
 import ExpenseManagement from './pages/ExpenseManagement';
 import DataManagementPage from './pages/DataManagement';
 import ApiDocs from './pages/ApiDocs';
+import { DashboardProvider } from './contexts/DashboardContext';
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('mkt_hub_token');
@@ -19,6 +20,7 @@ function ProtectedRoute({ children }) {
 function App() {
   return (
     <BrowserRouter>
+      <DashboardProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={
@@ -52,6 +54,7 @@ function App() {
           </ProtectedRoute>
         } />
       </Routes>
+      </DashboardProvider>
     </BrowserRouter>
   );
 }

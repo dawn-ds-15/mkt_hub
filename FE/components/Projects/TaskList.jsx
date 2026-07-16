@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
-import { getTaskList } from '../../services/api';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { getTaskList, createTask } from '../../services/api';
+import TaskEditDrawer from './TaskEditDrawer';
 
 const statusStyles = {
   overdue: { bg: 'bg-red-100', text: 'text-red-700', label: 'Quá hạn', row: 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100', icon: 'error', iconColor: 'text-red-600', fill: true },
@@ -37,11 +38,14 @@ const filterDefs = [
   { key: 'assignee', label: 'Người phụ trách:', options: ['Tất cả', 'An Nguyen', 'Minh Le', 'Thu Ha', 'Khoa Vo', 'Trang Mai'] },
 ];
 
+const LOCAL_KEY = 'mkt_hub_local_tasks';
+
 export default function TaskList() {
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [editTask, setEditTask] = useState(null);
   const [filters, setFilters] = useState({
     project: 'Tất cả',
     status: 'Tất cả',
@@ -52,6 +56,7 @@ export default function TaskList() {
   });
   const perPage = 10;
 
+  const [showQuickAddPopup, setShowQuickAddPopup] = useState(false);
   const [quickTask, setQuickTask] = useState({
     name: '',
     project: '',
@@ -60,27 +65,59 @@ export default function TaskList() {
     due: '',
   });
 
+  const [localTasks, setLocalTasks] = useState(() => {
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(LOCAL_KEY) || '[]');
+      return raw.map(t => ({
+        ...t,
+        status: t.status === 'planning' || t.status === 'pending' || t.status === 'cancel' || t.status === 'backlog' ? 'todo'
+              : t.status === 'processing' ? 'in_progress'
+              : t.status || 'todo',
+        startDate: t.startDate || '',
+        dueDate: t.dueDate || (t.due && t.due !== '-' ? t.due : ''),
+        completedDate: t.completedDate || '',
+        description: t.description || '',
+        stakeholders: Array.isArray(t.stakeholders) ? t.stakeholders : (t.stakeholders || ''),
+      }));
+    }
+    catch { return []; }
+  });
+
+  const allTasks = useMemo(() => [...tasks, ...localTasks], [tasks, localTasks]);
+
   useEffect(() => {
+    sessionStorage.setItem(LOCAL_KEY, JSON.stringify(localTasks));
+  }, [localTasks]);
+
+  const fetchTasks = useCallback(() => {
     getTaskList().then((res) => {
       setTasks(res.data);
-      setFilteredTasks(res.data);
       setLoading(false);
     });
   }, []);
 
   useEffect(() => {
-    let result = [...tasks];
+    fetchTasks();
+  }, [fetchTasks]);
+
+  useEffect(() => {
+    let result = [...allTasks];
     if (filters.project !== 'Tất cả') {
       result = result.filter(t => t.project === filters.project);
     }
     if (filters.status !== 'Tất cả') {
-      result = result.filter(t => t.status === filters.status);
+      result = result.filter(t => {
+        const s = t.status === 'planning' || t.status === 'pending' || t.status === 'cancel' || t.status === 'backlog' ? 'todo'
+                : t.status === 'processing' ? 'in_progress'
+                : t.status;
+        return s === filters.status;
+      });
     }
     if (filters.priority !== 'Tất cả') {
       result = result.filter(t => t.priority === filters.priority);
     }
     if (filters.assignee !== 'Tất cả') {
-      result = result.filter(t => t.assignee.name === filters.assignee);
+      result = result.filter(t => t.assignee?.name === filters.assignee);
     }
     if (filters.dateFrom) {
       result = result.filter(t => t.due && t.due !== '-' && new Date(t.due) >= new Date(filters.dateFrom));
@@ -90,17 +127,17 @@ export default function TaskList() {
     }
     setFilteredTasks(result);
     setPage(1);
-  }, [filters, tasks]);
+  }, [filters, allTasks]);
 
   const stats = useCallback(() => {
-    const total = tasks.length;
-    const todo = tasks.filter(t => t.status === 'todo').length;
-    const in_progress = tasks.filter(t => t.status === 'in_progress').length;
-    const review = tasks.filter(t => t.status === 'review').length;
-    const done = tasks.filter(t => t.status === 'done').length;
-    const overdue = tasks.filter(t => t.status === 'overdue').length;
+    const total = allTasks.length;
+    const todo = allTasks.filter(t => t.status === 'todo' || t.status === 'planning').length;
+    const in_progress = allTasks.filter(t => t.status === 'in_progress' || t.status === 'processing').length;
+    const review = allTasks.filter(t => t.status === 'review').length;
+    const done = allTasks.filter(t => t.status === 'done').length;
+    const overdue = allTasks.filter(t => t.status === 'overdue').length;
     return { total, todo, in_progress, review, done, overdue };
-  }, [tasks]);
+  }, [allTasks]);
 
   const clearFilters = () => {
     setFilters({ project: 'Tất cả', status: 'Tất cả', priority: 'Tất cả', assignee: 'Tất cả', dateFrom: '', dateTo: '' });
@@ -109,24 +146,39 @@ export default function TaskList() {
   const totalPages = Math.ceil(filteredTasks.length / perPage);
   const pagedTasks = filteredTasks.slice((page - 1) * perPage, page * perPage);
 
-  const handleQuickAdd = () => {
+  const handleQuickAdd = async () => {
     if (!quickTask.name.trim()) return;
-    const newTask = {
-      id: Date.now(),
-      project: quickTask.project || 'Social Q4',
-      taskName: quickTask.name,
-      assignee: { initials: 'ME', name: quickTask.assignee || 'Me' },
-      stakeholders: '-',
-      status: 'planning',
-      priority: quickTask.priority || 'medium',
-      start: '-',
-      due: quickTask.due || '-',
-      done: null,
-      link: null,
-      remark: 'New task',
-    };
-    setTasks(prev => [...prev, newTask]);
+    const q = { ...quickTask };
     setQuickTask({ name: '', project: '', assignee: '', priority: '', due: '' });
+    try {
+      await createTask({
+        name: q.name.trim(),
+        priority: (q.priority || 'medium').charAt(0).toUpperCase() + (q.priority || 'medium').slice(1),
+        dueDate: q.due || undefined,
+      });
+      fetchTasks();
+    } catch {
+      const newTask = {
+        id: Date.now() + Math.random(),
+        project: q.project || 'Social Q4',
+        taskName: q.name,
+        description: '',
+        assignee: { initials: 'ME', name: q.assignee || 'Me' },
+        stakeholders: '',
+        status: 'todo',
+        statusLabel: 'To Do',
+        priority: q.priority || 'medium',
+        start: '-',
+        startDate: '',
+        due: q.due || '-',
+        dueDate: q.due || '',
+        done: null,
+        completedDate: '',
+        link: null,
+        remark: 'New task',
+      };
+      setLocalTasks(prev => [...prev, newTask]);
+    }
   };
 
   if (loading) {
@@ -140,6 +192,7 @@ export default function TaskList() {
   const s = stats();
 
   return (
+    <>
     <div className="space-y-6">
       {/* Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -212,63 +265,107 @@ export default function TaskList() {
         </button>
       </div>
 
-      {/* Quick Add Task */}
-      <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-outline-variant shadow-sm">
-        <input
-          className="flex-1 border-none focus:ring-0 text-body-md placeholder:text-outline-variant outline-none"
-          placeholder="Tên task mới..."
-          type="text"
-          value={quickTask.name}
-          onChange={(e) => setQuickTask(prev => ({ ...prev, name: e.target.value }))}
-          onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
-        />
-        <div className="h-8 w-[1px] bg-outline-variant mx-1" />
-        <select
-          className="border-none bg-transparent focus:ring-0 text-sm font-medium pr-8 outline-none"
-          value={quickTask.project}
-          onChange={(e) => setQuickTask(prev => ({ ...prev, project: e.target.value }))}
-        >
-          <option value="">Dự án</option>
-          <option>Social Q4</option>
-          <option>Web Redesign</option>
-          <option>PR Hub</option>
-          <option>Campaigns</option>
-        </select>
-        <select
-          className="border-none bg-transparent focus:ring-0 text-sm font-medium pr-8 outline-none"
-          value={quickTask.assignee}
-          onChange={(e) => setQuickTask(prev => ({ ...prev, assignee: e.target.value }))}
-        >
-          <option value="">Assignee</option>
-          <option>An Nguyen</option>
-          <option>Minh Le</option>
-          <option>Thu Ha</option>
-          <option>Khoa Vo</option>
-        </select>
-        <select
-          className="border-none bg-transparent focus:ring-0 text-sm font-medium pr-8 outline-none"
-          value={quickTask.priority}
-          onChange={(e) => setQuickTask(prev => ({ ...prev, priority: e.target.value }))}
-        >
-           <option value="">Độ ưu tiên</option>
-          <option>high</option>
-          <option>medium</option>
-          <option>low</option>
-        </select>
-        <input
-          className="border-none bg-transparent focus:ring-0 text-sm font-medium outline-none"
-          type="date"
-          value={quickTask.due}
-          onChange={(e) => setQuickTask(prev => ({ ...prev, due: e.target.value }))}
-        />
+      {/* Quick Add Task Button */}
+      <div className="flex justify-end">
         <button
-          onClick={handleQuickAdd}
-          className="bg-primary text-on-primary px-4 py-2 rounded font-label-md flex items-center gap-2 hover:bg-primary/90 transition-transform active:scale-95"
+          onClick={() => setShowQuickAddPopup(true)}
+          className="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md flex items-center gap-2 hover:bg-primary/90 transition-transform active:scale-95"
         >
           <span className="material-symbols-outlined text-sm">add</span>
-          Thêm
+          Thêm task
         </button>
       </div>
+
+      {/* Quick Add Popup */}
+      {showQuickAddPopup && (
+        <>
+          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowQuickAddPopup(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold">Thêm task mới</h3>
+              <button onClick={() => setShowQuickAddPopup(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Tên task</label>
+              <input
+                className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                placeholder="Tên task mới..."
+                type="text"
+                value={quickTask.name}
+                onChange={(e) => setQuickTask(prev => ({ ...prev, name: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Dự án</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                  value={quickTask.project}
+                  onChange={(e) => setQuickTask(prev => ({ ...prev, project: e.target.value }))}
+                >
+                  <option value="">Chọn dự án</option>
+                  <option>Social Q4</option>
+                  <option>Web Redesign</option>
+                  <option>PR Hub</option>
+                  <option>Campaigns</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Assignee</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                  value={quickTask.assignee}
+                  onChange={(e) => setQuickTask(prev => ({ ...prev, assignee: e.target.value }))}
+                >
+                  <option value="">Chọn người</option>
+                  <option>An Nguyen</option>
+                  <option>Minh Le</option>
+                  <option>Thu Ha</option>
+                  <option>Khoa Vo</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Độ ưu tiên</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                  value={quickTask.priority}
+                  onChange={(e) => setQuickTask(prev => ({ ...prev, priority: e.target.value }))}
+                >
+                  <option value="">Chọn</option>
+                  <option>high</option>
+                  <option>medium</option>
+                  <option>low</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Hạn chót</label>
+                <input
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                  type="date"
+                  value={quickTask.due}
+                  onChange={(e) => setQuickTask(prev => ({ ...prev, due: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowQuickAddPopup(false)}
+                className="px-4 py-2 border border-gray-200 rounded text-xs font-bold text-gray-500 hover:bg-gray-50 transition-all"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => { handleQuickAdd(); setShowQuickAddPopup(false); }}
+                className="px-4 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:opacity-90 transition-all"
+              >
+                Thêm
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Task Table */}
       <div className="bg-white border border-outline-variant rounded-lg overflow-hidden flex flex-col">
@@ -298,7 +395,7 @@ export default function TaskList() {
                 </tr>
               ) : (
                 pagedTasks.map((task) => {
-                  const st = statusStyles[task.status] || statusStyles.planning;
+                  const st = statusStyles[task.status] || statusStyles.todo;
                   return (
                     <tr key={task.id} className={`${st.row} transition-colors`}>
                       <td className="p-3 text-center">
@@ -348,7 +445,10 @@ export default function TaskList() {
                       <td className="p-3 text-xs italic text-outline">{task.remark}</td>
                       <td className="p-3">
                         <div className="flex justify-center gap-2">
-                          <button className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors">
+                          <button
+                            onClick={() => setEditTask(task)}
+                            className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors"
+                          >
                             <span className="material-symbols-outlined text-lg">{task.status === 'done' ? 'visibility' : 'edit'}</span>
                           </button>
                           <button className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors">
@@ -400,6 +500,32 @@ export default function TaskList() {
           </div>
         </div>
       </div>
+
     </div>
+
+      {editTask && (
+        <TaskEditDrawer
+          task={editTask}
+          isLocalTask={editTask.id > 1000000000000}
+          onClose={() => setEditTask(null)}
+          onSaved={(saved) => {
+            if (saved) {
+              setLocalTasks(prev => prev.map(t => t.id === saved.id ? saved : t));
+            } else {
+              fetchTasks();
+            }
+            setEditTask(null);
+          }}
+          onDeleted={() => {
+            if (editTask.id > 1000000000000) {
+              setLocalTasks(prev => prev.filter(t => t.id !== editTask.id));
+            } else {
+              fetchTasks();
+            }
+            setEditTask(null);
+          }}
+        />
+      )}
+    </>
   );
 }

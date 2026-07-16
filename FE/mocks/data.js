@@ -488,7 +488,7 @@ export const mockExpenseOverview = {
 export const mockKanbanColumns = [
   {
     id: 'planning',
-    title: 'PLANNING',
+    title: 'LẬP KẾ HOẠCH',
     badgeCount: 4,
     badgeColor: 'bg-blue-50 text-blue-600',
     tasks: [
@@ -548,7 +548,7 @@ export const mockKanbanColumns = [
   },
   {
     id: 'processing',
-    title: 'PROCESSING',
+    title: 'ĐANG XỬ LÝ',
     badgeCount: 2,
     badgeColor: 'bg-blue-50 text-blue-600',
     tasks: [

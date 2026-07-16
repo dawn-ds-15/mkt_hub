@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { getProjects } from '../../services/api';
 import ProjectCard from './ProjectCard';
-import PortfolioSummary from './PortfolioSummary';
+import CreateProjectForm from './CreateProjectForm';
 
-export default function ProjectsPage() {
+export default function ProjectsPage({ onProjectCreated }) {
   const [projects, setProjects] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -105,8 +105,10 @@ export default function ProjectsPage() {
           )}
         </div>
       </section>
-      <aside className="w-[360px] flex flex-col gap-gutter flex-shrink-0">
-        <PortfolioSummary />
+      <aside className="w-[400px] flex flex-col gap-gutter flex-shrink-0">
+        <div className="sticky top-4">
+          <CreateProjectForm onSuccess={onProjectCreated} />
+        </div>
       </aside>
     </div>
   );

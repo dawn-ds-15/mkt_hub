@@ -103,33 +103,33 @@ export default function WeeklyReport() {
           </span>
       </div>
 
-      {/* 4 Sections */}
-      <div className="space-y-gutter">
+      {/* 4 Sections 2x2 grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }} className="mb-4">
         {/* Section 1: Completed */}
-        <section className="bg-white border border-outline-variant overflow-hidden">
-          <div className="bg-surface-container px-4 py-2 border-b border-outline-variant flex items-center gap-2">
-            <span className="text-green-600 material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-            <h4 className="font-headline-sm text-headline-sm">Công việc đã hoàn thành</h4>
+        <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
+          <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
+            <h4 className="text-sm font-bold text-gray-900">✅ 1. Công việc đã hoàn thành</h4>
+            <span className="text-[11px] text-gray-400">{data.completed.length}</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-surface-container-low border-b border-outline-variant">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Mã công việc</th>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Tên công việc</th>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-center">Kết quả</th>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-right">Người phụ trách</th>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Mã</th>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Tên công việc</th>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-center">Kết quả</th>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-right">Người phụ trách</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant">
+              <tbody className="divide-y divide-gray-50">
                 {data.completed.map((item, i) => (
-                  <tr key={i} className="hover:bg-surface-container-low transition-colors">
-                    <td className="px-4 py-3 font-body-md text-body-md text-on-surface-variant">{item.code}</td>
-                    <td className="px-4 py-3 font-body-md text-body-md font-medium">{item.name}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-label-sm">{item.result}</span>
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-gray-500">{item.code}</td>
+                    <td className="px-3 py-2 font-medium text-gray-800">{item.name}</td>
+                    <td className="px-3 py-2 text-center">
+                      <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-semibold">{item.result}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-body-md text-body-md">{item.assignee}</td>
+                    <td className="px-3 py-2 text-right text-gray-600">{item.assignee}</td>
                   </tr>
                 ))}
               </tbody>
@@ -138,29 +138,29 @@ export default function WeeklyReport() {
         </section>
 
         {/* Section 2: Next Week Plan */}
-        <section className="bg-white border border-outline-variant overflow-hidden">
-          <div className="bg-surface-container px-4 py-2 border-b border-outline-variant flex items-center gap-2">
-            <span className="text-primary material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>push_pin</span>
-            <h4 className="font-headline-sm text-headline-sm">Kế hoạch tuần tiếp theo</h4>
+        <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
+          <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
+            <h4 className="text-sm font-bold text-gray-900">📌 2. Kế hoạch tuần {data.week + 1}</h4>
+            <span className="text-[11px] text-gray-400">{data.nextWeek.length}</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-surface-container-low border-b border-outline-variant">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Thời gian</th>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Hạng mục</th>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">Deadline</th>
-                  <th className="px-4 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant text-right">Ưu tiên</th>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Thời gian</th>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Hạng mục</th>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Deadline</th>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-right">Ưu tiên</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant">
+              <tbody className="divide-y divide-gray-50">
                 {data.nextWeek.map((item, i) => (
-                  <tr key={i} className="hover:bg-surface-container-low transition-colors">
-                    <td className="px-4 py-3 font-body-md text-body-md text-on-surface-variant">{item.schedule}</td>
-                    <td className="px-4 py-3 font-body-md text-body-md font-medium">{item.item}</td>
-                    <td className="px-4 py-3 font-body-md text-body-md">{item.deadline}</td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={`${priorityStyles[item.priority] || priorityStyles.Normal} px-2 py-0.5 rounded-full text-label-sm`}>{item.priority}</span>
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-gray-500">{item.schedule}</td>
+                    <td className="px-3 py-2 font-medium text-gray-800">{item.item}</td>
+                    <td className="px-3 py-2 text-gray-600">{item.deadline}</td>
+                    <td className="px-3 py-2 text-right">
+                      <span className={`${priorityStyles[item.priority] || priorityStyles.Normal} px-2 py-0.5 rounded-full text-[10px] font-semibold`}>{item.priority}</span>
                     </td>
                   </tr>
                 ))}
@@ -170,46 +170,53 @@ export default function WeeklyReport() {
         </section>
 
         {/* Section 3: Backlog */}
-        <section className="bg-white border border-outline-variant overflow-hidden">
-          <div className="bg-surface-container px-4 py-2 border-b border-outline-variant flex items-center gap-2">
-            <span className="text-error material-symbols-outlined">construction</span>
-            <h4 className="font-headline-sm text-headline-sm">Backlog / Vấn đề</h4>
+        <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
+          <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
+            <h4 className="text-sm font-bold text-gray-900">🚧 3. Backlog / Vấn đề</h4>
+            <span className="text-[11px] text-gray-400">{data.backlog.length}</span>
           </div>
-          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-3 space-y-2">
             {data.backlog.map((item, i) => (
-              <div key={i} className={`p-4 border border-outline-variant rounded ${item.cardClass}`}>
-                <div className="flex justify-between items-start mb-2">
-                  <h5 className="font-body-lg font-bold text-on-surface">{item.title}</h5>
-                  <span className={`${item.tagClass} px-2 py-0.5 rounded text-[10px] font-bold`}>{item.tag}</span>
+              <div key={i} className={`p-3 border border-gray-200 rounded-lg ${item.cardClass || ''}`}>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h5 className="text-xs font-bold text-gray-900">{item.title}</h5>
+                  <span className={`${item.tagClass || 'bg-gray-100 text-gray-600'} px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap`}>{item.tag || 'BLOCKER'}</span>
                 </div>
-                <p className="text-body-md mb-2">{item.description}</p>
-                <div className="flex items-center gap-2 text-label-sm text-on-surface-variant italic">
-                  <span className="material-symbols-outlined text-[14px]">{item.icon}</span>
-                  {item.note}
-                </div>
+                <p className="text-xs text-gray-600">{item.description}</p>
               </div>
             ))}
           </div>
         </section>
 
         {/* Section 4: BOD Support */}
-        <section className="bg-white border border-outline-variant overflow-hidden">
-          <div className="bg-surface-container px-4 py-2 border-b border-outline-variant flex items-center gap-2">
-            <span className="text-primary material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>handshake</span>
-            <h4 className="font-headline-sm text-headline-sm">Cần BOD hỗ trợ</h4>
+        <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
+          <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
+            <h4 className="text-sm font-bold text-gray-900">🤝 4. Cần BOD hỗ trợ</h4>
+            <span className="text-[11px] text-gray-400">{data.bod.length}</span>
           </div>
-          <div className="p-4 space-y-3">
-            {data.bod.map((item, i) => (
-              <div key={i} className="flex gap-4 p-3 bg-surface-container-low rounded border-l-4 border-primary">
-                <div className="flex-1">
-                  <h5 className="font-body-md font-bold mb-1">{item.project}</h5>
-                  <p className="text-body-md text-on-surface-variant">{item.description}</p>
-                </div>
-                <button className="text-primary font-label-md flex items-center hover:underline">
-                  <span className="material-symbols-outlined mr-1 text-[18px]">chat</span> Thảo luận
-                </button>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Dự án</th>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Nội dung cần hỗ trợ</th>
+                  <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-center">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {data.bod.map((item, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-bold text-gray-800">{item.project}</td>
+                    <td className="px-3 py-2 text-gray-600">{item.description}</td>
+                    <td className="px-3 py-2 text-center">
+                      <button className="text-blue-600 text-[10px] font-semibold flex items-center gap-1 hover:underline mx-auto">
+                        💬 Thảo luận
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       </div>

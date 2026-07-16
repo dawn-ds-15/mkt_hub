@@ -143,7 +143,7 @@ Các guard áp dụng: `JwtAuthGuard`, `RolesGuard`.
 #### API 2: Lấy chi tiết một dự án theo ID
 * **Endpoint:** `GET /v1/projects/:id`
 * **File xử lý:** [projects.controller.ts](../BE/src/modules/projects-tasks/projects.controller.ts) $\rightarrow$ `findOne()`
-* **Input (Param):** `id` *(string, UUID, required)* - ID dự án.
+* **Input (Param):** `id` *(string, UUID hoặc chuỗi ID bất kỳ, required)* - ID dự án.
 * **Output:** Đối tượng duy nhất tương tự như cấu trúc phần tử của API 1 nhưng lọc riêng theo ID.
 
 #### API 3: Tạo mới một dự án
@@ -169,7 +169,7 @@ Các guard áp dụng: `JwtAuthGuard`, `RolesGuard`.
 #### API 4: Cập nhật thông tin dự án
 * **Endpoint:** `PATCH /v1/projects/:id`
 * **File xử lý:** [projects.controller.ts](../BE/src/modules/projects-tasks/projects.controller.ts) $\rightarrow$ `update()`
-* **Input (Param):** `id` *(string, UUID, required)*
+* **Input (Param):** `id` *(string, UUID hoặc chuỗi ID bất kỳ, required)*
 * **Input (Body):** `UpdateProjectDto` (Là Partial của `CreateProjectDto`).
 * **Output:** Đối tượng dự án sau khi cập nhật thành công.
 
@@ -177,7 +177,7 @@ Các guard áp dụng: `JwtAuthGuard`, `RolesGuard`.
 * **Endpoint:** `DELETE /v1/projects/:id`
 * **File xử lý:** [projects.controller.ts](../BE/src/modules/projects-tasks/projects.controller.ts) $\rightarrow$ `remove()`
 * **Tác dụng:** Xóa dự án cùng tất cả các Task liên quan thông qua Transaction.
-* **Input (Param):** `id` *(string, UUID, required)*
+* **Input (Param):** `id` *(string, UUID hoặc chuỗi ID bất kỳ, required)*
 * **Output:**
   ```json
   {
@@ -195,10 +195,10 @@ Các guard áp dụng: `JwtAuthGuard`, `RolesGuard`.
 * **File xử lý:** [tasks.controller.ts](../BE/src/modules/projects-tasks/tasks.controller.ts) $\rightarrow$ `findAll()`
 * **Service:** [tasks.service.ts](../BE/src/modules/projects-tasks/tasks.service.ts) $\rightarrow$ `findAll()`
 * **Input (Query Params):** `TaskFilterDto`
-  * `projectId` *(string, UUID, optional)*: Lọc theo dự án.
+  * `projectId` *(string, UUID hoặc chuỗi ID bất kỳ, optional)*: Lọc theo dự án.
   * `status` *(string, optional)*: Lọc theo trạng thái.
   * `priority` *(string, optional)*: Lọc theo độ ưu tiên.
-  * `assigneeId` *(string, UUID, optional)*: Lọc theo người phụ trách.
+  * `assigneeId` *(string, UUID hoặc chuỗi ID bất kỳ, optional)*: Lọc theo người phụ trách.
   * `dueDateFrom` *(string, ISO Date, optional)*: Tìm hạn chót từ ngày.
   * `dueDateTo` *(string, ISO Date, optional)*: Tìm hạn chót đến ngày.
 * **Output:**
@@ -298,7 +298,7 @@ Các guard áp dụng: `JwtAuthGuard`, `RolesGuard`.
 * **Headers yêu cầu:** `Content-Type: multipart/form-data`
 * **Input (Multipart Body):**
   * `file` *(file binary, bắt buộc)*: File định dạng `.csv` hoặc `.xlsx`.
-  * `projectId` *(string, UUID, optional)*: Project ID mặc định.
+  * `projectId` *(string, UUID hoặc chuỗi ID bất kỳ, optional)*: Project ID mặc định.
   * `confirm` *(string/boolean, optional)*: `"true"` (Commit) hoặc `"false"` (Dry-run).
 * **Output khi confirm = false:**
   ```json
@@ -326,7 +326,7 @@ Các guard áp dụng: `JwtAuthGuard`, `RolesGuard`.
 #### API 10: Lấy chi tiết công việc theo ID
 * **Endpoint:** `GET /v1/tasks/:id`
 * **File xử lý:** [tasks.controller.ts](../BE/src/modules/projects-tasks/tasks.controller.ts) $\rightarrow$ `findOne()`
-* **Input (Param):** `id` *(string, UUID, required)*
+* **Input (Param):** `id` *(string, UUID hoặc chuỗi ID bất kỳ, required)*
 * **Output:** Đối tượng chi tiết của Task (cấu trúc tương tự như phần tử dữ liệu của API 6).
 
 #### API 11: Tạo mới một công việc
@@ -353,7 +353,7 @@ Các guard áp dụng: `JwtAuthGuard`, `RolesGuard`.
 #### API 12: Cập nhật thông tin công việc
 * **Endpoint:** `PATCH /v1/tasks/:id`
 * **File xử lý:** [tasks.controller.ts](../BE/src/modules/projects-tasks/tasks.controller.ts) $\rightarrow$ `update()`
-* **Input (Param):** `id` *(string, UUID, required)*
+* **Input (Param):** `id` *(string, UUID hoặc chuỗi ID bất kỳ, required)*
 * **Input (Body):** `UpdateTaskDto` (Partial của `CreateTaskDto`).
 * **Output:** Đối tượng Task sau khi cập nhật.
 
@@ -379,8 +379,8 @@ Các guard áp dụng: `JwtAuthGuard`, `RolesGuard`.
 * **Input (Query Params):** `WeeklyReportQueryDto`
   * `week` *(number, required)*: Tuần cần lấy báo cáo (1-53).
   * `year` *(number, required)*: Năm cần lấy báo cáo.
-  * `projectId` *(string, UUID, optional)*.
-  * `memberId` *(string, UUID, optional)*.
+  * `projectId` *(string, UUID hoặc chuỗi ID bất kỳ, optional)*.
+  * `memberId` *(string, UUID hoặc chuỗi ID bất kỳ, optional)*.
 * **Output:**
   ```json
   {

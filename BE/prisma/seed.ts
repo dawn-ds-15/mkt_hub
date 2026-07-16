@@ -169,8 +169,8 @@ async function main() {
   // 7. Migrate KPI Actuals
   const rawKpiActuals: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM marketing.kpi_actuals`);
   for (const ka of rawKpiActuals) {
-    const year = 2026;
-    const planRow = rawKpiPlans.find((p) => Number(p.year) === 2026) || rawKpiPlans[0];
+    const planRow = rawKpiPlans.find((p) => Number(p.id) === Number(ka.plan_id)) || rawKpiPlans[0];
+    const year = planRow ? Number(planRow.year) : 2026;
     const id = toUuid(4, ka.id);
     await prisma.kpiActual.create({
       data: {
@@ -264,7 +264,7 @@ async function main() {
   for (const ex of rawExpenses) {
     const id = toUuid(7, ex.id);
     const projectId = toUuid(1, ex.project_id);
-    const createdBy = toUuid(0, ex.created_by);
+    const createdBy = ex.created_by ? toUuid(0, ex.created_by) : adminMember;
 
     await prisma.expenseRecord.create({
       data: {
@@ -287,7 +287,7 @@ async function main() {
   // 11. Migrate System Configs (from expense_settings)
   const rawConfigs: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM finance.expense_settings`);
   for (const c of rawConfigs) {
-    const createdBy = toUuid(0, c.created_by);
+    const createdBy = c.created_by ? toUuid(0, c.created_by) : adminMember;
     
     // Migrate churn_rate
     await prisma.systemConfig.create({

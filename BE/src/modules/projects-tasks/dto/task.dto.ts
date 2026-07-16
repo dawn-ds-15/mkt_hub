@@ -26,8 +26,8 @@ export class CreateTaskDto {
   name: string;
 
   @IsOptional() @IsString() description?: string;
-  @IsUUID() projectId: string;
-  @IsUUID() assigneeId: string;
+  @IsString() projectId: string;
+  @IsString() assigneeId: string;
 
   @IsOptional()
   @IsArray()
@@ -69,7 +69,7 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {}
 export class TaskFilterDto {
   @IsOptional()
   @Transform(({ value }) => (value === '' ? undefined : value))
-  @IsUUID()
+  @IsString()
   projectId?: string;
 
   @IsOptional()
@@ -84,7 +84,7 @@ export class TaskFilterDto {
 
   @IsOptional()
   @Transform(({ value }) => (value === '' ? undefined : value))
-  @IsUUID()
+  @IsString()
   assigneeId?: string;
 
   @IsOptional()
@@ -101,8 +101,8 @@ export class TaskFilterDto {
 export class WeeklyReportQueryDto {
   @Type(() => Number) @IsInt() @Min(1) @Max(53) week: number;
   @Type(() => Number) @IsInt() @Min(2000) @Max(9999) year: number;
-  @IsOptional() @IsUUID() projectId?: string;
-  @IsOptional() @IsUUID() memberId?: string;
+  @IsOptional() @IsString() projectId?: string;
+  @IsOptional() @IsString() memberId?: string;
 }
 
 export class SaveWeeklyLogDto extends WeeklyReportQueryDto {

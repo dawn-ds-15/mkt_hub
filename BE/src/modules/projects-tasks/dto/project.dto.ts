@@ -24,7 +24,7 @@ export class CreateProjectDto {
   @IsEnum(PROJECT_STATUSES)
   status: (typeof PROJECT_STATUSES)[number];
 
-  @IsUUID()
+  @IsString()
   ownerId: string;
 
   @IsOptional()

@@ -30,7 +30,7 @@ export class ProjectsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id') id: string) {
     return this.projectsService.findOne(id);
   }
 
@@ -44,14 +44,14 @@ export class ProjectsController {
 
   @Patch(':id')
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() dto: UpdateProjectDto,
   ) {
     return this.projectsService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id') id: string) {
     return this.projectsService.remove(id);
   }
 }

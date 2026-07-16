@@ -1,5 +1,7 @@
 -- Adminer 5.4.2 PostgreSQL 16.14 dump
 
+SET search_path TO marketing;
+
 DROP TABLE IF EXISTS "closed_deals";
 DROP SEQUENCE IF EXISTS "marketing".closed_deals_id_seq;
 CREATE SEQUENCE "marketing".closed_deals_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;

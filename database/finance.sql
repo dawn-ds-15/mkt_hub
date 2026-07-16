@@ -1,5 +1,7 @@
 -- Adminer 5.4.2 PostgreSQL 16.14 dump
 
+SET search_path TO finance;
+
 DROP TABLE IF EXISTS "expense_settings";
 DROP SEQUENCE IF EXISTS "finance".expense_settings_id_seq;
 CREATE SEQUENCE "finance".expense_settings_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;

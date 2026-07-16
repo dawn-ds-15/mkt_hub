@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
@@ -67,12 +67,35 @@ export class CreateTaskDto {
 export class UpdateTaskDto extends PartialType(CreateTaskDto) {}
 
 export class TaskFilterDto {
-  @IsOptional() @IsUUID() projectId?: string;
-  @IsOptional() @IsEnum(TASK_STATUSES) status?: string;
-  @IsOptional() @IsEnum(TASK_PRIORITIES) priority?: string;
-  @IsOptional() @IsUUID() assigneeId?: string;
-  @IsOptional() @IsDateString() dueDateFrom?: string;
-  @IsOptional() @IsDateString() dueDateTo?: string;
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsUUID()
+  projectId?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsEnum(TASK_STATUSES)
+  status?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsEnum(TASK_PRIORITIES)
+  priority?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsUUID()
+  assigneeId?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsDateString()
+  dueDateFrom?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsDateString()
+  dueDateTo?: string;
 }
 
 export class WeeklyReportQueryDto {

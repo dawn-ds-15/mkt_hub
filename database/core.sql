@@ -1,5 +1,13 @@
 -- Adminer 5.4.2 PostgreSQL 16.14 dump
 
+SET search_path TO core;
+
+-- Create enum type if not exists
+DO $$ BEGIN
+  CREATE TYPE public.member_role AS ENUM ('manager', 'specialist', 'member');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 DROP TABLE IF EXISTS "dropdowns";
 DROP SEQUENCE IF EXISTS "core".dropdowns_id_seq;
 CREATE SEQUENCE "core".dropdowns_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;

@@ -1,5 +1,7 @@
 -- Adminer 5.4.2 PostgreSQL 16.14 dump
 
+SET search_path TO sys_admin;
+
 DROP TABLE IF EXISTS "audit_logs";
 DROP SEQUENCE IF EXISTS "sys_admin".audit_logs_id_seq;
 CREATE SEQUENCE "sys_admin".audit_logs_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;

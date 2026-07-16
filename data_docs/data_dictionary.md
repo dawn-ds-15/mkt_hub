@@ -1,6 +1,6 @@
 # Data Dictionary
 
-Tài liệu này mô tả cấu trúc dữ liệu từ `database/core.sql`, `database/finance.sql`, `database/marketing.sql` và `database/sys.sql` trên nhánh `data`. Nội dung được sinh ngày 2026-07-16.
+Tài liệu này mô tả cấu trúc dữ liệu từ `database/core.sql`, `database/finance.sql`, `database/marketing.sql` và `database/sys.sql` trên nhánh `data`
 
 ## Quy ước
 

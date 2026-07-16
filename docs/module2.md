@@ -41,15 +41,15 @@ erDiagram
 
 ### A. Tự động sinh Checklist cho dự án Sự kiện (Event Template Checklist)
 * **Loại dự án áp dụng:** `Workshop`, `Event`, `Exhibition`, `Webinar`.
-* **Thuật toán phân bổ thời gian:**
+* **Thuật toán phân bổ thời gian (Hàm `createEventChecklist` - *Line 163 - 192 trong projects.service.ts*):**
   * Hệ thống có sẵn danh sách 11 đầu việc chuẩn (`EVENT_CHECKLIST`).
-  * Khi tạo dự án với cờ `applyTemplate: true`, hệ thống sẽ tính khoảng cách thời gian từ lúc tạo đến `deadline`.
+  * Khi tạo dự án với cờ `applyTemplate: true` *(Line 83 - 116)*, hệ thống sẽ tính khoảng cách thời gian từ lúc tạo đến `deadline`.
   * Các đầu việc sẽ được phân bổ hạn chót (`dueDate`) rải đều theo tỉ lệ tuyến tính từ $1/11$ đến $11/11$ khoảng thời gian đó.
-  * Mỗi công việc sẽ tự động được tính tuần ISO (`execWeek`) và năm (`execYear`) dựa trên ngày hạn chót được phân bổ.
+  * Mỗi công việc sẽ tự động được tính tuần ISO (`execWeek`) và năm (`execYear`) dựa trên ngày hạn chót được phân bổ thông qua hàm helper `getIsoWeek` *(Line 194 - 207)*.
   * **Tính toàn vẹn (Transaction):** Nếu việc tạo bất kỳ Task nào trong Template bị lỗi, hệ thống sẽ thực hiện rollback toàn bộ (xóa dự án vừa tạo) để đảm bảo không bị rác dữ liệu.
 
-### B. Logic sắp xếp mức độ ưu tiên hiển thị Task (Sorting Rank)
-Khi lấy danh sách Task, hệ thống tự động sắp xếp theo thứ tự ưu tiên giảm dần về độ khẩn cấp (giúp lập trình viên FE không cần viết lại logic sắp xếp):
+### B. Logic sắp xếp mức độ ưu tiên hiển thị Task (Sorting Rank - *Line 35 - 39 trong tasks.service.ts*)
+Khi lấy danh sách Task, hệ thống tự động sắp xếp theo thứ tự ưu tiên giảm dần về độ khẩn cấp thông qua hàm helper `sortRank` *(Line 197 - 204 trong tasks.service.ts)*:
 1. **Ưu tiên 1 (Rank 0):** Công việc đã quá hạn (`isOverdue = true`).
 2. **Ưu tiên 2 (Rank 1):** Công việc sắp đến hạn trong vòng 5 ngày (`isUpcoming = true`).
 3. **Ưu tiên 3 (Rank 2):** Công việc đang làm (`In Progress`).
@@ -431,10 +431,13 @@ Các guard áp dụng: `JwtAuthGuard`, `RolesGuard`.
   ```
 * **Output:** Ghi chú (`WeeklyReportLog`) vừa được cập nhật hoặc tạo mới.
 
-#### API 16: Xuất báo cáo tuần ra tệp văn bản (.txt)
+#### API 16: Xuất báo cáo tuần ra tệp văn bản (.txt) (Weekly Report TXT Export - *Line 82 - 111 trong weekly-reports.service.ts*)
 * **Endpoint:** `GET /v1/weekly-reports/export.txt`
 * **File xử lý:** [weekly-reports.controller.ts](../BE/src/modules/projects-tasks/weekly-reports.controller.ts) $\rightarrow$ `exportText()`
 * **Tác dụng:** Trả về file văn bản thô `.txt` đã định dạng.
+* **Logic phụ trợ:**
+  * Hàm `nextWeek` *(Line 122 - 129)*: Tự động tính toán số tuần và năm tiếp theo khi chuyển năm.
+  * Hàm `isoWeekRange` *(Line 131 - 140)*: Quy đổi số tuần và năm sang khoảng ngày (Thứ Hai đến Chủ Nhật).
 * **Input (Query Params):** `WeeklyReportQueryDto`.
 * **Định dạng file trả về:**
   ```text

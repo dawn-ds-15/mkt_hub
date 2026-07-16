@@ -52,45 +52,45 @@ erDiagram
 Hệ thống lưu trữ số liệu thực tế (`KpiActual`, `Opportunity`, `ClosedDeal`) theo đơn vị **Tuần (1 - 53)** trong năm. Do đó, Backend có một số logic quy đổi ngày tháng như sau:
 
 * **Xác định các tuần thuộc Tháng/Quý/Năm:**
-  * Hàm `getThursdayOfWeek(year, week)`: Xác định ngày Thứ Năm của một tuần cụ thể (được sử dụng làm ngày mốc chuẩn cho tuần đó).
-  * Hàm `getWeeksInMonth(year, month)`: Lặp từ tuần 1 đến 53, kiểm tra xem Thứ Năm của tuần đó có rơi vào tháng và năm yêu cầu hay không. Nếu có thì tuần đó thuộc về tháng đó.
-  * Hàm `getWeeksInQuarter(year, quarter)`: Tính toán các tháng thuộc quý (Ví dụ: Q1 gồm tháng 1, 2, 3) rồi gom tất cả các tuần của các tháng đó lại.
-  * Hàm `getWeeksInYear(year)`: Gom tất cả các tuần trong cả 12 tháng.
-* **Chuẩn hóa nhãn chu kỳ (`getPeriodLabel`):** Trả về chuỗi mô tả trực quan cho Client (Ví dụ: *"Tuần 28 · Tháng 7/2026 · Q3/2026"*).
+  * Hàm `getThursdayOfWeek(year, week)` *(Line 84 - 91 trong dashboard.service.ts)*: Xác định ngày Thứ Năm của một tuần cụ thể (được sử dụng làm ngày mốc chuẩn cho tuần đó).
+  * Hàm `getWeeksInMonth(year, month)` *(Line 53 - 65 trong dashboard.service.ts)*: Lặp từ tuần 1 đến 53, kiểm tra xem Thứ Năm của tuần đó có rơi vào tháng và năm yêu cầu hay không. Nếu có thì tuần đó thuộc về tháng đó.
+  * Hàm `getWeeksInQuarter(year, quarter)` *(Line 67 - 74 trong dashboard.service.ts)*: Tính toán các tháng thuộc quý (Ví dụ: Q1 gồm tháng 1, 2, 3) rồi gom tất cả các tuần của các tháng đó lại.
+  * Hàm `getWeeksInYear(year)` *(Line 76 - 82 trong dashboard.service.ts)*: Gom tất cả các tuần trong cả 12 tháng.
+* **Chuẩn hóa nhãn chu kỳ (`getPeriodLabel`)** *(Line 142 - 163 trong dashboard.service.ts)*: Trả về chuỗi mô tả trực quan cho Client (Ví dụ: *"Tuần 28 · Tháng 7/2026 · Q3/2026"*).
 
 ---
 
 ## 🛠️ 4. Chi tiết các thuật toán & Logic tính toán trong Dashboard Service
 
-### A. Logic tính toán KPI Cards & Chỉ số Tài chính (Hàm `getKpiCardsData`)
+### A. Logic tính toán KPI Cards & Chỉ số Tài chính (Hàm `getKpiCardsData` - *Line 228 - 494 trong dashboard.service.ts*)
 Đây là trái tim của dashboard, thực hiện tổng hợp dữ liệu từ nhiều bảng:
 
 1. **Tính toán số liệu thực tế (Actual):**
-   * Tổng hợp `rawLeads`, `mql`, `sql`, `oppCount`, `closedCount` từ bảng `KpiActual` có `year` và `week` nằm trong danh sách các tuần được lọc.
-   * Tính `pipelineValue`: Duyệt các bản ghi trong `Opportunity` của các tuần được lọc. Công thức tính giá trị của một cơ hội: 
+   * Tổng hợp `rawLeads`, `mql`, `sql`, `oppCount`, `closedCount` từ bảng `KpiActual` có `year` và `week` nằm trong danh sách các tuần được lọc *(Line 241 - 273)*.
+   * Tính `pipelineValue`: Duyệt các bản ghi trong `Opportunity` của các tuần được lọc *(Line 275 - 283)*. Công thức tính giá trị của một cơ hội: 
      $$\text{pipelineValue} = \text{setupFee} + \text{monthlyFee} \times 12$$
-   * Tính `wonValue`: Duyệt các bản ghi trong `ClosedDeal` của các tuần được lọc. Công thức tính doanh số đã thắng:
+   * Tính `wonValue`: Duyệt các bản ghi trong `ClosedDeal` của các tuần được lọc *(Line 285 - 293)*. Công thức tính doanh số đã thắng:
      $$\text{wonValue} = \text{setupFee} + \text{monthlyFee} \times 12$$
 
-2. **Tính toán số liệu kế hoạch (Plan/Target):**
+2. **Tính toán số liệu kế hoạch (Plan/Target):** *(Line 295 - 317)*
    * Nếu có cấu hình `KpiPlan` cho năm đó: Lấy chỉ tiêu cả năm nhân với tỉ số số tuần đang lọc chia cho 52 tuần.
      $$\text{Target trong kỳ} = \text{Target cả năm} \times \left( \frac{\text{Số tuần lọc}}{52} \right)$$
    * Nếu không cấu hình `KpiPlan`: Cộng dồn các giá trị kế hoạch tuần (`planRawLeads`, `planMql`...) có sẵn trong bảng `KpiActual`.
 
-3. **Tính toán CAC (Chi phí sở hữu khách hàng):**
+3. **Tính toán CAC (Chi phí sở hữu khách hàng):** *(Line 324 - 367)*
    * Lấy danh sách các tháng chứa các tuần đang lọc.
    * Sum các trường `directCost` và `overheadCost` từ bảng `ExpenseRecord` của các dự án đang hoạt động (`Active`) trong các tháng đó để ra tổng chi phí $\text{Total Cost}$.
    * Đếm số lượng hợp đồng đã chốt thành công (`ClosedDeal` count) của các dự án hoạt động trong các tuần tương ứng.
    * Công thức:
      $$\text{CAC} = \frac{\text{Total Cost}}{\text{ClosedDeals Count}}$$
 
-4. **Tính toán LTV (Giá trị trọn đời khách hàng):**
+4. **Tính toán LTV (Giá trị trọn đời khách hàng):** *(Line 369 - 409)*
    * Lấy giá trị trung bình cộng của `setupFee` và `monthlyFee` từ các hợp đồng đã chốt trong kỳ.
    * Lấy các cấu hình hệ thống `churn_rate` (tỉ lệ rời đi, mặc định 5% nếu không cấu hình) và `gross_margin` (biên lợi nhuận gộp, mặc định 80% nếu không cấu hình) từ bảng `SystemConfig`.
    * Công thức:
      $$\text{LTV} = \left( \text{Setup Fee Avg} + \text{Monthly Fee Avg} \times \frac{1}{\text{Churn Rate}} \right) \times \text{Gross Margin}$$
 
-5. **Phân loại sức khỏe tài chính (`LTV / CAC` Ratio):**
+5. **Phân loại sức khỏe tài chính (`LTV / CAC` Ratio):** *(Line 411 - 419)*
    * Tỉ số $\text{Ratio} = \text{LTV} / \text{CAC}$.
    * Đánh giá trạng thái màu sắc hiển thị trên UI:
      * **Màu Xanh dương (Blue):** $\text{Ratio} \ge 4.0$ (Mô hình kinh doanh cực kỳ tốt/siêu lợi nhuận).
@@ -100,12 +100,12 @@ Hệ thống lưu trữ số liệu thực tế (`KpiActual`, `Opportunity`, `Cl
 
 ---
 
-### B. Logic tính tiến độ dự án (Hàm `getProgressData`)
+### B. Logic tính tiến độ dự án (Hàm `getProgressData` - *Line 662 - 732 trong dashboard.service.ts*)
 * Tìm tất cả các dự án có trạng thái là `Active`.
-* Với mỗi dự án, tìm các công việc (`Task`) thuộc dự án đó có `execYear` và `execWeek` nằm trong chu kỳ đang lọc.
+* Với mỗi dự án, tìm các công việc (`Task`) thuộc dự án đó có `execYear` và `execWeek` nằm trong chu kỳ đang lọc *(Line 688 - 703)*.
 * Tính tỉ lệ phần trăm công việc hoàn thành:
   $$\text{Tiến độ dự án} = \frac{\text{Số công việc có status = 'Done'}}{\text{Tổng số công việc}} \times 100$$
-* Phân loại màu sắc hiển thị tiến độ dự án:
+* Phân loại màu sắc hiển thị tiến độ dự án: *(Line 705 - 721)*
   * **Xanh lá (Green):** Tiến độ đạt $\ge 70\%$.
   * **Vàng (Yellow):** Tiến độ đạt từ $40\%$ đến dưới $70\%$.
   * **Đỏ (Red):** Tiến độ dưới $40\%$.
@@ -311,7 +311,7 @@ Tiền tố đường dẫn chung (Base Controller Path): `/v1/dashboard`.
 ### [GET] `/v1/dashboard/alerts`
 * **Mục đích:** Lấy ra danh sách các công việc khẩn cấp cần người dùng xử lý ngay lập tức (bị trễ hạn hoặc sắp đến hạn chót).
 * **Input:** Không có tham số đầu vào.
-* **Logic thời gian:** API này so sánh `dueDate` trực tiếp với ngày hiện tại (sử dụng hàm helper `startOfBusinessToday()` trong [date.util.ts](../BE/src/common/utils/date.util.ts) để đồng bộ mốc thời gian đầu ngày làm việc).
+* **Logic thời gian (Hàm `getAlertsData` - *Line 165 - 226 trong dashboard.service.ts*):** API này so sánh `dueDate` trực tiếp với ngày hiện tại (sử dụng hàm helper `startOfBusinessToday()` trong [date.util.ts](../BE/src/common/utils/date.util.ts) để đồng bộ mốc thời gian đầu ngày làm việc).
 * **Các file code tương ứng:**
   * Controller: [dashboard.controller.ts](../BE/src/modules/dashboard/dashboard.controller.ts)
   * Service: [dashboard.service.ts](../BE/src/modules/dashboard/dashboard.service.ts)

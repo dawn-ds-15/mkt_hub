@@ -425,6 +425,7 @@ export class DashboardService {
         actual: actual.rawLeads,
         plan: plan.rawLeads,
         percentVsPlan: calcPercentVsPlan(actual.rawLeads, plan.rawLeads),
+        ratio: calcPercentVsPlan(actual.rawLeads, plan.rawLeads),
         convPct: null,
       },
       {
@@ -433,6 +434,7 @@ export class DashboardService {
         actual: actual.mql,
         plan: plan.mql,
         percentVsPlan: calcPercentVsPlan(actual.mql, plan.mql),
+        ratio: calcPercentVsPlan(actual.mql, plan.mql),
         convPct:
           actual.rawLeads > 0
             ? Number(((actual.mql / actual.rawLeads) * 100).toFixed(1))
@@ -444,6 +446,7 @@ export class DashboardService {
         actual: actual.sql,
         plan: plan.sql,
         percentVsPlan: calcPercentVsPlan(actual.sql, plan.sql),
+        ratio: calcPercentVsPlan(actual.sql, plan.sql),
         convPct:
           actual.mql > 0
             ? Number(((actual.sql / actual.mql) * 100).toFixed(1))
@@ -455,6 +458,7 @@ export class DashboardService {
         actual: actual.oppCount,
         plan: plan.oppCount,
         percentVsPlan: calcPercentVsPlan(actual.oppCount, plan.oppCount),
+        ratio: calcPercentVsPlan(actual.oppCount, plan.oppCount),
         convPct:
           actual.sql > 0
             ? Number(((actual.oppCount / actual.sql) * 100).toFixed(1))
@@ -466,6 +470,7 @@ export class DashboardService {
         actual: actual.closedCount,
         plan: plan.closedCount,
         percentVsPlan: calcPercentVsPlan(actual.closedCount, plan.closedCount),
+        ratio: calcPercentVsPlan(actual.closedCount, plan.closedCount),
         convPct:
           actual.oppCount > 0
             ? Number(((actual.closedCount / actual.oppCount) * 100).toFixed(1))
@@ -480,6 +485,10 @@ export class DashboardService {
           actual.pipelineValue,
           plan.pipelineValue,
         ),
+        ratio: calcPercentVsPlan(
+          actual.pipelineValue,
+          plan.pipelineValue,
+        ),
         convPct: null,
       },
       {
@@ -488,6 +497,9 @@ export class DashboardService {
         cac,
         ltv,
         ratio,
+        actual: cac,
+        plan: ltv,
+        percentVsPlan: ratio,
         health,
       },
     ];
@@ -539,6 +551,7 @@ export class DashboardService {
         actual: 0,
         plan: 0,
         percentVsPlan: 0,
+        ratio: 0,
         convPct: null,
       },
       {
@@ -547,6 +560,7 @@ export class DashboardService {
         actual: 0,
         plan: 0,
         percentVsPlan: 0,
+        ratio: 0,
         convPct: null,
       },
       {
@@ -555,6 +569,7 @@ export class DashboardService {
         actual: 0,
         plan: 0,
         percentVsPlan: 0,
+        ratio: 0,
         convPct: null,
       },
       {
@@ -563,6 +578,7 @@ export class DashboardService {
         actual: 0,
         plan: 0,
         percentVsPlan: 0,
+        ratio: 0,
         convPct: null,
       },
       {
@@ -571,6 +587,7 @@ export class DashboardService {
         actual: 0,
         plan: 0,
         percentVsPlan: 0,
+        ratio: 0,
         convPct: null,
       },
       {
@@ -579,6 +596,7 @@ export class DashboardService {
         actual: 0,
         plan: 0,
         percentVsPlan: 0,
+        ratio: 0,
         convPct: null,
       },
       {
@@ -587,6 +605,9 @@ export class DashboardService {
         cac: 0,
         ltv: 0,
         ratio: 0,
+        actual: 0,
+        plan: 0,
+        percentVsPlan: 0,
         health: 'gray',
       },
     ];

@@ -194,6 +194,7 @@ Tiền tố đường dẫn chung (Base Controller Path): `/v1/dashboard`.
       "actual": 150,
       "plan": 120,
       "percentVsPlan": 125,
+      "ratio": 125,
       "convPct": null
     },
     // ... các thẻ tiếp theo cho MQL, SQL, OPP, Closed Deal, Pipeline Value
@@ -203,6 +204,9 @@ Tiền tố đường dẫn chung (Base Controller Path): `/v1/dashboard`.
       "cac": 1200000,
       "ltv": 4800000,
       "ratio": 4,
+      "actual": 1200000,
+      "plan": 4800000,
+      "percentVsPlan": 4,
       "health": "blue"
     }
   ]

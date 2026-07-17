@@ -190,3 +190,36 @@ ALTER TABLE ONLY "finance"."project_expenses" ADD CONSTRAINT "project_expenses_c
 ALTER TABLE ONLY "finance"."project_expenses" ADD CONSTRAINT "project_expenses_project_id_fkey" FOREIGN KEY (project_id) REFERENCES core.projects(id) ON DELETE CASCADE;
 
 -- 2026-07-13 09:24:19 UTC
+
+
+-- BEGIN GENERATED EXPENSE SETTINGS 2024 AND 2026
+-- Percentage values: churn_rate and gross_margin are stored as percent, matching 2025 data.
+INSERT INTO finance.expense_settings (id, period_type, period_value, churn_rate, gross_margin, note, created_by, created_at) VALUES
+(13, 'MONTH', '2024-01', 1.50, 59.50, 'Financial settings for month 1 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(14, 'MONTH', '2024-02', 1.70, 60.00, 'Financial settings for month 2 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(15, 'MONTH', '2024-03', 1.90, 60.50, 'Financial settings for month 3 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(16, 'MONTH', '2024-04', 2.10, 61.00, 'Financial settings for month 4 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(17, 'MONTH', '2024-05', 2.30, 61.50, 'Financial settings for month 5 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(18, 'MONTH', '2024-06', 2.50, 62.00, 'Financial settings for month 6 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(19, 'MONTH', '2024-07', 2.70, 62.50, 'Financial settings for month 7 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(20, 'MONTH', '2024-08', 2.90, 63.00, 'Financial settings for month 8 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(21, 'MONTH', '2024-09', 3.10, 63.50, 'Financial settings for month 9 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(22, 'MONTH', '2024-10', 3.30, 64.00, 'Financial settings for month 10 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(23, 'MONTH', '2024-11', 3.50, 64.50, 'Financial settings for month 11 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(24, 'MONTH', '2024-12', 3.70, 65.00, 'Financial settings for month 12 of 2024', 1, '2026-07-13 08:57:27.841603'),
+(25, 'MONTH', '2026-01', 1.80, 61.00, 'Financial settings for month 1 of 2026', 1, '2026-07-17 09:00:00'),
+(26, 'MONTH', '2026-02', 2.00, 61.50, 'Financial settings for month 2 of 2026', 1, '2026-07-17 09:00:00'),
+(27, 'MONTH', '2026-03', 2.20, 62.00, 'Financial settings for month 3 of 2026', 1, '2026-07-17 09:00:00'),
+(28, 'MONTH', '2026-04', 2.40, 62.50, 'Financial settings for month 4 of 2026', 1, '2026-07-17 09:00:00'),
+(29, 'MONTH', '2026-05', 2.60, 63.00, 'Financial settings for month 5 of 2026', 1, '2026-07-17 09:00:00'),
+(30, 'MONTH', '2026-06', 2.80, 63.50, 'Financial settings for month 6 of 2026', 1, '2026-07-17 09:00:00'),
+(31, 'MONTH', '2026-07', 3.00, 64.00, 'Financial settings for month 7 of 2026', 1, '2026-07-17 09:00:00'),
+(32, 'MONTH', '2026-08', 3.20, 64.50, 'Financial settings for month 8 of 2026', 1, '2026-07-17 09:00:00'),
+(33, 'MONTH', '2026-09', 3.40, 65.00, 'Financial settings for month 9 of 2026', 1, '2026-07-17 09:00:00'),
+(34, 'MONTH', '2026-10', 3.60, 65.50, 'Financial settings for month 10 of 2026', 1, '2026-07-17 09:00:00'),
+(35, 'MONTH', '2026-11', 3.80, 66.00, 'Financial settings for month 11 of 2026', 1, '2026-07-17 09:00:00'),
+(36, 'MONTH', '2026-12', 4.00, 66.50, 'Financial settings for month 12 of 2026', 1, '2026-07-17 09:00:00')
+ON CONFLICT (id) DO UPDATE SET period_type = EXCLUDED.period_type, period_value = EXCLUDED.period_value, churn_rate = EXCLUDED.churn_rate, gross_margin = EXCLUDED.gross_margin, note = EXCLUDED.note, created_by = EXCLUDED.created_by;
+
+SELECT setval('finance.expense_settings_id_seq', GREATEST((SELECT MAX(id) FROM finance.expense_settings), 36));
+-- END GENERATED EXPENSE SETTINGS 2024 AND 2026

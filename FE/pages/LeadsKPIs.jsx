@@ -3,6 +3,9 @@ import Layout from '../components/Layout';
 import PlanKPIsForm from '../components/LeadsKPIs/PlanKPIsForm';
 import ActualsForm from '../components/LeadsKPIs/ActualsForm';
 import LeadsKPIsFooter from '../components/LeadsKPIs/LeadsKPIsFooter';
+import ViewAnalytics from '../components/LeadsKPIs/ViewAnalytics';
+import ComparePeriods from '../components/LeadsKPIs/ComparePeriods';
+import { useDashboard } from '../contexts/DashboardContext';
 
 const tabs = [
   { label: 'Xem & Phân tích', key: 'view' },
@@ -12,6 +15,7 @@ const tabs = [
 
 export default function LeadsKPIs() {
   const [activeTab, setActiveTab] = useState('input');
+  const { year, periodType, periodValue } = useDashboard();
 
   const renderContent = () => {
     switch (activeTab) {
@@ -27,23 +31,15 @@ export default function LeadsKPIs() {
         );
       case 'view':
         return (
-          <div className="flex items-center justify-center h-64 text-on-surface-variant bg-white border border-border-light rounded-lg">
-            <div className="text-center">
-              <span className="material-symbols-outlined text-[48px] text-outline-variant mb-4">analytics</span>
-              <p className="text-headline-sm font-semibold">Xem & Phân tích</p>
-              <p className="text-body-sm text-on-surface-variant mt-2">Đang phát triển...</p>
-            </div>
-          </div>
+          <ViewAnalytics
+            year={year}
+            periodType={periodType}
+            periodValue={periodValue}
+          />
         );
       case 'compare':
         return (
-          <div className="flex items-center justify-center h-64 text-on-surface-variant bg-white border border-border-light rounded-lg">
-            <div className="text-center">
-              <span className="material-symbols-outlined text-[48px] text-outline-variant mb-4">compare_arrows</span>
-              <p className="text-headline-sm font-semibold">So sánh kỳ</p>
-              <p className="text-body-sm text-on-surface-variant mt-2">Đang phát triển...</p>
-            </div>
-          </div>
+          <ComparePeriods year={year} />
         );
       default:
         return null;

@@ -1,0 +1,7 @@
+services:
+  mkt-hub:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./BE/prisma/dev.db:/app/BE/prisma/dev.db

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { createProject, getMembers } from '../../services/api';
+import { createProject, updateProject, getMembers } from '../../services/api';
 
 const typeMap = {
   'Nội bộ': 'Internal', 'Khách hàng': 'Client', 'Nghiên cứu': 'Research',
@@ -10,7 +10,11 @@ const eventTypes = ['Workshop', 'Event', 'Exhibition', 'Webinar'];
 
 const isUUID = (s) => s && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 
-export default function CreateProjectForm({ onClose, onSuccess }) {
+const reverseTypeMap = Object.fromEntries(Object.entries(typeMap).map(([k, v]) => [v, k]));
+const reverseStatusMap = Object.fromEntries(Object.entries(statusMap).map(([k, v]) => [v, k]));
+
+export default function CreateProjectForm({ project, onClose, onSuccess }) {
+  const isEditing = !!project;
   const [members, setMembers] = useState([]);
   const [name, setName] = useState('');
   const [type, setType] = useState('Nội bộ');
@@ -24,24 +28,26 @@ export default function CreateProjectForm({ onClose, onSuccess }) {
   const [applyChecklist, setApplyChecklist] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     getMembers().then(res => setMembers(res.data)).catch(() => {});
   }, []);
 
-  const resetForm = () => {
-    setName('');
-    setType('Nội bộ');
-    setStatus('Lên kế hoạch');
-    setOwnerId('');
-    setDeadline('');
-    setBudget('');
-    setOverhead('');
-    setKpiPlan('');
-    setKpiActual('');
-    setApplyChecklist(false);
-    setError('');
-  };
+  useEffect(() => {
+    if (project && !initialized) {
+      setName(project.name || '');
+      setType(reverseTypeMap[project.type] || 'Nội bộ');
+      setStatus(reverseStatusMap[project.statusLabel] || 'Lên kế hoạch');
+      setOwnerId(project.ownerId || '');
+      setDeadline(project.deadline ? project.deadline.split('T')[0] || project.deadline : '');
+      setBudget(String(project.budgetPlanDirect || ''));
+      setOverhead(String(project.budgetPlanOverhead || ''));
+      setKpiPlan(String(project.kpiRawLeadsPlan || ''));
+      setKpiActual(String(project.kpiRawLeadsActual || ''));
+      setInitialized(true);
+    }
+  }, [project, initialized]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,7 +58,7 @@ export default function CreateProjectForm({ onClose, onSuccess }) {
     setSaving(true);
     setError('');
     try {
-      await createProject({
+      const payload = {
         name: name.trim(),
         type: typeMap[type],
         status: statusMap[status],
@@ -62,8 +68,12 @@ export default function CreateProjectForm({ onClose, onSuccess }) {
         budgetPlanOverhead: parseFloat(overhead) || 0,
         kpiRawLeadsPlan: parseFloat(kpiPlan) || 0,
         kpiRawLeadsActual: parseFloat(kpiActual) || 0,
-      });
-      resetForm();
+      };
+      if (isEditing) {
+        await updateProject(project.id, payload);
+      } else {
+        await createProject(payload);
+      }
       if (onSuccess) onSuccess();
       if (onClose) onClose();
     } catch (err) {
@@ -77,7 +87,7 @@ export default function CreateProjectForm({ onClose, onSuccess }) {
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">Tạo Dự án Mới</h3>
+        <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">{isEditing ? 'Chỉnh sửa Dự án' : 'Tạo Dự án Mới'}</h3>
         {onClose && (
           <button onClick={onClose} className="text-on-surface-variant hover:text-primary transition-colors">
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -186,7 +196,7 @@ export default function CreateProjectForm({ onClose, onSuccess }) {
           </div>
         )}
         <button className="w-full py-3 bg-primary text-on-primary rounded font-bold text-label-md mt-6 hover:shadow-lg transition-all active:scale-[0.98]" type="submit" disabled={saving}>
-          {saving ? 'Đang lưu...' : 'Tạo dự án'}
+          {saving ? 'Đang lưu...' : (isEditing ? 'Cập nhật dự án' : 'Tạo dự án')}
         </button>
       </form>
     </div>

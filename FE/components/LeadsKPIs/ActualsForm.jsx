@@ -4,7 +4,14 @@ import OpportunitiesTable from './OpportunitiesTable';
 import ClosedDealsTable from './ClosedDealsTable';
 
 export default function ActualsForm() {
-  const [selectedWeek, setSelectedWeek] = useState('2024-W20');
+  const getCurrentWeek = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    const diff = (now - start + (start.getTimezoneOffset() - now.getTimezoneOffset()) * 60000) / 86400000;
+    const week = Math.ceil((diff + start.getDay() + 1) / 7);
+    return `${now.getFullYear()}-W${String(week).padStart(2, '0')}`;
+  };
+  const [selectedWeek, setSelectedWeek] = useState(getCurrentWeek());
   const [formData, setFormData] = useState({
     rawLeads: '',
     mqlActual: '',
@@ -71,7 +78,7 @@ export default function ActualsForm() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            Raw Leads
+            Raw Leads Actual
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -84,7 +91,7 @@ export default function ActualsForm() {
         </div>
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            MQL Actual
+            MQL
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -97,7 +104,7 @@ export default function ActualsForm() {
         </div>
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            SQL Actual
+            SQL
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -110,7 +117,7 @@ export default function ActualsForm() {
         </div>
       </div>
 
-      <OpportunitiesTable />
+      <OpportunitiesTable onConvertSuccess={() => loadActuals()} />
       <ClosedDealsTable />
 
       <div className="mt-8 flex justify-end">

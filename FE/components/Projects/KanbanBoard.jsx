@@ -1,5 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
-import { getKanbanData } from '../../services/api';
+import { getKanbanData, updateTask } from '../../services/api';
+
+const statusMapToApi = {
+  todo: 'To Do',
+  'in progress': 'In Progress',
+  review: 'Review',
+  done: 'Done',
+};
+
+const KANBAN_CACHE_KEY = 'mkt_hub_kanban_cache';
 
 const priorityBorders = {
   High: 'border-l-red-500',
@@ -84,11 +93,25 @@ export default function KanbanBoard() {
   const [draggedFromCol, setDraggedFromCol] = useState(null);
 
   useEffect(() => {
+    const cached = sessionStorage.getItem(KANBAN_CACHE_KEY);
+    if (cached) {
+      try {
+        setColumns(JSON.parse(cached));
+        setLoading(false);
+        return;
+      } catch { /* ignore */ }
+    }
     getKanbanData().then((res) => {
       setColumns(res.data);
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (!loading && columns.length > 0) {
+      sessionStorage.setItem(KANBAN_CACHE_KEY, JSON.stringify(columns));
+    }
+  }, [columns, loading]);
 
   const handleDragStart = useCallback((e, taskId) => {
     setDraggedTaskId(taskId);
@@ -137,6 +160,12 @@ export default function KanbanBoard() {
 
       const [movedTask] = fromCol.tasks.splice(taskIdx, 1);
       toCol.tasks.push(movedTask);
+
+      const apiStatus = statusMapToApi[targetColId];
+      if (apiStatus) {
+        updateTask(draggedTaskId, { status: apiStatus }).catch(() => {});
+      }
+
       return next;
     });
 

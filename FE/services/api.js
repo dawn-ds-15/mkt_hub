@@ -474,26 +474,169 @@ export const getMembers = async () => {
   return { data: res.data };
 };
 
+// ===================== FUNNEL DATA =====================
+
+export const getFunnelData = async (periodType = 'year', periodValue = '2026', year = '2026') => {
+  const res = await api.get('/v1/dashboard/funnel', {
+    params: { period_type: periodType, period_value: periodValue, year },
+  });
+  const d = res.data?.data ?? res.data ?? [];
+  return { data: d };
+};
+
+export const getKpiCardsData = async (periodType = 'year', periodValue = '2026', year = '2026') => {
+  const res = await api.get('/v1/dashboard/kpi-cards', {
+    params: { period_type: periodType, period_value: periodValue, year },
+  });
+  const d = res.data?.data ?? res.data ?? [];
+  return { data: d };
+};
+
+// ===================== KPI ROLLOVER =====================
+
+export const getKPIRollover = async (year, week) => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const planRes = await getPlanKPIs(year);
+  const weekStr = `W${String(week).padStart(2, '0')}`;
+  const actualsRes = await getActuals(weekStr);
+  const plan = planRes.data;
+  const actuals = actualsRes.data;
+
+  const totalWeeks = 52;
+  const weeklyTargetRawLeads = Math.round((plan.targetLeads || 0) / totalWeeks);
+  const weeklyTargetMQL = Math.round((plan.mqlTarget || 0) / totalWeeks);
+  const weeklyTargetSQL = Math.round((plan.sqlTarget || 0) / totalWeeks);
+  const weeklyTargetOPP = Math.round((plan.opportunityCount || 0) / totalWeeks);
+  const weeklyTargetClosed = Math.round((plan.closedDealCount || 0) / totalWeeks);
+
+  return {
+    data: [
+      {
+        label: 'Raw Leads',
+        weeklyTarget: weeklyTargetRawLeads,
+        currentActual: actuals.rawLeads || 0,
+      },
+      {
+        label: 'MQL',
+        weeklyTarget: weeklyTargetMQL,
+        currentActual: actuals.mqlActual || 0,
+      },
+      {
+        label: 'SQL',
+        weeklyTarget: weeklyTargetSQL,
+        currentActual: actuals.sqlActual || 0,
+      },
+      {
+        label: 'OPP',
+        weeklyTarget: weeklyTargetOPP,
+        currentActual: 0,
+      },
+      {
+        label: 'Closed Deal',
+        weeklyTarget: weeklyTargetClosed,
+        currentActual: 0,
+      },
+    ],
+  };
+};
+
+// ===================== COMPARE PERIODS =====================
+
+export const getCompareData = async (years = ['2026', '2025'], periodType = 'year', periodValue = '2026') => {
+  const results = await Promise.all(
+    years.map(year =>
+      getKpiCardsData(periodType, periodValue, year).then(r => ({ year, data: r.data }))
+    )
+  );
+  const byYear = {};
+  for (const { year, data } of results) {
+    byYear[year] = {};
+    for (const kpi of data) {
+      byYear[year][kpi.label] = { actual: kpi.actual, plan: kpi.plan, percentVsPlan: kpi.percentVsPlan };
+    }
+  }
+  return { data: byYear };
+};
+
+export const getQuarterlyCompareData = async (selectedYears, metric = 'Raw Leads') => {
+  await new Promise(resolve => setTimeout(resolve, 400));
+
+  const baseValues = {
+    'Raw Leads': [4000, 3400, 2800],
+    'MQL': [2000, 1700, 1400],
+    'SQL': [800, 680, 560],
+    'Won Value': [350000, 290000, 240000],
+  };
+  const bases = baseValues[metric] || baseValues['Raw Leads'];
+
+  const now = new Date();
+  const currentYear = String(now.getFullYear());
+  const currentMonth = now.getMonth() + 1;
+  const currentQuarter = Math.ceil(currentMonth / 3);
+
+  const datasets = selectedYears.map((year, idx) => {
+    const colors = ['bg-primary', 'bg-secondary-fixed-dim', 'bg-surface-container-highest'];
+    const base = bases[idx] || bases[bases.length - 1];
+    const multipliers = [0.6, 0.75, 0.85, 0.9];
+    const values = multipliers.map(m => Math.round(base * m));
+
+    const isEstimated = year === currentYear
+      ? [false, currentQuarter > 1, currentQuarter > 2, currentQuarter > 3]
+      : [false, false, false, false];
+
+    return {
+      year,
+      color: colors[idx] || 'bg-gray-300',
+      values,
+      isEstimated,
+    };
+  });
+
+  return {
+    data: {
+      quarters: ['Quý 1', 'Quý 2', 'Quý 3', 'Quý 4'],
+      datasets,
+    },
+  };
+};
+
+// ===================== CONVERT TO WON =====================
+
+export const convertOpportunityToWon = async (id, signedDate) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { data: { id, status: 'won', signedDate } };
+};
+
 // ===================== MOCK (Legacy) =====================
 
 export const getPlanKPIs = async (year) => {
   await new Promise(resolve => setTimeout(resolve, 300));
-  return { data: { ...mockPlanKPIs, year: year || mockPlanKPIs.year } };
+  const base = savedPlanKPIs || mockPlanKPIs;
+  return { data: { ...base, year: year || base.year } };
 };
+
+let savedPlanKPIs = null;
+let savedActuals = {};
 
 export const savePlanKPIs = async (data) => {
   await new Promise(resolve => setTimeout(resolve, 500));
-  return { data: { ...data, id: Date.now() } };
+  savedPlanKPIs = { ...mockPlanKPIs, ...data, id: Date.now() };
+  return { data: savedPlanKPIs };
 };
 
 export const getActuals = async (week) => {
   await new Promise(resolve => setTimeout(resolve, 300));
+  const cached = savedActuals[week];
+  if (cached) return { data: { ...cached } };
   return { data: { ...mockActuals, week: week || mockActuals.week } };
 };
 
 export const saveActuals = async (data) => {
   await new Promise(resolve => setTimeout(resolve, 500));
-  return { data: { ...data, id: Date.now() } };
+  const week = data.week || mockActuals.week;
+  const saved = { ...mockActuals, ...data, id: Date.now() };
+  savedActuals[week] = saved;
+  return { data: saved };
 };
 
 export const getOpportunities = async () => {

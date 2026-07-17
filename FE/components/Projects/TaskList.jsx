@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { getTaskList, createTask } from '../../services/api';
+import { getTaskList, createTask, deleteTask } from '../../services/api';
 import TaskEditDrawer from './TaskEditDrawer';
 
 const statusStyles = {
@@ -21,6 +21,8 @@ const priorityLabels = {
   medium: 'Trung bình',
   low: 'Thấp',
 };
+
+const priorityWeight = { high: 3, medium: 2, low: 1 };
 
 const statsMeta = [
   { key: 'total', label: 'Tổng cộng', color: 'text-primary' },
@@ -125,6 +127,7 @@ export default function TaskList() {
     if (filters.dateTo) {
       result = result.filter(t => t.due && t.due !== '-' && new Date(t.due) <= new Date(filters.dateTo));
     }
+    result.sort((a, b) => (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0));
     setFilteredTasks(result);
     setPage(1);
   }, [filters, allTasks]);
@@ -178,6 +181,24 @@ export default function TaskList() {
         remark: 'New task',
       };
       setLocalTasks(prev => [...prev, newTask]);
+    }
+  };
+
+  const userRole = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('mkt_hub_user'));
+      return u?.role || 'specialist';
+    } catch { return 'specialist'; }
+  })();
+
+  const handleDeleteTask = async (task) => {
+    if (task.id > 1000000000000) {
+      setLocalTasks(prev => prev.filter(t => t.id !== task.id));
+    } else {
+      try {
+        await deleteTask(task.id);
+        fetchTasks();
+      } catch { fetchTasks(); }
     }
   };
 
@@ -451,9 +472,14 @@ export default function TaskList() {
                           >
                             <span className="material-symbols-outlined text-lg">{task.status === 'done' ? 'visibility' : 'edit'}</span>
                           </button>
-                          <button className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors">
-                            <span className="material-symbols-outlined text-lg">more_vert</span>
-                          </button>
+                          {userRole === 'manager' && (
+                            <button
+                              onClick={() => handleDeleteTask(task)}
+                              className="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-lg text-red-500">delete</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

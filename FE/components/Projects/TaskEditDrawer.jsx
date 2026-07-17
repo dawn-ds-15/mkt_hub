@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { updateTask, deleteTask } from '../../services/api';
 
 const statusOptions = [
-  { value: 'todo', label: 'Chưa bắt đầu' },
-  { value: 'in_progress', label: 'Đang làm' },
-  { value: 'review', label: 'Đang review' },
-  { value: 'done', label: 'Hoàn thành' },
-  { value: 'overdue', label: 'Quá hạn' },
+  { value: 'Planning', label: 'Chưa bắt đầu' },
+  { value: 'Processing', label: 'Đang làm' },
+  { value: 'Done', label: 'Hoàn thành' },
+  { value: 'Backlog', label: 'Backlog' },
+  { value: 'Pending', label: 'Đang chờ' },
+  { value: 'Cancel', label: 'Đã huỷ' },
 ];
 
 const priorityOptions = [
@@ -28,15 +29,13 @@ function getUserRole() {
   return 'manager';
 }
 
-export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, isLocalTask }) {
+export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
   const [name, setName] = useState(task.taskName || task.title || '');
   const [description, setDescription] = useState(task.description || '');
   const [status, setStatus] = useState(() => {
-    if (task.status === 'overdue') return 'overdue';
-    if (task.status === 'in_progress' || task.status === 'processing') return 'in_progress';
-    if (task.status === 'review') return 'review';
-    if (task.status === 'done') return 'done';
-    return 'todo';
+    const backendValue = task.status;
+    if (['Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'Cancel'].includes(backendValue)) return backendValue;
+    return 'Planning';
   });
   const [priority, setPriority] = useState(task.priority ? task.priority.charAt(0).toUpperCase() + task.priority.slice(1) : 'Medium');
   const [startDate, setStartDate] = useState(task.startDate || '');
@@ -55,15 +54,9 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, isLo
 
   const role = getUserRole();
   const isSpecialist = role === 'specialist';
-  const showReason = ['backlog', 'pending', 'cancel'].includes(status);
+  const showReason = ['Backlog', 'Pending', 'Cancel'].includes(status);
   const reasonRequired = showReason && !reason.trim();
-  const reasonLabel = status === 'backlog' ? 'Lý do chuyển Backlog' : 'Lý do Pending / Đã huỷ';
-
-  const statusToApi = (s) => {
-    const map = { todo: 'To Do', in_progress: 'In Progress', review: 'Review', done: 'Done' };
-    if (s === 'overdue') return task.statusLabel || 'To Do';
-    return map[s] || 'To Do';
-  };
+  const reasonLabel = status === 'Backlog' ? 'Lý do chuyển Backlog' : 'Lý do Pending / Đã huỷ';
 
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
@@ -89,10 +82,11 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, isLo
     setError('');
     setSaving(true);
     try {
-      const apiStatus = statusToApi(status);
       const payload = {
-        name,
+        title: name,
         description,
+        status,
+        priority,
         stakeholders,
         startDate: startDate || undefined,
         dueDate: dueDate || undefined,
@@ -101,20 +95,10 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, isLo
         link: link || undefined,
         remark,
       };
-      if (isLocalTask) {
-        payload.status = status;
-        payload.priority = priority.toLowerCase();
-        if (showReason) payload.reason = reason;
-        if (onSaved) onSaved({ ...task, ...payload });
-        if (onClose) onClose();
-      } else {
-        payload.status = apiStatus;
-        payload.priority = priority;
-        if (showReason) payload.reason = reason;
-        await updateTask(task.id, payload);
-        if (onSaved) onSaved();
-        if (onClose) onClose();
-      }
+      if (showReason) payload.reason = reason;
+      await updateTask(task.id, payload);
+      if (onSaved) onSaved();
+      if (onClose) onClose();
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Lưu thất bại';
       setError(Array.isArray(msg) ? msg.join('\n') : msg);
@@ -127,14 +111,9 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, isLo
     if (!window.confirm('Xác nhận xóa task này?')) return;
     setSaving(true);
     try {
-      if (isLocalTask) {
-        if (onDeleted) onDeleted();
-        if (onClose) onClose();
-      } else {
-        await deleteTask(task.id);
-        if (onDeleted) onDeleted();
-        if (onClose) onClose();
-      }
+      await deleteTask(task.id);
+      if (onDeleted) onDeleted();
+      if (onClose) onClose();
     } catch (err) {
       setError('Xóa thất bại');
     } finally {
@@ -233,7 +212,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, isLo
             </div>
           </div>
 
-              {showReason && (
+          {showReason && (
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
                 {reasonLabel} <span className="text-red-500">*</span>

@@ -1,14 +1,14 @@
-import { useEffect, useState, useCallback } from 'react';
-import { getKanbanData, updateTask } from '../../services/api';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { getKanbanData, updateTask, getProjects, getMembers } from '../../services/api';
 
-const statusMapToApi = {
-  todo: 'To Do',
-  'in progress': 'In Progress',
-  review: 'Review',
+const STATUS_TO_API = {
+  planning: 'Planning',
+  processing: 'Processing',
   done: 'Done',
+  backlog: 'Backlog',
+  pending: 'Pending',
+  cancel: 'Cancel',
 };
-
-const KANBAN_CACHE_KEY = 'mkt_hub_kanban_cache';
 
 const priorityBorders = {
   High: 'border-l-red-500',
@@ -31,12 +31,10 @@ function KanbanCard({ task, onDragStart }) {
           <span className="material-symbols-outlined text-lg">more_vert</span>
         </button>
       </div>
-
       <div className="flex items-center gap-1.5 text-xs text-gray-500">
         <span className="material-symbols-outlined text-[15px]">folder</span>
         <span>{task.project}</span>
       </div>
-
       <div className="flex items-center justify-between pt-1.5 border-t border-gray-100">
         <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center text-[10px] font-bold text-white">
           {task.avatar}
@@ -87,31 +85,54 @@ function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, on
 
 export default function KanbanBoard() {
   const [columns, setColumns] = useState([]);
+  const [allRawTasks, setAllRawTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [overColId, setOverColId] = useState(null);
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [draggedFromCol, setDraggedFromCol] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [members, setMembers] = useState([]);
+
+  const [projectFilter, setProjectFilter] = useState('Tất cả dự án');
+  const [assigneeFilter, setAssigneeFilter] = useState('Tất cả mọi người');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
-    const cached = sessionStorage.getItem(KANBAN_CACHE_KEY);
-    if (cached) {
-      try {
-        setColumns(JSON.parse(cached));
-        setLoading(false);
-        return;
-      } catch { /* ignore */ }
-    }
+    getProjects().then(r => setProjects(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+    getMembers().then(r => {
+      const m = Array.isArray(r.data) ? r.data : (r.data?.members || []);
+      setMembers(m);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     getKanbanData().then((res) => {
+      setAllRawTasks([]);
       setColumns(res.data);
       setLoading(false);
     });
   }, []);
 
-  useEffect(() => {
-    if (!loading && columns.length > 0) {
-      sessionStorage.setItem(KANBAN_CACHE_KEY, JSON.stringify(columns));
-    }
-  }, [columns, loading]);
+  const filteredColumns = useMemo(() => {
+    if (!columns.length) return [];
+    return columns.map(col => {
+      let tasks = col.tasks;
+      if (projectFilter !== 'Tất cả dự án') {
+        tasks = tasks.filter(t => t.project === projectFilter || t.projectName === projectFilter);
+      }
+      if (assigneeFilter !== 'Tất cả mọi người') {
+        tasks = tasks.filter(t => t.assignee?.name === assigneeFilter);
+      }
+      if (dateFrom) {
+        tasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) >= new Date(dateFrom));
+      }
+      if (dateTo) {
+        tasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) <= new Date(dateTo));
+      }
+      return { ...col, tasks, badgeCount: tasks.length };
+    });
+  }, [columns, projectFilter, assigneeFilter, dateFrom, dateTo]);
 
   const handleDragStart = useCallback((e, taskId) => {
     setDraggedTaskId(taskId);
@@ -149,6 +170,7 @@ export default function KanbanBoard() {
       return;
     }
 
+    const prevColumns = columns;
     setColumns((prev) => {
       const next = prev.map((col) => ({ ...col, tasks: [...col.tasks] }));
       const fromCol = next.find((c) => c.id === draggedFromCol);
@@ -161,22 +183,19 @@ export default function KanbanBoard() {
       const [movedTask] = fromCol.tasks.splice(taskIdx, 1);
       toCol.tasks.push(movedTask);
 
-      const apiStatus = statusMapToApi[targetColId];
-      if (apiStatus) {
-        updateTask(draggedTaskId, { status: apiStatus }).catch(() => {});
-      }
-
-      return next;
+      return next.map(c => ({ ...c, badgeCount: c.tasks.length }));
     });
+
+    const apiStatus = STATUS_TO_API[targetColId];
+    if (apiStatus) {
+      updateTask(draggedTaskId, { status: apiStatus }).catch(() => {
+        setColumns(prevColumns);
+      });
+    }
 
     setDraggedTaskId(null);
     setDraggedFromCol(null);
-  }, [draggedTaskId, draggedFromCol]);
-
-  const [projectFilter, setProjectFilter] = useState('Tất cả dự án');
-  const [assigneeFilter, setAssigneeFilter] = useState('Tất cả mọi người');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  }, [draggedTaskId, draggedFromCol, columns]);
 
   if (loading) {
     return (
@@ -197,9 +216,7 @@ export default function KanbanBoard() {
             onChange={(e) => setProjectFilter(e.target.value)}
           >
             <option>Tất cả dự án</option>
-            <option>Q3 Brand Campaign</option>
-            <option>Social Media Audit</option>
-            <option>Email Automation</option>
+            {projects.map(p => <option key={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div className="flex flex-col gap-1">
@@ -210,10 +227,7 @@ export default function KanbanBoard() {
             onChange={(e) => setAssigneeFilter(e.target.value)}
           >
             <option>Tất cả mọi người</option>
-            <option>Nguyễn Văn A</option>
-            <option>Trần Thị B</option>
-            <option>Minh Tú</option>
-            <option>Hoàng Nam</option>
+            {members.map(m => <option key={m.id}>{m.name}</option>)}
           </select>
         </div>
         <div className="flex flex-col gap-1">
@@ -240,7 +254,7 @@ export default function KanbanBoard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" style={{ minHeight: 'calc(100vh - 280px)' }}>
-        {columns.map((column) => (
+        {filteredColumns.map((column) => (
           <KanbanColumn
             key={column.id}
             column={column}

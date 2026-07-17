@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { createProject, updateProject, getMembers } from '../../services/api';
 
 const typeMap = {
-  'Nội bộ': 'Internal', 'Khách hàng': 'Client', 'Nghiên cứu': 'Research',
-  'Workshop': 'Workshop', 'Event': 'Event', 'Exhibition': 'Exhibition', 'Webinar': 'Webinar',
+  'Lead Generation': 'Lead Generation', 'Workshop': 'Workshop', 'Online Campaign': 'Online Campaign',
+  'Webinar': 'Webinar', 'Event': 'Event', 'Exhibition': 'Exhibition', 'Awards': 'Awards', 'Production': 'Production',
 };
 const statusMap = { 'Lên kế hoạch': 'Planning', 'Đang thực hiện': 'Active', 'Tạm dừng': 'On Hold', 'Hoàn thành': 'Completed', 'Đã huỷ': 'Cancelled' };
 const eventTypes = ['Workshop', 'Event', 'Exhibition', 'Webinar'];

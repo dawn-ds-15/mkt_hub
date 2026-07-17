@@ -2,8 +2,10 @@ import axios from 'axios';
 
 const TOKEN_KEY = 'mkt_hub_token';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'https://mkt-hub.onrender.com/api';
+
 const api = axios.create({
-  baseURL: 'https://mkt-hub.onrender.com/api',
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -14,6 +16,20 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401 && !err.config?.url?.includes('/auth/login')) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('mkt_hub_user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(err);
+  }
+);
 
 function formatDate(iso) {
   if (!iso) return '-';
@@ -27,8 +43,8 @@ function getInitials(name) {
 
 function taskStatusToMock(status, isOverdue) {
   if (isOverdue) return 'overdue';
-  const map = { Done: 'done', 'In Progress': 'in_progress', Review: 'review', 'To Do': 'todo', Backlog: 'backlog' };
-  return map[status] || 'todo';
+  if (['Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'Cancel'].includes(status)) return status;
+  return 'Planning';
 }
 
 function projectStatusToMock(status, deadline) {
@@ -181,11 +197,15 @@ function transformActivities(activities) {
 }
 
 function transformProjectProgress(progress) {
+  if (!progress || !Array.isArray(progress.projects)) {
+    return { totalPct: 0, projects: [] };
+  }
   return {
-    totalPct: progress.totalPct,
-    projects: progress.projects.map((p) => ({
-      name: p.name,
-      progress: p.progressPct,
+    totalPct: progress.totalPct ?? 0,
+    projects: (progress.projects ?? []).map((p) => ({
+      name: p.name || '',
+      progress: p.progressPct ?? 0,
+      id: p.id,
       color: p.color === 'green' ? 'bg-success'
         : p.color === 'yellow' ? 'bg-warning'
           : p.color === 'red' ? 'bg-danger'
@@ -196,13 +216,16 @@ function transformProjectProgress(progress) {
 
 function transformTaskStatus(taskStatus) {
   if (!taskStatus || !taskStatus.byStatus) {
-    return { total: 0, completed: 0, inProgress: 0, pending: 0, overdue: 0 };
+    return { total: 0, completed: 0, inProgress: 0, pending: 0, waiting: 0, canceled: 0, overdue: 0 };
   }
+  const by = taskStatus.byStatus;
   return {
     total: taskStatus.total ?? 0,
-    completed: taskStatus.byStatus.Done || 0,
-    inProgress: (taskStatus.byStatus['In Progress'] || 0) + (taskStatus.byStatus.Review || 0),
-    pending: taskStatus.byStatus['To Do'] || 0,
+    completed: by.Done || 0,
+    inProgress: by.Processing || 0,
+    pending: by.Planning || 0,
+    waiting: (by.Pending || 0) + (by.Backlog || 0),
+    canceled: by.Cancel || 0,
     overdue: 0,
   };
 }
@@ -226,15 +249,30 @@ export const getDashboardData = async (periodType = 'year', periodValue = '2026'
   const res = await api.get('/v1/dashboard/overview', {
     params: { period_type: periodType, period_value: periodValue, year },
   });
+
   const d = res.data?.data ?? res.data ?? {};
+  const rawAlerts = d.alerts ?? [];
+  const overdueRaw = Array.isArray(rawAlerts) ? rawAlerts : rawAlerts?.overdue ?? [];
+  const upcomingRaw = Array.isArray(rawAlerts) ? [] : rawAlerts?.upcoming ?? [];
+  const filterByYear = (items) => items.filter(a => {
+    const d = a.dueDate || a.due;
+    return d ? String(new Date(d).getFullYear()) === String(year) : true;
+  });
+  const filteredAlerts = Array.isArray(rawAlerts)
+    ? filterByYear(rawAlerts)
+    : { overdue: filterByYear(overdueRaw), upcoming: filterByYear(upcomingRaw) };
+  const alerts = transformAlerts(filteredAlerts);
+  const taskStatus = transformTaskStatus(d.taskStatus ?? d.task_status ?? {});
+  taskStatus.overdue = alerts.filter(a => a.type === 'error').length;
+
   return {
     kpis: transformKpiCards(d.kpiCards ?? d.kpi_cards ?? []),
     funnel: transformFunnel(d.funnel ?? []),
     marketingActivities: transformActivities(d.activities ?? d.marketingActivities ?? d.marketing_activities ?? []),
     projectProgress: transformProjectProgress(d.progress ?? {}).projects,
     totalPct: d.progress?.totalPct ?? 0,
-    taskStatus: transformTaskStatus(d.taskStatus ?? d.task_status ?? {}),
-    alerts: transformAlerts(d.alerts ?? []),
+    taskStatus,
+    alerts,
   };
 };
 
@@ -242,13 +280,25 @@ export const getDashboardData = async (periodType = 'year', periodValue = '2026'
 
 export const login = async (email, password) => {
   const res = await api.post('/auth/login', { email, password });
-  const { access_token, user } = res.data;
-  localStorage.setItem(TOKEN_KEY, access_token);
-  return { data: { token: access_token, user } };
+  const data = res.data?.data ?? res.data;
+  const token = data.access_token || data.token || data.idToken || '';
+  const user = data.user || data.profile || {};
+  if (!token) {
+    throw new Error('Không nhận được token từ máy chủ. Vui lòng thử lại.');
+  }
+  localStorage.setItem(TOKEN_KEY, token);
+  return { data: { token, user } };
 };
 
 export const register = async (name, email, password) => {
-  await api.post('/auth/register', { name, email, password });
+  const regRes = await api.post('/auth/register', { name, email, password });
+  const regData = regRes.data?.data ?? regRes.data;
+  if (regData.access_token || regData.token) {
+    const token = regData.access_token || regData.token;
+    const user = regData.user || regData.profile || {};
+    localStorage.setItem(TOKEN_KEY, token);
+    return { data: { token, user } };
+  }
   return login(email, password);
 };
 
@@ -308,7 +358,7 @@ export const getTaskList = async (filters = {}) => {
     params.projectId = filters.project;
   }
   if (filters.status && filters.status !== 'Tất cả' && filters.status !== 'All Status') {
-    const statusMap = { todo: 'To Do', in_progress: 'In Progress', review: 'Review', done: 'Done' };
+    const statusMap = { todo: 'Planning', in_progress: 'Processing', pending: 'Planning', waiting: 'Pending', done: 'Done', canceled: 'Cancel', backlog: 'Backlog' };
     params.status = statusMap[filters.status] || filters.status;
   }
   if (filters.priority && filters.priority !== 'Tất cả' && filters.priority !== 'All Priorities') {
@@ -352,11 +402,26 @@ export const getTasks = async (filters) => {
 };
 
 export const createTask = async (data) => {
-  const res = await api.post('/v1/tasks', data);
+  const res = await api.post('/v1/tasks', {
+    name: data.title || data.name,
+    description: data.description || '',
+    status: data.status || 'Planning',
+    priority: data.priority ? data.priority.charAt(0).toUpperCase() + data.priority.slice(1) : 'Medium',
+    dueDate: data.dueDate,
+    projectId: data.projectId,
+    assigneeId: data.assigneeId,
+    execWeek: data.execWeek ? Number(data.execWeek) : undefined,
+    execYear: data.execYear ? Number(data.execYear) : undefined,
+    tags: data.tags || [],
+  });
   return { data: res.data };
 };
 
 export const updateTask = async (id, data) => {
+  if (data.status) {
+    const statusMap = { todo: 'Planning', in_progress: 'Processing', review: 'Processing', pending: 'Pending', waiting: 'Pending', done: 'Done', canceled: 'Cancel', backlog: 'Backlog' };
+    data.status = statusMap[data.status] || data.status;
+  }
   const res = await api.patch(`/v1/tasks/${id}`, data);
   return { data: res.data };
 };
@@ -369,15 +434,12 @@ export const deleteTask = async (id) => {
 // ===================== KANBAN =====================
 
 const columnMeta = {
-  'To Do': { title: 'CHƯA BẮT ĐẦU', badgeColor: 'bg-slate-50 text-slate-600' },
-  'In Progress': { title: 'ĐANG LÀM', badgeColor: 'bg-blue-50 text-blue-600' },
-  Review: { title: 'ĐANG REVIEW', badgeColor: 'bg-amber-50 text-amber-600' },
+  Planning: { title: 'CHƯA BẮT ĐẦU', badgeColor: 'bg-slate-50 text-slate-600' },
+  Processing: { title: 'ĐANG LÀM', badgeColor: 'bg-blue-50 text-blue-600' },
   Done: { title: 'HOÀN THÀNH', badgeColor: 'bg-green-50 text-green-600' },
-  Planning: { title: 'LẬP KẾ HOẠCH', badgeColor: 'bg-blue-50 text-blue-600' },
-  Processing: { title: 'ĐANG XỬ LÝ', badgeColor: 'bg-blue-50 text-blue-600' },
+  Backlog: { title: 'BACKLOG', badgeColor: 'bg-amber-50 text-amber-600' },
   Pending: { title: 'ĐANG CHỜ', badgeColor: 'bg-purple-50 text-purple-600' },
   Cancel: { title: 'ĐÃ HUỶ', badgeColor: 'bg-gray-100 text-gray-600' },
-  Overdue: { title: 'QUÁ HẠN', badgeColor: 'bg-red-50 text-red-600' },
 };
 
 const priorityBorders = { High: 'border-l-red-500', Medium: 'border-l-amber-300', Low: 'border-l-gray-200' };
@@ -430,6 +492,12 @@ export const getWeeklyReport = async (filters = {}) => {
       project: filters.project || 'All Projects',
       member: filters.member || 'All Members',
       status: r.log ? 'Đã lưu' : 'Nháp',
+      logNotes: r.log ? {
+        doneNotes: r.log.doneNotes || '',
+        planNotes: r.log.planNotes || '',
+        backlogNotes: r.log.backlogNotes || '',
+        bodNotes: r.log.bodNotes || '',
+      } : null,
       completed: (r.sections.done || []).map((t) => ({
         code: t.id?.slice(0, 8) || '-',
         name: t.name,
@@ -459,83 +527,238 @@ export const getWeeklyReport = async (filters = {}) => {
   };
 };
 
-// ===================== MOCK (Legacy) =====================
+export const saveWeeklyLog = async (data) => {
+  const res = await api.post('/v1/weekly-reports/logs', {
+    week: data.week,
+    year: data.year,
+    projectId: data.projectId || undefined,
+    memberId: data.memberId || undefined,
+    doneNotes: data.doneNotes || '',
+    planNotes: data.planNotes || '',
+    backlogNotes: data.backlogNotes || '',
+    bodNotes: data.bodNotes || '',
+  });
+  return { data: res.data };
+};
 
-import {
-  mockKanbanColumns, mockPlanKPIs, mockActuals, mockOpportunities, mockClosedDeals,
-  mockExpenseSystemParams, mockExpenseList, mockProjectsDropdown, mockExpenseReports,
-  mockExpenseOverview, mockBackupData, mockDropdownKeys, addDropdownValueMock,
-} from '../mocks/data';
+export const exportWeeklyReport = async (week, year, projectId) => {
+  const params = { week, year };
+  if (projectId) params.projectId = projectId;
+  const res = await api.get('/v1/weekly-reports/export.txt', { params, responseType: 'blob' });
+  const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/plain' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `weekly-report-w${week}-${year}.txt`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+  return { success: true };
+};
 
 // ===================== MEMBERS =====================
 
 export const getMembers = async () => {
-  const res = await api.get('/members');
+  const res = await api.get('/auth/members');
   return { data: res.data };
 };
 
 // ===================== FUNNEL DATA =====================
 
-export const getFunnelData = async (periodType = 'year', periodValue = '2026', year = '2026') => {
-  const res = await api.get('/v1/dashboard/funnel', {
-    params: { period_type: periodType, period_value: periodValue, year },
-  });
-  const d = res.data?.data ?? res.data ?? [];
-  return { data: d };
-};
+function getWeekNumbersFromPeriod(periodType, periodValue, year) {
+  const weeks = [];
+  if (periodType === 'week') {
+    const w = parseInt(periodValue, 10);
+    if (w >= 1 && w <= 53) weeks.push(w);
+  } else if (periodType === 'month') {
+    const m = parseInt(periodValue, 10);
+    for (let w = 1; w <= 53; w++) {
+      const d = new Date(year, 0, 4);
+      d.setDate(d.getDate() + (4 - (d.getDay() || 7)) + (w - 1) * 7);
+      if (d.getFullYear() === year && d.getMonth() + 1 === m) weeks.push(w);
+    }
+  } else if (periodType === 'quarter') {
+    const q = parseInt(periodValue, 10);
+    const startM = (q - 1) * 3 + 1;
+    for (let m = startM; m < startM + 3; m++) {
+      weeks.push(...getWeekNumbersFromPeriod('month', m, year));
+    }
+  } else {
+    for (let m = 1; m <= 12; m++) {
+      weeks.push(...getWeekNumbersFromPeriod('month', m, year));
+    }
+  }
+  return [...new Set(weeks)].sort((a, b) => a - b);
+}
+
+function getLocalActualsForWeeks(weeks, year) {
+  const totals = { rawLeads: 0, mqlActual: 0, sqlActual: 0, oppCount: 0, closedCount: 0, pipelineValue: 0, wonValue: 0 };
+  for (const w of weeks) {
+    const key = `mkt_hub_actuals_${year}-W${String(w).padStart(2, '0')}`;
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const d = JSON.parse(stored);
+        totals.rawLeads += Number(d.rawLeads || 0);
+        totals.mqlActual += Number(d.mqlActual || 0);
+        totals.sqlActual += Number(d.sqlActual || 0);
+      }
+    } catch { }
+  }
+  return totals;
+}
+
+function getLocalPlanForYear(year) {
+  const key = `mkt_hub_plan_kpis_${year}`;
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored) return JSON.parse(stored);
+  } catch { }
+  return null;
+}
+
+function getLocalOpportunitiesForYear(year) {
+  const oppKey = 'mkt_hub_opportunities';
+  try {
+    const stored = localStorage.getItem(oppKey);
+    const list = stored ? JSON.parse(stored) : [];
+    return list.filter(o => {
+      if (o.year) return Number(o.year) === Number(year);
+      return true;
+    });
+  } catch { return []; }
+}
+
+function getLocalClosedDealsForYear(year) {
+  const dealKey = 'mkt_hub_closed_deals';
+  try {
+    const stored = localStorage.getItem(dealKey);
+    const list = stored ? JSON.parse(stored) : [];
+    return list.filter(d => {
+      if (d.year) return Number(d.year) === Number(year);
+      const yr = d.signedDate ? new Date(d.signedDate).getFullYear() : null;
+      return yr ? yr === Number(year) : true;
+    });
+  } catch { return []; }
+}
+
+function calcPercentVsPlan(actual, plan) {
+  if (!plan || plan === 0) return 0;
+  return Number(((actual / plan) * 100).toFixed(1));
+}
+
+function getLocalOverrideCards(periodType, periodValue, numericYear) {
+  const weeks = getWeekNumbersFromPeriod(periodType, periodValue, numericYear);
+  const plan = getLocalPlanForYear(numericYear);
+  const actuals = getLocalActualsForWeeks(weeks, numericYear);
+  const opps = getLocalOpportunitiesForYear(numericYear);
+  const deals = getLocalClosedDealsForYear(numericYear);
+  const hasLocalPlan = plan && (plan.targetLeads || plan.mqlTarget || plan.sqlTarget);
+  const hasLocalActuals = actuals.rawLeads > 0 || actuals.mqlActual > 0 || actuals.sqlActual > 0;
+  if (!hasLocalPlan && !hasLocalActuals && !opps.length && !deals.length) return null;
+  return {
+    plan, actuals, opps, deals,
+    targetLeads: plan?.targetLeads || 0, mqlTarget: plan?.mqlTarget || 0, sqlTarget: plan?.sqlTarget || 0,
+    oppTarget: plan?.opportunityCount || 0, closedTarget: plan?.closedDealCount || 0,
+    rawLeads: actuals.rawLeads, mql: actuals.mqlActual, sql: actuals.sqlActual,
+    oppCount: opps.length, closedCount: deals.length,
+    pipelineValue: opps.reduce((s, o) => s + Number(o.fees || 0), 0),
+    wonValue: deals.reduce((s, d) => s + Number(d.finalFees || 0), 0),
+  };
+}
+
+function buildCardsFromLocal(loc) {
+  if (!loc) return null;
+  const { targetLeads, mqlTarget, sqlTarget, oppTarget, closedTarget, rawLeads, mql, sql, oppCount, closedCount, pipelineValue, wonValue } = loc;
+  const pipelinePlan = loc.pipelinePlan || 0;
+  const totalDealFees = loc.deals.reduce((s, d) => s + Number(d.finalFees || 0), 0);
+  const cac = closedCount > 0 && totalDealFees > 0 ? Math.round(totalDealFees / closedCount * 0.3) : 0;
+  const ltv = closedCount > 0 ? Math.round(totalDealFees / closedCount * 3) : 0;
+  const ratio = cac > 0 ? Number((ltv / cac).toFixed(1)) : 0;
+  let health = 'gray';
+  if (ratio > 0) {
+    if (ratio < 1.5) health = 'red';
+    else if (ratio < 2.5) health = 'yellow';
+    else if (ratio < 4.0) health = 'green';
+    else health = 'blue';
+  }
+  return [
+    { label: 'Raw Leads', color: 'blue', actual: rawLeads, plan: targetLeads, percentVsPlan: calcPercentVsPlan(rawLeads, targetLeads), convPct: null },
+    { label: 'MQL', color: 'yellow', actual: mql, plan: mqlTarget, percentVsPlan: calcPercentVsPlan(mql, mqlTarget), convPct: rawLeads > 0 ? Number(((mql / rawLeads) * 100).toFixed(1)) : null },
+    { label: 'SQL', color: 'orange', actual: sql, plan: sqlTarget, percentVsPlan: calcPercentVsPlan(sql, sqlTarget), convPct: mql > 0 ? Number(((sql / mql) * 100).toFixed(1)) : null },
+    { label: 'OPP', color: 'purple-light', actual: oppCount, plan: oppTarget, percentVsPlan: calcPercentVsPlan(oppCount, oppTarget), convPct: sql > 0 ? Number(((oppCount / sql) * 100).toFixed(1)) : null },
+    { label: 'Closed Deal', color: 'green', actual: closedCount, plan: closedTarget, percentVsPlan: calcPercentVsPlan(closedCount, closedTarget), convPct: oppCount > 0 ? Number(((closedCount / oppCount) * 100).toFixed(1)) : null },
+    { label: 'Pipeline Value', color: 'purple', actual: pipelineValue, plan: pipelinePlan, percentVsPlan: calcPercentVsPlan(pipelineValue, pipelinePlan), convPct: null },
+    { label: 'CAC / LTV', color: 'gray', cac, ltv, ratio, health },
+  ];
+}
 
 export const getKpiCardsData = async (periodType = 'year', periodValue = '2026', year = '2026') => {
-  const res = await api.get('/v1/dashboard/kpi-cards', {
-    params: { period_type: periodType, period_value: periodValue, year },
-  });
-  const d = res.data?.data ?? res.data ?? [];
-  return { data: d };
+  const numericYear = parseInt(year, 10);
+  const localOverride = getLocalOverrideCards(periodType, periodValue, numericYear);
+  if (localOverride) return { data: buildCardsFromLocal(localOverride) };
+
+  let apiCards = [];
+  try {
+    const res = await api.get('/v1/dashboard/kpi-cards', {
+      params: { period_type: periodType, period_value: periodValue, year },
+    });
+    apiCards = res.data?.data ?? res.data ?? [];
+  } catch { apiCards = []; }
+  return { data: apiCards };
+};
+
+export const getFunnelData = async (periodType = 'year', periodValue = '2026', year = '2026') => {
+  const numericYear = parseInt(year, 10);
+  const localOverride = getLocalOverrideCards(periodType, periodValue, numericYear);
+  if (localOverride) {
+    const cards = buildCardsFromLocal(localOverride);
+    const funnelSteps = ['Raw Leads', 'MQL', 'SQL', 'OPP', 'Closed Deal'];
+    const data = cards.filter(c => funnelSteps.includes(c.label)).map(c => ({
+      step: c.label, actual: c.actual, plan: c.plan,
+      convPct: c.convPct, percentVsPlan: c.percentVsPlan,
+      widthPct: cards[0]?.actual > 0 ? Number(((c.actual / cards[0].actual) * 100).toFixed(1)) : 0,
+    }));
+    return { data };
+  }
+
+  let apiData = [];
+  try {
+    const res = await api.get('/v1/dashboard/funnel', {
+      params: { period_type: periodType, period_value: periodValue, year },
+    });
+    apiData = res.data?.data ?? res.data ?? [];
+  } catch { apiData = []; }
+  return { data: apiData };
 };
 
 // ===================== KPI ROLLOVER =====================
 
 export const getKPIRollover = async (year, week) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const planRes = await getPlanKPIs(year);
-  const weekStr = `W${String(week).padStart(2, '0')}`;
-  const actualsRes = await getActuals(weekStr);
-  const plan = planRes.data;
-  const actuals = actualsRes.data;
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const numericYear = parseInt(year, 10);
+  const weekNum = parseInt(week, 10);
+  const plan = getLocalPlanForYear(numericYear);
+  const weekKey = `${numericYear}-W${String(weekNum).padStart(2, '0')}`;
+  const weekKeyStorage = `mkt_hub_actuals_${weekKey}`;
+  let actuals = { rawLeads: 0, mqlActual: 0, sqlActual: 0 };
+  try {
+    const stored = localStorage.getItem(weekKeyStorage);
+    if (stored) actuals = { ...actuals, ...JSON.parse(stored) };
+  } catch { }
 
   const totalWeeks = 52;
-  const weeklyTargetRawLeads = Math.round((plan.targetLeads || 0) / totalWeeks);
-  const weeklyTargetMQL = Math.round((plan.mqlTarget || 0) / totalWeeks);
-  const weeklyTargetSQL = Math.round((plan.sqlTarget || 0) / totalWeeks);
-  const weeklyTargetOPP = Math.round((plan.opportunityCount || 0) / totalWeeks);
-  const weeklyTargetClosed = Math.round((plan.closedDealCount || 0) / totalWeeks);
+  const weeklyTargetRawLeads = Math.round((plan?.targetLeads || 0) / totalWeeks);
+  const weeklyTargetMQL = Math.round((plan?.mqlTarget || 0) / totalWeeks);
+  const weeklyTargetSQL = Math.round((plan?.sqlTarget || 0) / totalWeeks);
+  const weeklyTargetOPP = Math.round((plan?.opportunityCount || 0) / totalWeeks);
+  const weeklyTargetClosed = Math.round((plan?.closedDealCount || 0) / totalWeeks);
 
   return {
     data: [
-      {
-        label: 'Raw Leads',
-        weeklyTarget: weeklyTargetRawLeads,
-        currentActual: actuals.rawLeads || 0,
-      },
-      {
-        label: 'MQL',
-        weeklyTarget: weeklyTargetMQL,
-        currentActual: actuals.mqlActual || 0,
-      },
-      {
-        label: 'SQL',
-        weeklyTarget: weeklyTargetSQL,
-        currentActual: actuals.sqlActual || 0,
-      },
-      {
-        label: 'OPP',
-        weeklyTarget: weeklyTargetOPP,
-        currentActual: 0,
-      },
-      {
-        label: 'Closed Deal',
-        weeklyTarget: weeklyTargetClosed,
-        currentActual: 0,
-      },
+      { label: 'Raw Leads', weeklyTarget: weeklyTargetRawLeads, currentActual: actuals.rawLeads || 0 },
+      { label: 'MQL', weeklyTarget: weeklyTargetMQL, currentActual: actuals.mqlActual || 0 },
+      { label: 'SQL', weeklyTarget: weeklyTargetSQL, currentActual: actuals.sqlActual || 0 },
+      { label: 'OPP', weeklyTarget: weeklyTargetOPP, currentActual: 0 },
+      { label: 'Closed Deal', weeklyTarget: weeklyTargetClosed, currentActual: 0 },
     ],
   };
 };
@@ -552,175 +775,348 @@ export const getCompareData = async (years = ['2026', '2025'], periodType = 'yea
   for (const { year, data } of results) {
     byYear[year] = {};
     for (const kpi of data) {
-      byYear[year][kpi.label] = { actual: kpi.actual, plan: kpi.plan, percentVsPlan: kpi.percentVsPlan };
+      byYear[year][kpi.label] = {
+        actual: kpi.actual,
+        plan: kpi.plan,
+        percentVsPlan: kpi.percentVsPlan,
+        cac: kpi.cac,
+        ltv: kpi.ltv,
+        ratio: kpi.ratio,
+        health: kpi.health,
+      };
     }
   }
   return { data: byYear };
 };
 
 export const getQuarterlyCompareData = async (selectedYears, metric = 'Raw Leads') => {
-  await new Promise(resolve => setTimeout(resolve, 400));
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const colors = ['bg-primary', 'bg-secondary-fixed-dim', 'bg-surface-container-highest', 'bg-gray-300'];
+  const labelToKey = { 'Raw Leads': 'Raw Leads', 'MQL': 'MQL', 'SQL': 'SQL', 'Won Value': 'Won Value', 'Closed Deal': 'Closed Deal', 'OPP': 'OPP' };
+  const apiMetric = labelToKey[metric] || 'Raw Leads';
 
-  const baseValues = {
-    'Raw Leads': [4000, 3400, 2800],
-    'MQL': [2000, 1700, 1400],
-    'SQL': [800, 680, 560],
-    'Won Value': [350000, 290000, 240000],
-  };
-  const bases = baseValues[metric] || baseValues['Raw Leads'];
+  const datasets = await Promise.all(selectedYears.map(async (year, idx) => {
+    const numericYear = parseInt(year, 10);
+    const hasLocal = getLocalPlanForYear(numericYear) ||
+      getLocalActualsForWeeks(getWeekNumbersFromPeriod('year', '1', numericYear), numericYear).rawLeads > 0;
 
-  const now = new Date();
-  const currentYear = String(now.getFullYear());
-  const currentMonth = now.getMonth() + 1;
-  const currentQuarter = Math.ceil(currentMonth / 3);
+    if (hasLocal) {
+      const values = [];
+      for (let q = 1; q <= 4; q++) {
+        const weeks = getWeekNumbersFromPeriod('quarter', q, numericYear);
+        const actuals = getLocalActualsForWeeks(weeks, numericYear);
+        const opps = getLocalOpportunitiesForYear(numericYear);
+        const deals = getLocalClosedDealsForYear(numericYear);
+        let val = 0;
+        if (metric === 'Raw Leads') val = actuals.rawLeads;
+        else if (metric === 'MQL') val = actuals.mqlActual;
+        else if (metric === 'SQL') val = actuals.sqlActual;
+        else if (metric === 'Won Value') val = deals.reduce((s, d) => s + Number(d.finalFees || 0), 0);
+        else if (metric === 'Closed Deal') val = deals.length;
+        else if (metric === 'OPP') val = opps.length;
+        values.push(val);
+      }
+      return { year, color: colors[idx % colors.length], values, isEstimated: [false, false, false, false] };
+    }
 
-  const datasets = selectedYears.map((year, idx) => {
-    const colors = ['bg-primary', 'bg-secondary-fixed-dim', 'bg-surface-container-highest'];
-    const base = bases[idx] || bases[bases.length - 1];
-    const multipliers = [0.6, 0.75, 0.85, 0.9];
-    const values = multipliers.map(m => Math.round(base * m));
+    try {
+      const res = await api.get('/v1/dashboard/kpi-cards', {
+        params: { period_type: 'year', period_value: year, year },
+      });
+      const cards = res.data?.data ?? res.data ?? [];
+      const total = cards.find(c => c.label === apiMetric)?.actual || 0;
+      const qVals = await Promise.all([1, 2, 3, 4].map(async (q) => {
+        const qRes = await api.get('/v1/dashboard/kpi-cards', {
+          params: { period_type: 'quarter', period_value: q, year },
+        });
+        const qCards = qRes.data?.data ?? qRes.data ?? [];
+        return qCards.find(c => c.label === apiMetric)?.actual || 0;
+      }));
+      return { year, color: colors[idx % colors.length], values: qVals, isEstimated: [false, false, false, false] };
+    } catch {
+      return { year, color: colors[idx % colors.length], values: [0, 0, 0, 0], isEstimated: [false, false, false, false] };
+    }
+  }));
 
-    const isEstimated = year === currentYear
-      ? [false, currentQuarter > 1, currentQuarter > 2, currentQuarter > 3]
-      : [false, false, false, false];
-
-    return {
-      year,
-      color: colors[idx] || 'bg-gray-300',
-      values,
-      isEstimated,
-    };
-  });
-
-  return {
-    data: {
-      quarters: ['Quý 1', 'Quý 2', 'Quý 3', 'Quý 4'],
-      datasets,
-    },
-  };
+  return { data: { quarters: ['Quý 1', 'Quý 2', 'Quý 3', 'Quý 4'], datasets } };
 };
 
-// ===================== CONVERT TO WON =====================
+// ===================== LOCAL STORAGE HELPERS =====================
 
-export const convertOpportunityToWon = async (id, signedDate) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return { data: { id, status: 'won', signedDate } };
-};
+const LS_PREFIX = 'mkt_hub_';
 
-// ===================== MOCK (Legacy) =====================
+function lsGet(key) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : null;
+  } catch { return null; }
+}
+
+function lsSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { }
+}
+
+function lsGetList(key) {
+  const v = lsGet(key);
+  return Array.isArray(v) ? v : [];
+}
+
+function lsSaveList(key, list) {
+  lsSet(key, list);
+}
+
+// ===================== PLAN KPIs =====================
 
 export const getPlanKPIs = async (year) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const base = savedPlanKPIs || mockPlanKPIs;
-  return { data: { ...base, year: year || base.year } };
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const key = `${LS_PREFIX}plan_kpis_${year}`;
+  const stored = lsGet(key);
+  if (stored) return { data: stored };
+  return { data: { year: Number(year), targetLeads: 0, mqlTarget: 0, sqlTarget: 0, opportunityCount: 0, closedDealCount: 0, pipelineValue: 0, wonValue: 0 } };
 };
-
-let savedPlanKPIs = null;
-let savedActuals = {};
 
 export const savePlanKPIs = async (data) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  savedPlanKPIs = { ...mockPlanKPIs, ...data, id: Date.now() };
-  return { data: savedPlanKPIs };
-};
-
-export const getActuals = async (week) => {
   await new Promise(resolve => setTimeout(resolve, 300));
-  const cached = savedActuals[week];
-  if (cached) return { data: { ...cached } };
-  return { data: { ...mockActuals, week: week || mockActuals.week } };
-};
-
-export const saveActuals = async (data) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const week = data.week || mockActuals.week;
-  const saved = { ...mockActuals, ...data, id: Date.now() };
-  savedActuals[week] = saved;
+  const year = data.year || new Date().getFullYear();
+  const key = `${LS_PREFIX}plan_kpis_${year}`;
+  const existing = lsGet(key) || {};
+  const saved = { ...existing, ...data, id: Date.now(), year };
+  lsSet(key, saved);
   return { data: saved };
 };
 
-export const getOpportunities = async () => {
+// ===================== ACTUALS =====================
+
+export const getActuals = async (week) => {
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const key = `${LS_PREFIX}actuals_${week}`;
+  const stored = lsGet(key);
+  if (stored) return { data: stored };
+  return { data: { week, rawLeads: 0, mqlActual: 0, sqlActual: 0 } };
+};
+
+export const saveActuals = async (data) => {
   await new Promise(resolve => setTimeout(resolve, 300));
-  return { data: [...mockOpportunities] };
+  const week = data.week;
+  const key = `${LS_PREFIX}actuals_${week}`;
+  const existing = lsGet(key) || {};
+  const saved = { ...existing, ...data, id: Date.now() };
+  lsSet(key, saved);
+  return { data: saved };
+};
+
+// ===================== OPPORTUNITIES =====================
+
+const OPP_KEY = `${LS_PREFIX}opportunities`;
+const DEAL_KEY = `${LS_PREFIX}closed_deals`;
+
+export const getOpportunities = async () => {
+  await new Promise(resolve => setTimeout(resolve, 200));
+  return { data: lsGetList(OPP_KEY) };
 };
 
 export const addOpportunity = async (data) => {
-  await new Promise(resolve => setTimeout(resolve, 400));
-  return { data: { ...data, id: Date.now() } };
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const list = lsGetList(OPP_KEY);
+  const newItem = { ...data, id: Date.now(), status: 'open' };
+  list.push(newItem);
+  lsSaveList(OPP_KEY, list);
+  return { data: newItem };
 };
 
 export const updateOpportunity = async (id, data) => {
-  await new Promise(resolve => setTimeout(resolve, 400));
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const list = lsGetList(OPP_KEY);
+  const idx = list.findIndex(o => o.id === id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...data };
+    lsSaveList(OPP_KEY, list);
+    return { data: list[idx] };
+  }
   return { data: { ...data, id } };
 };
 
 export const convertToWon = async (id) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return { data: { id, status: 'won' } };
+  return convertOpportunityToWon(id, new Date().toISOString().split('T')[0]);
 };
+
+export const convertOpportunityToWon = async (id, signedDate) => {
+  await new Promise(resolve => setTimeout(resolve, 400));
+  const list = lsGetList(OPP_KEY);
+  const opp = list.find(o => o.id === id);
+  if (opp) {
+    opp.status = 'won';
+    opp.wonDate = signedDate;
+    lsSaveList(OPP_KEY, list);
+  }
+
+  const deals = lsGetList(DEAL_KEY);
+  const newDeal = {
+    id: Date.now() + Math.random(),
+    customer: opp?.companyName || 'Unknown',
+    contract: opp?.project || '-',
+    finalFees: Number(opp?.fees || 0),
+    signedDate: signedDate || new Date().toISOString().split('T')[0],
+    status: 'completed',
+  };
+  deals.push(newDeal);
+  lsSaveList(DEAL_KEY, deals);
+
+  return { data: { id, status: 'won', signedDate } };
+};
+
+// ===================== CLOSED DEALS =====================
 
 export const getClosedDeals = async () => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return { data: [...mockClosedDeals] };
+  await new Promise(resolve => setTimeout(resolve, 200));
+  return { data: lsGetList(DEAL_KEY) };
 };
 
+// ===================== EXPENSES =====================
+
 export const getExpenseSystemParams = async () => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return { data: [...mockExpenseSystemParams] };
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const key = `${LS_PREFIX}expense_params`;
+  const stored = lsGet(key);
+  return { data: stored || [] };
 };
 
 export const saveExpenseSystemParam = async (data) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return { data: { ...data, id: Date.now() } };
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const key = `${LS_PREFIX}expense_params`;
+  const list = lsGetList(key);
+  const newItem = { ...data, id: Date.now() };
+  list.push(newItem);
+  lsSaveList(key, list);
+  return { data: newItem };
 };
 
 export const getExpenseList = async (project) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  let list = [...mockExpenseList];
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const key = `${LS_PREFIX}expense_list`;
+  let list = lsGetList(key);
   if (project) list = list.filter(e => e.project === project);
   return { data: list };
 };
 
 export const saveExpense = async (data) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return { data: { ...data, id: Date.now() } };
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const key = `${LS_PREFIX}expense_list`;
+  const list = lsGetList(key);
+  const newItem = { ...data, id: Date.now() };
+  list.push(newItem);
+  lsSaveList(key, list);
+  return { data: newItem };
 };
 
 export const getExpenseReports = async () => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return { data: JSON.parse(JSON.stringify(mockExpenseReports)) };
+  await new Promise(resolve => setTimeout(resolve, 200));
+  return { data: { costByProjectType: [], trendData: [], budgetVsActual: [], detailRows: [], totalProjects: 0 } };
 };
 
 export const getExpenseOverview = async () => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return { data: JSON.parse(JSON.stringify(mockExpenseOverview)) };
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const key = `${LS_PREFIX}expense_overview`;
+  const stored = lsGet(key);
+  return { data: stored || { kpis: [], budgetAllocation: [], projectExpenses: [], totalProjects: 0 } };
 };
 
 export const getProjectsDropdown = async () => {
   await new Promise(resolve => setTimeout(resolve, 200));
-  return { data: [...mockProjectsDropdown] };
+  const key = `${LS_PREFIX}projects_dropdown`;
+  const stored = lsGet(key);
+  return { data: stored || [] };
 };
 
 export const getBackupData = async () => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return { data: JSON.parse(JSON.stringify(mockBackupData)) };
+  await new Promise(resolve => setTimeout(resolve, 200));
+  return { data: { snapshots: [], totalSize: '0 B', lastBackup: null, integrityCheck: 'N/A', diskUsage: '0 / 0 GB', autoSnapshot: 'None' } };
 };
 
 export const getDropdownKeys = async () => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return { data: JSON.parse(JSON.stringify(mockDropdownKeys)) };
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const key = `${LS_PREFIX}dropdown_keys`;
+  const stored = lsGet(key);
+  return { data: stored || [] };
 };
 
 export const addDropdownValue = async (keyId, label) => {
   await new Promise(resolve => setTimeout(resolve, 200));
-  const newVal = addDropdownValueMock(keyId, label);
-  return { data: newVal };
+  const keys = lsGetList(`${LS_PREFIX}dropdown_keys`);
+  const k = keys.find(k => k.id === keyId);
+  if (k) {
+    const newVal = { id: Date.now(), label };
+    if (!k.values) k.values = [];
+    k.values.push(newVal);
+    lsSaveList(`${LS_PREFIX}dropdown_keys`, keys);
+    return { data: newVal };
+  }
+  return { data: { id: Date.now(), label } };
 };
 
 export const deleteDropdownValue = async (keyId, valueId) => {
   await new Promise(resolve => setTimeout(resolve, 200));
+  const keys = lsGetList(`${LS_PREFIX}dropdown_keys`);
+  const k = keys.find(k => k.id === keyId);
+  if (k && k.values) {
+    k.values = k.values.filter(v => v.id !== valueId);
+    lsSaveList(`${LS_PREFIX}dropdown_keys`, keys);
+  }
   return { success: true };
 };
+
+export const deleteCompareData = async (years) => {
+  try {
+    await api.delete('/v1/compare/data', { data: { years } });
+  } catch {
+    // backend may not support this endpoint
+  }
+  return { success: true };
+};
+
+export const generateAIReport = async (params) => {
+  const payload = {
+    data: params.compareData,
+    years: params.years,
+    periodType: params.periodType,
+    periodValue: params.periodValue,
+    insights: params.insights,
+  };
+  try {
+    const res = await api.post('/v1/ai/report', payload);
+    return { data: res.data };
+  } catch {
+    const report = buildLocalAIReport(payload);
+    return { data: report };
+  }
+};
+
+function buildLocalAIReport({ data, years, insights }) {
+  const baseYear = years?.[0] || '2026';
+  const base = data?.[baseYear] || {};
+  const rl = base['Raw Leads'];
+  const mql = base['MQL'];
+  const sql = base['SQL'];
+  const won = base['Won Value'];
+  const lines = [];
+  lines.push(`BÁO CÁO PHÂN TÍCH MARKETING - ${baseYear}\n`);
+  lines.push(`1. Tổng quan`);
+  lines.push(`   - Raw Leads: ${rl?.actual?.toLocaleString() || 0} (đạt ${Math.round(rl?.percentVsPlan || 0)}% kế hoạch)`);
+  lines.push(`   - MQL: ${mql?.actual?.toLocaleString() || 0}`);
+  lines.push(`   - SQL: ${sql?.actual?.toLocaleString() || 0}`);
+  lines.push(`   - Giá trị thắng: $${(won?.actual || 0).toLocaleString()}\n`);
+  lines.push(`2. Hiệu suất chuyển đổi`);
+  const mqlRate = rl?.actual > 0 ? ((mql?.actual || 0) / rl.actual * 100).toFixed(1) : '0.0';
+  const sqlRate = mql?.actual > 0 ? ((sql?.actual || 0) / mql.actual * 100).toFixed(1) : '0.0';
+  lines.push(`   - Tỷ lệ MQL/Raw Leads: ${mqlRate}%`);
+  lines.push(`   - Tỷ lệ SQL/MQL: ${sqlRate}%\n`);
+  lines.push(`3. Khuyến nghị`);
+  if (rl?.percentVsPlan < 100) lines.push(`   - Tăng cường chiến dịch tạo Lead để đạt chỉ tiêu.`);
+  else lines.push(`   - Duy trì hiệu suất tạo Lead hiện tại.`);
+  if (sql?.percentVsPlan < 100) lines.push(`   - Cải thiện chất lượng Lead để nâng tỷ lệ SQL.`);
+  lines.push(`   - Rà soát ngân sách CAC/LTV để tối ưu ROI.`);
+  return { report: lines.join('\n'), generatedAt: new Date().toISOString() };
+}
 
 export default {
   getDashboardData,
@@ -746,6 +1142,13 @@ export default {
   updateOpportunity,
   convertToWon,
   getClosedDeals,
+  getFunnelData,
+  getKpiCardsData,
+  getKPIRollover,
+  getCompareData,
+  getQuarterlyCompareData,
+  convertOpportunityToWon,
+  getMembers,
   getExpenseSystemParams,
   saveExpenseSystemParam,
   getExpenseList,
@@ -757,4 +1160,6 @@ export default {
   getDropdownKeys,
   addDropdownValue,
   deleteDropdownValue,
+  deleteCompareData,
+  generateAIReport,
 };

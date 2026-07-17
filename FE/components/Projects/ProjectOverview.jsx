@@ -1,23 +1,24 @@
 const statusConfig = {
   near_deadline: { label: 'Sắp hết hạn', bg: 'bg-amber-100', text: 'text-amber-700' },
-  on_track: { label: 'Đúng tiến độ', bg: 'bg-green-100', text: 'text-green-700' },
-  planning: { label: 'Lên kế hoạch', bg: 'bg-blue-100', text: 'text-blue-700' },
   active: { label: 'Đang thực hiện', bg: 'bg-primary/10', text: 'text-primary' },
+  planning: { label: 'Lên kế hoạch', bg: 'bg-blue-100', text: 'text-blue-700' },
   completed: { label: 'Hoàn thành', bg: 'bg-green-100', text: 'text-green-700' },
   cancelled: { label: 'Đã huỷ', bg: 'bg-red-100', text: 'text-red-700' },
   on_hold: { label: 'Tạm dừng', bg: 'bg-amber-100', text: 'text-amber-700' },
 };
 
 const taskStatusConfig = {
-  done: { label: 'Hoàn thành', bg: 'bg-green-100', text: 'text-green-700' },
-  in_progress: { label: 'Đang làm', bg: 'bg-blue-100', text: 'text-blue-700' },
-  todo: { label: 'Chưa bắt đầu', bg: 'bg-slate-100', text: 'text-slate-600' },
-  review: { label: 'Đang review', bg: 'bg-amber-100', text: 'text-amber-700' },
+  Done: { label: 'Hoàn thành', bg: 'bg-green-100', text: 'text-green-700' },
+  Processing: { label: 'Đang làm', bg: 'bg-blue-100', text: 'text-blue-700' },
+  Planning: { label: 'Chưa bắt đầu', bg: 'bg-slate-100', text: 'text-slate-600' },
+  Backlog: { label: 'Backlog', bg: 'bg-amber-100', text: 'text-amber-700' },
+  Pending: { label: 'Đang chờ', bg: 'bg-purple-100', text: 'text-purple-700' },
+  Cancel: { label: 'Đã huỷ', bg: 'bg-gray-100', text: 'text-gray-600' },
   overdue: { label: 'Quá hạn', bg: 'bg-red-100', text: 'text-red-700' },
 };
 
 export default function ProjectOverview({ project, onClose }) {
-  const st = statusConfig[project.status] || statusConfig.on_track;
+  const st = statusConfig[project.status] || statusConfig.active;
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-2xl overflow-hidden">

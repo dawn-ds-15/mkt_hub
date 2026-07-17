@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getOpportunities, addOpportunity, convertOpportunityToWon } from '../../services/api';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { getOpportunities, addOpportunity, updateOpportunity, convertOpportunityToWon } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 
 const emptyRow = {
   companyName: '',
@@ -15,10 +16,12 @@ function getTodayISO() {
 }
 
 export default function OpportunitiesTable({ onConvertSuccess }) {
+  const addToast = useToast();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [convertingIndex, setConvertingIndex] = useState(null);
   const [removingIds, setRemovingIds] = useState(new Set());
+  const saveTimers = useRef({});
 
   const [showModal, setShowModal] = useState(false);
   const [modalIndex, setModalIndex] = useState(null);
@@ -41,16 +44,30 @@ export default function OpportunitiesTable({ onConvertSuccess }) {
     loadOpportunities();
   }, [loadOpportunities]);
 
-  const addRow = () => {
-    setRows(prev => [...prev, { ...emptyRow, id: Date.now() }]);
+  const addRow = async () => {
+    try {
+      const res = await addOpportunity({ ...emptyRow });
+      setRows(prev => [...prev, { ...res.data }]);
+      addToast('Đã thêm cơ hội mới!', 'success');
+    } catch {
+      setRows(prev => [...prev, { ...emptyRow, id: Date.now() }]);
+    }
   };
 
   const handleRowChange = (index, field, value) => {
+    const prevRow = rows[index];
+    const updatedRow = { ...prevRow, [field]: value };
     setRows(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
+      const copy = [...prev];
+      copy[index] = updatedRow;
+      return copy;
     });
+    if (saveTimers.current[index]) clearTimeout(saveTimers.current[index]);
+    saveTimers.current[index] = setTimeout(async () => {
+      try {
+        await updateOpportunity(updatedRow.id, updatedRow);
+      } catch {}
+    }, 500);
   };
 
   const openConvertModal = (index) => {
@@ -63,11 +80,12 @@ export default function OpportunitiesTable({ onConvertSuccess }) {
     if (modalIndex == null) return;
     const row = rows[modalIndex];
     if (!row.companyName) {
-      alert('Vui lòng nhập tên công ty!');
+      addToast('Vui lòng nhập tên công ty!', 'error');
       return;
     }
     setModalSubmitting(true);
     try {
+      await updateOpportunity(row.id, { ...row });
       await convertOpportunityToWon(row.id, signedDate);
       setRemovingIds(prev => new Set([...prev, row.id]));
       setTimeout(() => {
@@ -79,11 +97,12 @@ export default function OpportunitiesTable({ onConvertSuccess }) {
         });
         if (onConvertSuccess) onConvertSuccess();
       }, 400);
+      addToast('Chuyển đổi cơ hội thành Closed Deal thành công!', 'success');
       setShowModal(false);
       setModalIndex(null);
     } catch (error) {
       console.error('Error converting to won:', error);
-      alert('Có lỗi xảy ra khi chuyển đổi!');
+      addToast('Có lỗi xảy ra khi chuyển đổi!', 'error');
     } finally {
       setModalSubmitting(false);
     }

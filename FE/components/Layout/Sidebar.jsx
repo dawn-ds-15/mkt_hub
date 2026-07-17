@@ -1,4 +1,5 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 const navItems = [
@@ -9,11 +10,25 @@ const navItems = [
   { label: 'Quản lý Dữ liệu', href: '/data' },
 ];
 
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
+
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
   const { year, setYear } = useDashboard();
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+
+  useEffect(() => {
+    import('../../services/api').then(({ getProjects }) => {
+      getProjects().then(res => {
+        setProjects(res.data);
+      }).catch(() => {});
+    });
+  }, []);
+
   return (
     <aside className="fixed left-0 top-0 h-full w-sidebar-width bg-sidebar-bg flex flex-col p-4 overflow-y-auto z-50">
       <div className="mb-8 px-2 flex items-center gap-3">
@@ -28,16 +43,16 @@ export default function Sidebar() {
 
       <nav className="flex-1 space-y-1">
         {navItems.map((item) => (
-          <a
+          <Link
             key={item.label}
-            href={item.href}
+            to={item.href}
             className={currentPath === item.href || (item.href !== '/' && currentPath.startsWith(item.href))
               ? 'sidebar-active flex items-center gap-3 px-3 py-2.5 transition-colors'
               : 'text-outline-variant hover:text-white flex items-center gap-3 px-3 py-2.5 transition-colors group'
             }
           >
             <span className="font-body-md text-body-md">{item.label}</span>
-          </a>
+          </Link>
         ))}
       </nav>
 
@@ -51,16 +66,22 @@ export default function Sidebar() {
               onChange={(e) => setYear(e.target.value)}
               className="w-full bg-slate-800 border-none rounded text-white text-xs py-1.5 focus:ring-1 focus:ring-primary"
             >
-              {[2026, 2025, 2024, 2023].map((y) => (
-                <option key={y}>{y}</option>
+              {YEAR_OPTIONS.map((y) => (
+                <option key={y} value={y}>{y}</option>
               ))}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-[11px] text-slate-400">Dự án</label>
-            <select className="w-full bg-slate-800 border-none rounded text-white text-xs py-1.5 focus:ring-1 focus:ring-primary">
-              <option>Tất cả</option>
-              <option>Chiến dịch Tết</option>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full bg-slate-800 border-none rounded text-white text-xs py-1.5 focus:ring-1 focus:ring-primary"
+            >
+              <option value="">Tất cả</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
             </select>
           </div>
         </div>

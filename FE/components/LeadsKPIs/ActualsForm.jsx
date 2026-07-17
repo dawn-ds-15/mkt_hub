@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { getActuals, saveActuals } from '../../services/api';
 import OpportunitiesTable from './OpportunitiesTable';
 import ClosedDealsTable from './ClosedDealsTable';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function ActualsForm() {
+  const addToast = useToast();
   const getCurrentWeek = () => {
     const now = new Date();
     const start = new Date(now.getFullYear(), 0, 1);
@@ -48,10 +50,10 @@ export default function ActualsForm() {
   const handleSubmit = async () => {
     try {
       await saveActuals({ ...formData, week: selectedWeek });
-      alert('Đã lưu Actual Data thành công!');
+      addToast('Đã lưu Actual Data thành công!', 'success');
     } catch (error) {
       console.error('Error saving actuals:', error);
-      alert('Có lỗi xảy ra khi lưu!');
+      addToast('Có lỗi xảy ra khi lưu!', 'error');
     }
   };
 

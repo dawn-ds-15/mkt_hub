@@ -44,7 +44,7 @@ export function DashboardProvider({ children }) {
   }, []);
 
   return (
-    <DashboardContext.Provider value={{ year, periodType, periodValue, setYear: changeYear, setPeriodType: updatePeriod }}>
+    <DashboardContext.Provider value={{ year, periodType, periodValue, setYear: changeYear, setPeriodType: updatePeriod, setPeriodValue }}>
       {children}
     </DashboardContext.Provider>
   );

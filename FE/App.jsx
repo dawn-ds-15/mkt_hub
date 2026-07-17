@@ -8,6 +8,7 @@ import ExpenseManagement from './pages/ExpenseManagement';
 import DataManagementPage from './pages/DataManagement';
 import ApiDocs from './pages/ApiDocs';
 import { DashboardProvider } from './contexts/DashboardContext';
+import { ToastProvider } from './contexts/ToastContext';
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('mkt_hub_token');
@@ -21,6 +22,7 @@ function App() {
   return (
     <BrowserRouter>
       <DashboardProvider>
+      <ToastProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={
@@ -54,6 +56,7 @@ function App() {
           </ProtectedRoute>
         } />
       </Routes>
+      </ToastProvider>
       </DashboardProvider>
     </BrowserRouter>
   );

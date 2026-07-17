@@ -14,7 +14,7 @@ const tabs = [
 ];
 
 export default function LeadsKPIs() {
-  const [activeTab, setActiveTab] = useState('input');
+  const [activeTab, setActiveTab] = useState('view');
   const { year, periodType, periodValue } = useDashboard();
 
   const renderContent = () => {

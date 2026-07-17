@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { getPlanKPIs, savePlanKPIs } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 
 const years = [2024, 2025, 2026];
 
 export default function PlanKPIsForm() {
+  const addToast = useToast();
   const [selectedYear, setSelectedYear] = useState(2026);
   const [formData, setFormData] = useState({
     targetLeads: '',
@@ -49,10 +51,10 @@ export default function PlanKPIsForm() {
   const handleSubmit = async () => {
     try {
       await savePlanKPIs({ ...formData, year: selectedYear });
-      alert('Đã lưu Kế hoạch KPIs thành công!');
+      addToast('Đã lưu Kế hoạch KPIs thành công!', 'success');
     } catch (error) {
       console.error('Error saving plan KPIs:', error);
-      alert('Có lỗi xảy ra khi lưu!');
+      addToast('Có lỗi xảy ra khi lưu!', 'error');
     }
   };
 

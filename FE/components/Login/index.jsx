@@ -30,17 +30,25 @@ export default function Login() {
       localStorage.setItem('mkt_hub_user', JSON.stringify(res.data.user));
       navigate('/');
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Email hoặc mật khẩu không chính xác';
+      const errData = err?.response?.data;
+      const msg = Array.isArray(errData?.message) ? errData.message.join('; ')
+        : errData?.message || errData?.error || err?.message || 'Email hoặc mật khẩu không chính xác';
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!name || !email || !password || !confirmPassword) {
       setError('Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError('Email không đúng định dạng');
       return;
     }
     if (password !== confirmPassword) {
@@ -54,7 +62,9 @@ export default function Login() {
       localStorage.setItem('mkt_hub_user', JSON.stringify(res.data.user));
       navigate('/');
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Đăng ký thất bại';
+      const errData = err?.response?.data;
+      const msg = Array.isArray(errData?.message) ? errData.message.join('; ')
+        : errData?.message || errData?.error || err?.message || 'Đăng ký thất bại';
       setError(msg);
     } finally {
       setLoading(false);

@@ -27,6 +27,7 @@ CREATE INDEX idx_closed_opp ON marketing.closed_deals USING btree (opportunity_i
 
 CREATE INDEX idx_closed_date ON marketing.closed_deals USING btree (closed_date);
 
+TRUNCATE "closed_deals";
 INSERT INTO "closed_deals" ("id", "opportunity_id", "project_id", "company_name", "company_size_id", "setup_fee", "monthly_fee", "closed_date", "remark", "created_at", "updated_at") VALUES
 (1,	1,	1,	'FPT Software',	18,	10500.00,	2100.00,	'2024-02-09',	NULL,	'2026-07-13 08:54:34.570649',	'2026-07-13 08:54:34.570649'),
 (2,	2,	2,	'Viettel Solutions',	19,	11000.00,	2200.00,	'2024-02-17',	NULL,	'2026-07-13 08:54:34.570649',	'2026-07-13 08:54:34.570649'),
@@ -67,7 +68,31 @@ INSERT INTO "closed_deals" ("id", "opportunity_id", "project_id", "company_name"
 (37,	37,	NULL,	'MoMo',	18,	28500.00,	5700.00,	'2024-11-23',	NULL,	'2026-07-13 08:54:34.570649',	'2026-07-13 08:54:34.570649'),
 (38,	38,	NULL,	'Techcombank',	19,	29000.00,	5800.00,	'2024-12-01',	NULL,	'2026-07-13 08:54:34.570649',	'2026-07-13 08:54:34.570649'),
 (39,	39,	NULL,	'MB Bank',	17,	29500.00,	5900.00,	'2024-12-09',	NULL,	'2026-07-13 08:54:34.570649',	'2026-07-13 08:54:34.570649'),
-(40,	40,	NULL,	'Samsung Vietnam',	18,	30000.00,	6000.00,	'2024-12-17',	NULL,	'2026-07-13 08:54:34.570649',	'2026-07-13 08:54:34.570649');
+(40,	40,	NULL,	'Samsung Vietnam',	18,	30000.00,	6000.00,	'2024-12-17',	NULL,	'2026-07-13 08:54:34.570649',	'2026-07-13 08:54:34.570649'),
+(41,	81,	1,	'An Phat Digital 2025',	17,	90000000.00,	18000000.00,	'2025-01-20',	'Generated reference seed for 2025',	'2025-01-20 17:00:00',	'2025-01-20 17:00:00'),
+(42,	82,	2,	'Bao Viet Tech 2025',	18,	94000000.00,	19000000.00,	'2025-02-20',	'Generated reference seed for 2025',	'2025-02-20 17:00:00',	'2025-02-20 17:00:00'),
+(43,	83,	3,	'Cuu Long Retail 2025',	19,	98000000.00,	20000000.00,	'2025-03-20',	'Generated reference seed for 2025',	'2025-03-20 17:00:00',	'2025-03-20 17:00:00'),
+(44,	84,	4,	'Dai Nam Logistics 2025',	17,	102000000.00,	21000000.00,	'2025-04-20',	'Generated reference seed for 2025',	'2025-04-20 17:00:00',	'2025-04-20 17:00:00'),
+(45,	85,	5,	'East Sea Media 2025',	18,	106000000.00,	22000000.00,	'2025-05-20',	'Generated reference seed for 2025',	'2025-05-20 17:00:00',	'2025-05-20 17:00:00'),
+(46,	86,	6,	'Future Commerce 2025',	19,	110000000.00,	23000000.00,	'2025-06-20',	'Generated reference seed for 2025',	'2025-06-20 17:00:00',	'2025-06-20 17:00:00'),
+(47,	87,	7,	'Gia Dinh Foods 2025',	17,	114000000.00,	24000000.00,	'2025-07-20',	'Generated reference seed for 2025',	'2025-07-20 17:00:00',	'2025-07-20 17:00:00'),
+(48,	88,	8,	'Hoa Sen Cloud 2025',	18,	118000000.00,	25000000.00,	'2025-08-20',	'Generated reference seed for 2025',	'2025-08-20 17:00:00',	'2025-08-20 17:00:00'),
+(49,	89,	9,	'Indochina Travel 2025',	19,	122000000.00,	26000000.00,	'2025-09-20',	'Generated reference seed for 2025',	'2025-09-20 17:00:00',	'2025-09-20 17:00:00'),
+(50,	90,	10,	'Kim Long Pharma 2025',	17,	126000000.00,	27000000.00,	'2025-10-20',	'Generated reference seed for 2025',	'2025-10-20 17:00:00',	'2025-10-20 17:00:00'),
+(51,	91,	11,	'Lotus Education 2025',	18,	130000000.00,	28000000.00,	'2025-11-20',	'Generated reference seed for 2025',	'2025-11-20 17:00:00',	'2025-11-20 17:00:00'),
+(52,	92,	12,	'Mekong Analytics 2025',	19,	134000000.00,	29000000.00,	'2025-12-20',	'Generated reference seed for 2025',	'2025-12-20 17:00:00',	'2025-12-20 17:00:00'),
+(53,	93,	13,	'An Phat Digital 2026',	17,	138000000.00,	30000000.00,	'2026-01-20',	'Generated reference seed for 2026',	'2026-01-20 17:00:00',	'2026-01-20 17:00:00'),
+(54,	94,	14,	'Bao Viet Tech 2026',	18,	142000000.00,	31000000.00,	'2026-02-20',	'Generated reference seed for 2026',	'2026-02-20 17:00:00',	'2026-02-20 17:00:00'),
+(55,	95,	15,	'Cuu Long Retail 2026',	19,	146000000.00,	32000000.00,	'2026-03-20',	'Generated reference seed for 2026',	'2026-03-20 17:00:00',	'2026-03-20 17:00:00'),
+(56,	96,	16,	'Dai Nam Logistics 2026',	17,	150000000.00,	33000000.00,	'2026-04-20',	'Generated reference seed for 2026',	'2026-04-20 17:00:00',	'2026-04-20 17:00:00'),
+(57,	97,	17,	'East Sea Media 2026',	18,	154000000.00,	34000000.00,	'2026-05-20',	'Generated reference seed for 2026',	'2026-05-20 17:00:00',	'2026-05-20 17:00:00'),
+(58,	98,	18,	'Future Commerce 2026',	19,	158000000.00,	35000000.00,	'2026-06-20',	'Generated reference seed for 2026',	'2026-06-20 17:00:00',	'2026-06-20 17:00:00'),
+(59,	99,	19,	'Gia Dinh Foods 2026',	17,	162000000.00,	36000000.00,	'2026-07-20',	'Generated reference seed for 2026',	'2026-07-20 17:00:00',	'2026-07-20 17:00:00'),
+(60,	100,	20,	'Hoa Sen Cloud 2026',	18,	166000000.00,	37000000.00,	'2026-08-20',	'Generated reference seed for 2026',	'2026-08-20 17:00:00',	'2026-08-20 17:00:00'),
+(61,	101,	21,	'Indochina Travel 2026',	19,	170000000.00,	38000000.00,	'2026-09-20',	'Generated reference seed for 2026',	'2026-09-20 17:00:00',	'2026-09-20 17:00:00'),
+(62,	102,	22,	'Kim Long Pharma 2026',	17,	174000000.00,	39000000.00,	'2026-10-20',	'Generated reference seed for 2026',	'2026-10-20 17:00:00',	'2026-10-20 17:00:00'),
+(63,	103,	23,	'Lotus Education 2026',	18,	178000000.00,	40000000.00,	'2026-11-20',	'Generated reference seed for 2026',	'2026-11-20 17:00:00',	'2026-11-20 17:00:00'),
+(64,	104,	24,	'Mekong Analytics 2026',	19,	182000000.00,	41000000.00,	'2026-12-20',	'Generated reference seed for 2026',	'2026-12-20 17:00:00',	'2026-12-20 17:00:00');
 
 DROP TABLE IF EXISTS "kpi_actuals";
 DROP SEQUENCE IF EXISTS "marketing".kpi_actuals_id_seq;
@@ -97,6 +122,7 @@ CREATE INDEX idx_actual_plan ON marketing.kpi_actuals USING btree (plan_id);
 
 CREATE INDEX idx_actual_week ON marketing.kpi_actuals USING btree (week);
 
+TRUNCATE "kpi_actuals";
 INSERT INTO "kpi_actuals" ("id", "plan_id", "week", "raw_leads", "mql", "sql", "opp", "closed_deal", "pipeline_value", "won_value", "created_at", "updated_at") VALUES
 (101,	1,	1,	16,	9,	4,	2,	0,	405000.00,	202500.00,	'2026-07-13 08:51:52.582376',	'2026-07-13 08:51:52.582376'),
 (102,	1,	2,	17,	10,	5,	1,	0,	410000.00,	205000.00,	'2026-07-13 08:51:52.582376',	'2026-07-13 08:51:52.582376'),
@@ -279,6 +305,7 @@ CREATE UNIQUE INDEX kpi_plans_year_key ON marketing.kpi_plans USING btree (year)
 
 CREATE INDEX idx_plan_year ON marketing.kpi_plans USING btree (year);
 
+TRUNCATE "kpi_plans";
 INSERT INTO "kpi_plans" ("id", "year", "raw_leads_plan", "mql_plan", "sql_plan", "opp_plan", "closed_deal_plan", "pipeline_value_plan", "won_value_plan", "created_at", "updated_at") VALUES
 (1,	2024,	1000,	500,	200,	100,	50,	30000000.00,	12000000.00,	'2026-07-13 08:50:08.084913',	'2026-07-13 08:50:08.084913'),
 (2,	2025,	1200,	600,	250,	130,	65,	40000000.00,	15000000.00,	'2026-07-13 08:50:08.088117',	'2026-07-13 08:50:08.088117'),
@@ -312,6 +339,7 @@ CREATE INDEX idx_opp_status ON marketing.opportunities USING btree (status_id);
 
 CREATE INDEX idx_opp_date ON marketing.opportunities USING btree (expected_close_date);
 
+TRUNCATE "opportunities";
 INSERT INTO "opportunities" ("id", "project_id", "owner_id", "company_name", "company_size_id", "pipeline_value", "expected_close_date", "status_id", "remark", "created_at", "updated_at") VALUES
 (1,	1,	2,	'FPT Software',	18,	105000.00,	NULL,	27,	NULL,	'2024-01-09 00:00:00',	'2026-07-13 08:53:01.11689'),
 (2,	2,	3,	'Viettel Solutions',	19,	110000.00,	NULL,	27,	NULL,	'2024-01-17 00:00:00',	'2026-07-13 08:53:01.11689'),
@@ -392,7 +420,31 @@ INSERT INTO "opportunities" ("id", "project_id", "owner_id", "company_name", "co
 (77,	NULL,	6,	'MoMo',	19,	485000.00,	NULL,	24,	NULL,	'2025-09-08 00:00:00',	'2026-07-13 08:53:01.11689'),
 (78,	NULL,	7,	'Techcombank',	17,	490000.00,	NULL,	25,	NULL,	'2025-09-16 00:00:00',	'2026-07-13 08:53:01.11689'),
 (79,	NULL,	8,	'MB Bank',	18,	495000.00,	NULL,	26,	NULL,	'2025-09-24 00:00:00',	'2026-07-13 08:53:01.11689'),
-(80,	NULL,	9,	'Samsung Vietnam',	19,	500000.00,	NULL,	23,	NULL,	'2025-10-02 00:00:00',	'2026-07-13 08:53:01.11689');
+(80,	NULL,	9,	'Samsung Vietnam',	19,	500000.00,	NULL,	23,	NULL,	'2025-10-02 00:00:00',	'2026-07-13 08:53:01.11689'),
+(81,	1,	2,	'An Phat Digital 2025',	17,	150000000.00,	'2025-01-15',	27,	'Generated reference seed for 2025',	'2025-01-01 09:00:00',	'2025-01-20 17:00:00'),
+(82,	2,	11,	'Bao Viet Tech 2025',	18,	157500000.00,	'2025-02-15',	27,	'Generated reference seed for 2025',	'2025-02-01 09:00:00',	'2025-02-20 17:00:00'),
+(83,	3,	2,	'Cuu Long Retail 2025',	19,	165000000.00,	'2025-03-15',	27,	'Generated reference seed for 2025',	'2025-03-01 09:00:00',	'2025-03-20 17:00:00'),
+(84,	4,	11,	'Dai Nam Logistics 2025',	17,	172500000.00,	'2025-04-15',	27,	'Generated reference seed for 2025',	'2025-04-01 09:00:00',	'2025-04-20 17:00:00'),
+(85,	5,	2,	'East Sea Media 2025',	18,	180000000.00,	'2025-05-15',	27,	'Generated reference seed for 2025',	'2025-05-01 09:00:00',	'2025-05-20 17:00:00'),
+(86,	6,	11,	'Future Commerce 2025',	19,	187500000.00,	'2025-06-15',	27,	'Generated reference seed for 2025',	'2025-06-01 09:00:00',	'2025-06-20 17:00:00'),
+(87,	7,	2,	'Gia Dinh Foods 2025',	17,	195000000.00,	'2025-07-15',	27,	'Generated reference seed for 2025',	'2025-07-01 09:00:00',	'2025-07-20 17:00:00'),
+(88,	8,	11,	'Hoa Sen Cloud 2025',	18,	202500000.00,	'2025-08-15',	27,	'Generated reference seed for 2025',	'2025-08-01 09:00:00',	'2025-08-20 17:00:00'),
+(89,	9,	2,	'Indochina Travel 2025',	19,	210000000.00,	'2025-09-15',	27,	'Generated reference seed for 2025',	'2025-09-01 09:00:00',	'2025-09-20 17:00:00'),
+(90,	10,	11,	'Kim Long Pharma 2025',	17,	217500000.00,	'2025-10-15',	27,	'Generated reference seed for 2025',	'2025-10-01 09:00:00',	'2025-10-20 17:00:00'),
+(91,	11,	2,	'Lotus Education 2025',	18,	225000000.00,	'2025-11-15',	27,	'Generated reference seed for 2025',	'2025-11-01 09:00:00',	'2025-11-20 17:00:00'),
+(92,	12,	11,	'Mekong Analytics 2025',	19,	232500000.00,	'2025-12-15',	27,	'Generated reference seed for 2025',	'2025-12-01 09:00:00',	'2025-12-20 17:00:00'),
+(93,	13,	2,	'An Phat Digital 2026',	17,	240000000.00,	'2026-01-15',	27,	'Generated reference seed for 2026',	'2026-01-01 09:00:00',	'2026-01-20 17:00:00'),
+(94,	14,	11,	'Bao Viet Tech 2026',	18,	247500000.00,	'2026-02-15',	27,	'Generated reference seed for 2026',	'2026-02-01 09:00:00',	'2026-02-20 17:00:00'),
+(95,	15,	2,	'Cuu Long Retail 2026',	19,	255000000.00,	'2026-03-15',	27,	'Generated reference seed for 2026',	'2026-03-01 09:00:00',	'2026-03-20 17:00:00'),
+(96,	16,	11,	'Dai Nam Logistics 2026',	17,	262500000.00,	'2026-04-15',	27,	'Generated reference seed for 2026',	'2026-04-01 09:00:00',	'2026-04-20 17:00:00'),
+(97,	17,	2,	'East Sea Media 2026',	18,	270000000.00,	'2026-05-15',	27,	'Generated reference seed for 2026',	'2026-05-01 09:00:00',	'2026-05-20 17:00:00'),
+(98,	18,	11,	'Future Commerce 2026',	19,	277500000.00,	'2026-06-15',	27,	'Generated reference seed for 2026',	'2026-06-01 09:00:00',	'2026-06-20 17:00:00'),
+(99,	19,	2,	'Gia Dinh Foods 2026',	17,	285000000.00,	'2026-07-15',	27,	'Generated reference seed for 2026',	'2026-07-01 09:00:00',	'2026-07-20 17:00:00'),
+(100,	20,	11,	'Hoa Sen Cloud 2026',	18,	292500000.00,	'2026-08-15',	27,	'Generated reference seed for 2026',	'2026-08-01 09:00:00',	'2026-08-20 17:00:00'),
+(101,	21,	2,	'Indochina Travel 2026',	19,	300000000.00,	'2026-09-15',	27,	'Generated reference seed for 2026',	'2026-09-01 09:00:00',	'2026-09-20 17:00:00'),
+(102,	22,	11,	'Kim Long Pharma 2026',	17,	307500000.00,	'2026-10-15',	27,	'Generated reference seed for 2026',	'2026-10-01 09:00:00',	'2026-10-20 17:00:00'),
+(103,	23,	2,	'Lotus Education 2026',	18,	315000000.00,	'2026-11-15',	27,	'Generated reference seed for 2026',	'2026-11-01 09:00:00',	'2026-11-20 17:00:00'),
+(104,	24,	11,	'Mekong Analytics 2026',	19,	322500000.00,	'2026-12-15',	27,	'Generated reference seed for 2026',	'2026-12-01 09:00:00',	'2026-12-20 17:00:00');
 
 ALTER TABLE ONLY "marketing"."closed_deals" ADD CONSTRAINT "closed_deals_company_size_id_fkey" FOREIGN KEY (company_size_id) REFERENCES core.dropdowns(id);
 ALTER TABLE ONLY "marketing"."closed_deals" ADD CONSTRAINT "closed_deals_opportunity_id_fkey" FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE CASCADE;
@@ -405,65 +457,4 @@ ALTER TABLE ONLY "marketing"."opportunities" ADD CONSTRAINT "opportunities_owner
 ALTER TABLE ONLY "marketing"."opportunities" ADD CONSTRAINT "opportunities_project_id_fkey" FOREIGN KEY (project_id) REFERENCES core.projects(id);
 ALTER TABLE ONLY "marketing"."opportunities" ADD CONSTRAINT "opportunities_status_id_fkey" FOREIGN KEY (status_id) REFERENCES core.dropdowns(id);
 
--- 2026-07-13 09:30:12 UTC
-
-
--- BEGIN GENERATED SEED 2025-2026
--- Deterministic monthly reference data for dashboard testing and Render recovery.
-INSERT INTO marketing.opportunities (id, project_id, owner_id, company_name, company_size_id, pipeline_value, expected_close_date, status_id, remark, created_at, updated_at) VALUES
-(81, 1, 2, 'An Phat Digital 2025', 17, 150000000, '2025-01-15', 27, 'Generated reference seed for 2025', '2025-01-01 09:00:00', '2025-01-20 17:00:00'),
-(82, 2, 11, 'Bao Viet Tech 2025', 18, 157500000, '2025-02-15', 27, 'Generated reference seed for 2025', '2025-02-01 09:00:00', '2025-02-20 17:00:00'),
-(83, 3, 2, 'Cuu Long Retail 2025', 19, 165000000, '2025-03-15', 27, 'Generated reference seed for 2025', '2025-03-01 09:00:00', '2025-03-20 17:00:00'),
-(84, 4, 11, 'Dai Nam Logistics 2025', 17, 172500000, '2025-04-15', 27, 'Generated reference seed for 2025', '2025-04-01 09:00:00', '2025-04-20 17:00:00'),
-(85, 5, 2, 'East Sea Media 2025', 18, 180000000, '2025-05-15', 27, 'Generated reference seed for 2025', '2025-05-01 09:00:00', '2025-05-20 17:00:00'),
-(86, 6, 11, 'Future Commerce 2025', 19, 187500000, '2025-06-15', 27, 'Generated reference seed for 2025', '2025-06-01 09:00:00', '2025-06-20 17:00:00'),
-(87, 7, 2, 'Gia Dinh Foods 2025', 17, 195000000, '2025-07-15', 27, 'Generated reference seed for 2025', '2025-07-01 09:00:00', '2025-07-20 17:00:00'),
-(88, 8, 11, 'Hoa Sen Cloud 2025', 18, 202500000, '2025-08-15', 27, 'Generated reference seed for 2025', '2025-08-01 09:00:00', '2025-08-20 17:00:00'),
-(89, 9, 2, 'Indochina Travel 2025', 19, 210000000, '2025-09-15', 27, 'Generated reference seed for 2025', '2025-09-01 09:00:00', '2025-09-20 17:00:00'),
-(90, 10, 11, 'Kim Long Pharma 2025', 17, 217500000, '2025-10-15', 27, 'Generated reference seed for 2025', '2025-10-01 09:00:00', '2025-10-20 17:00:00'),
-(91, 11, 2, 'Lotus Education 2025', 18, 225000000, '2025-11-15', 27, 'Generated reference seed for 2025', '2025-11-01 09:00:00', '2025-11-20 17:00:00'),
-(92, 12, 11, 'Mekong Analytics 2025', 19, 232500000, '2025-12-15', 27, 'Generated reference seed for 2025', '2025-12-01 09:00:00', '2025-12-20 17:00:00'),
-(93, 13, 2, 'An Phat Digital 2026', 17, 240000000, '2026-01-15', 27, 'Generated reference seed for 2026', '2026-01-01 09:00:00', '2026-01-20 17:00:00'),
-(94, 14, 11, 'Bao Viet Tech 2026', 18, 247500000, '2026-02-15', 27, 'Generated reference seed for 2026', '2026-02-01 09:00:00', '2026-02-20 17:00:00'),
-(95, 15, 2, 'Cuu Long Retail 2026', 19, 255000000, '2026-03-15', 27, 'Generated reference seed for 2026', '2026-03-01 09:00:00', '2026-03-20 17:00:00'),
-(96, 16, 11, 'Dai Nam Logistics 2026', 17, 262500000, '2026-04-15', 27, 'Generated reference seed for 2026', '2026-04-01 09:00:00', '2026-04-20 17:00:00'),
-(97, 17, 2, 'East Sea Media 2026', 18, 270000000, '2026-05-15', 27, 'Generated reference seed for 2026', '2026-05-01 09:00:00', '2026-05-20 17:00:00'),
-(98, 18, 11, 'Future Commerce 2026', 19, 277500000, '2026-06-15', 27, 'Generated reference seed for 2026', '2026-06-01 09:00:00', '2026-06-20 17:00:00'),
-(99, 19, 2, 'Gia Dinh Foods 2026', 17, 285000000, '2026-07-15', 27, 'Generated reference seed for 2026', '2026-07-01 09:00:00', '2026-07-20 17:00:00'),
-(100, 20, 11, 'Hoa Sen Cloud 2026', 18, 292500000, '2026-08-15', 27, 'Generated reference seed for 2026', '2026-08-01 09:00:00', '2026-08-20 17:00:00'),
-(101, 21, 2, 'Indochina Travel 2026', 19, 300000000, '2026-09-15', 27, 'Generated reference seed for 2026', '2026-09-01 09:00:00', '2026-09-20 17:00:00'),
-(102, 22, 11, 'Kim Long Pharma 2026', 17, 307500000, '2026-10-15', 27, 'Generated reference seed for 2026', '2026-10-01 09:00:00', '2026-10-20 17:00:00'),
-(103, 23, 2, 'Lotus Education 2026', 18, 315000000, '2026-11-15', 27, 'Generated reference seed for 2026', '2026-11-01 09:00:00', '2026-11-20 17:00:00'),
-(104, 24, 11, 'Mekong Analytics 2026', 19, 322500000, '2026-12-15', 27, 'Generated reference seed for 2026', '2026-12-01 09:00:00', '2026-12-20 17:00:00')
-ON CONFLICT (id) DO UPDATE SET project_id = EXCLUDED.project_id, owner_id = EXCLUDED.owner_id, company_name = EXCLUDED.company_name, company_size_id = EXCLUDED.company_size_id, pipeline_value = EXCLUDED.pipeline_value, expected_close_date = EXCLUDED.expected_close_date, status_id = EXCLUDED.status_id, remark = EXCLUDED.remark, updated_at = EXCLUDED.updated_at;
-
-INSERT INTO marketing.closed_deals (id, opportunity_id, project_id, company_name, company_size_id, setup_fee, monthly_fee, closed_date, remark, created_at, updated_at) VALUES
-(41, 81, 1, 'An Phat Digital 2025', 17, 90000000, 18000000, '2025-01-20', 'Generated reference seed for 2025', '2025-01-20 17:00:00', '2025-01-20 17:00:00'),
-(42, 82, 2, 'Bao Viet Tech 2025', 18, 94000000, 19000000, '2025-02-20', 'Generated reference seed for 2025', '2025-02-20 17:00:00', '2025-02-20 17:00:00'),
-(43, 83, 3, 'Cuu Long Retail 2025', 19, 98000000, 20000000, '2025-03-20', 'Generated reference seed for 2025', '2025-03-20 17:00:00', '2025-03-20 17:00:00'),
-(44, 84, 4, 'Dai Nam Logistics 2025', 17, 102000000, 21000000, '2025-04-20', 'Generated reference seed for 2025', '2025-04-20 17:00:00', '2025-04-20 17:00:00'),
-(45, 85, 5, 'East Sea Media 2025', 18, 106000000, 22000000, '2025-05-20', 'Generated reference seed for 2025', '2025-05-20 17:00:00', '2025-05-20 17:00:00'),
-(46, 86, 6, 'Future Commerce 2025', 19, 110000000, 23000000, '2025-06-20', 'Generated reference seed for 2025', '2025-06-20 17:00:00', '2025-06-20 17:00:00'),
-(47, 87, 7, 'Gia Dinh Foods 2025', 17, 114000000, 24000000, '2025-07-20', 'Generated reference seed for 2025', '2025-07-20 17:00:00', '2025-07-20 17:00:00'),
-(48, 88, 8, 'Hoa Sen Cloud 2025', 18, 118000000, 25000000, '2025-08-20', 'Generated reference seed for 2025', '2025-08-20 17:00:00', '2025-08-20 17:00:00'),
-(49, 89, 9, 'Indochina Travel 2025', 19, 122000000, 26000000, '2025-09-20', 'Generated reference seed for 2025', '2025-09-20 17:00:00', '2025-09-20 17:00:00'),
-(50, 90, 10, 'Kim Long Pharma 2025', 17, 126000000, 27000000, '2025-10-20', 'Generated reference seed for 2025', '2025-10-20 17:00:00', '2025-10-20 17:00:00'),
-(51, 91, 11, 'Lotus Education 2025', 18, 130000000, 28000000, '2025-11-20', 'Generated reference seed for 2025', '2025-11-20 17:00:00', '2025-11-20 17:00:00'),
-(52, 92, 12, 'Mekong Analytics 2025', 19, 134000000, 29000000, '2025-12-20', 'Generated reference seed for 2025', '2025-12-20 17:00:00', '2025-12-20 17:00:00'),
-(53, 93, 13, 'An Phat Digital 2026', 17, 138000000, 30000000, '2026-01-20', 'Generated reference seed for 2026', '2026-01-20 17:00:00', '2026-01-20 17:00:00'),
-(54, 94, 14, 'Bao Viet Tech 2026', 18, 142000000, 31000000, '2026-02-20', 'Generated reference seed for 2026', '2026-02-20 17:00:00', '2026-02-20 17:00:00'),
-(55, 95, 15, 'Cuu Long Retail 2026', 19, 146000000, 32000000, '2026-03-20', 'Generated reference seed for 2026', '2026-03-20 17:00:00', '2026-03-20 17:00:00'),
-(56, 96, 16, 'Dai Nam Logistics 2026', 17, 150000000, 33000000, '2026-04-20', 'Generated reference seed for 2026', '2026-04-20 17:00:00', '2026-04-20 17:00:00'),
-(57, 97, 17, 'East Sea Media 2026', 18, 154000000, 34000000, '2026-05-20', 'Generated reference seed for 2026', '2026-05-20 17:00:00', '2026-05-20 17:00:00'),
-(58, 98, 18, 'Future Commerce 2026', 19, 158000000, 35000000, '2026-06-20', 'Generated reference seed for 2026', '2026-06-20 17:00:00', '2026-06-20 17:00:00'),
-(59, 99, 19, 'Gia Dinh Foods 2026', 17, 162000000, 36000000, '2026-07-20', 'Generated reference seed for 2026', '2026-07-20 17:00:00', '2026-07-20 17:00:00'),
-(60, 100, 20, 'Hoa Sen Cloud 2026', 18, 166000000, 37000000, '2026-08-20', 'Generated reference seed for 2026', '2026-08-20 17:00:00', '2026-08-20 17:00:00'),
-(61, 101, 21, 'Indochina Travel 2026', 19, 170000000, 38000000, '2026-09-20', 'Generated reference seed for 2026', '2026-09-20 17:00:00', '2026-09-20 17:00:00'),
-(62, 102, 22, 'Kim Long Pharma 2026', 17, 174000000, 39000000, '2026-10-20', 'Generated reference seed for 2026', '2026-10-20 17:00:00', '2026-10-20 17:00:00'),
-(63, 103, 23, 'Lotus Education 2026', 18, 178000000, 40000000, '2026-11-20', 'Generated reference seed for 2026', '2026-11-20 17:00:00', '2026-11-20 17:00:00'),
-(64, 104, 24, 'Mekong Analytics 2026', 19, 182000000, 41000000, '2026-12-20', 'Generated reference seed for 2026', '2026-12-20 17:00:00', '2026-12-20 17:00:00')
-ON CONFLICT (id) DO UPDATE SET opportunity_id = EXCLUDED.opportunity_id, project_id = EXCLUDED.project_id, company_name = EXCLUDED.company_name, company_size_id = EXCLUDED.company_size_id, setup_fee = EXCLUDED.setup_fee, monthly_fee = EXCLUDED.monthly_fee, closed_date = EXCLUDED.closed_date, remark = EXCLUDED.remark, updated_at = EXCLUDED.updated_at;
-
-SELECT setval('marketing.opportunities_id_seq', GREATEST((SELECT MAX(id) FROM marketing.opportunities), 104));
-SELECT setval('marketing.closed_deals_id_seq', GREATEST((SELECT MAX(id) FROM marketing.closed_deals), 64));
--- END GENERATED SEED 2025-2026
+-- 2026-07-17 08:30:02 UTC

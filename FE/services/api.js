@@ -328,6 +328,7 @@ export const getProjects = async () => {
         name: t.name,
         assignee: t.assignee?.name || 'Unknown',
         due: t.dueDate ? formatDate(t.dueDate) : '-',
+        dueDate: t.dueDate || null,
       status: taskStatusToMock(t.status, t.isOverdue),
       statusLabel: t.status,
       })),

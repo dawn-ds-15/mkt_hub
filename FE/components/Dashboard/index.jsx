@@ -18,6 +18,34 @@ function getPeriodOptions(type) {
 }
 
 const CURRENT_YEAR = String(new Date().getFullYear());
+
+function getISOWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+}
+
+function isTaskInPeriod(dueDate, periodType, periodValue, year) {
+  if (!dueDate) return false;
+  const d = new Date(dueDate);
+  if (isNaN(d.getTime())) return false;
+  const y = d.getFullYear();
+  if (String(y) !== year && y !== parseInt(year)) return false;
+  if (periodType === 'year') return true;
+  if (periodType === 'quarter') {
+    const q = Math.ceil((d.getMonth() + 1) / 3);
+    return q === parseInt(periodValue);
+  }
+  if (periodType === 'month') {
+    return d.getMonth() + 1 === parseInt(periodValue);
+  }
+  if (periodType === 'week') {
+    return getISOWeek(d) === parseInt(periodValue);
+  }
+  return true;
+}
 const STATUS_LABELS = {
   completed: 'Hoàn thành',
   inProgress: 'Đang làm',
@@ -58,8 +86,29 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const result = await getDashboardData(periodType, periodValue, year);
+      const [result, projectsRes] = await Promise.all([
+        getDashboardData(periodType, periodValue, year),
+        import('../../services/api').then(m => m.getProjects()).catch(() => ({ data: [] })),
+      ]);
       if (!controller.signal.aborted) {
+        const allProjects = projectsRes.data || [];
+        const activeProjectIds = new Set();
+        const tasksMap = {};
+        for (const p of allProjects) {
+          const periodTasks = (p.tasks || []).filter(t =>
+            isTaskInPeriod(t.dueDate, periodType, periodValue, year)
+          );
+          if (periodTasks.length > 0) {
+            activeProjectIds.add(p.id);
+            tasksMap[`${p.id}_${periodType}-${periodValue}-${year}`] = periodTasks;
+          }
+        }
+        if (result.projectProgress && activeProjectIds.size > 0) {
+          result.projectProgress = result.projectProgress.filter(
+            p => activeProjectIds.has(p.id)
+          );
+        }
+        setProjectTasksCache(tasksMap);
         setData(result);
       }
     } catch (err) {
@@ -90,8 +139,7 @@ export default function Dashboard() {
     }
     setExpandedProjectId(projectId);
     const cacheKey = `${projectId}_${periodKey}`;
-    if (projectTasksCache[cacheKey]) return;
-    if (projectLoading[projectId]) return;
+    if (projectTasksCache[cacheKey] || projectLoading[projectId]) return;
 
     setProjectLoading(prev => ({ ...prev, [projectId]: true }));
     setProjectErrors(prev => ({ ...prev, [projectId]: null }));
@@ -101,12 +149,9 @@ export default function Dashboard() {
       const res = await getProjects();
       const p = res.data.find(proj => proj.id === projectId);
       if (p) {
-        const yearNum = parseInt(year, 10);
-        const filtered = p.tasks.filter(t => {
-          if (!t.due || t.due === '-') return true;
-          const taskYear = new Date(t.due.split('/').reverse().join('-')).getFullYear();
-          return taskYear === yearNum;
-        });
+        const filtered = (p.tasks || []).filter(t =>
+          isTaskInPeriod(t.dueDate, periodType, periodValue, year)
+        );
         setProjectTasksCache(prev => ({ ...prev, [cacheKey]: filtered }));
       } else {
         setProjectTasksCache(prev => ({ ...prev, [cacheKey]: [] }));

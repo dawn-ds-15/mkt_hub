@@ -24,6 +24,7 @@ CREATE INDEX idx_audit_entity ON sys_admin.audit_logs USING btree (entity_type);
 
 CREATE INDEX idx_audit_created ON sys_admin.audit_logs USING btree (created_at);
 
+TRUNCATE "audit_logs";
 INSERT INTO "audit_logs" ("id", "user_id", "action", "entity_type", "entity_id", "field_changed", "old_value", "new_value", "created_at") VALUES
 (1,	2,	'UPDATE',	'projects',	2,	NULL,	NULL,	NULL,	'2026-07-12 04:58:41.290032'),
 (2,	3,	'DELETE',	'opportunities',	3,	NULL,	NULL,	NULL,	'2026-07-11 00:58:41.290032'),
@@ -341,6 +342,7 @@ CREATE TABLE "sys_admin"."backups" (
 )
 WITH (oids = false);
 
+TRUNCATE "backups";
 INSERT INTO "backups" ("id", "file_name", "backup_type", "file_size", "created_by", "created_at") VALUES
 (1,	'backup_crm_db_1.sql',	'INCREMENTAL',	106954752,	2,	'2026-07-12 21:01:55.50024'),
 (2,	'backup_crm_db_2.sql',	'INCREMENTAL',	109051904,	3,	'2026-07-12 09:01:55.50024'),
@@ -388,6 +390,7 @@ CREATE TABLE "sys_admin"."export_logs" (
 )
 WITH (oids = false);
 
+TRUNCATE "export_logs";
 INSERT INTO "export_logs" ("id", "export_type", "period", "file_name", "exported_by", "exported_at") VALUES
 (1,	'projects',	'2026-M02',	'export_projects_1.xlsx',	2,	'2026-07-12 15:03:38.220072'),
 (2,	'project_expenses',	'2026-M03',	'export_expenses_2.csv',	3,	'2026-07-11 21:03:38.220072'),
@@ -437,6 +440,7 @@ CREATE TABLE "sys_admin"."import_logs" (
 )
 WITH (oids = false);
 
+TRUNCATE "import_logs";
 INSERT INTO "import_logs" ("id", "import_type", "file_name", "total_rows", "success_rows", "failed_rows", "imported_by", "imported_at") VALUES
 (1,	'opportunities',	'import_opportunities_1.xlsx',	12,	11,	1,	2,	'2026-07-12 18:02:45.433881'),
 (2,	'tasks',	'import_tasks_2.xlsx',	14,	12,	2,	3,	'2026-07-12 03:02:45.433881'),
@@ -484,6 +488,7 @@ CREATE TABLE "sys_admin"."slack_notification_logs" (
 )
 WITH (oids = false);
 
+TRUNCATE "slack_notification_logs";
 INSERT INTO "slack_notification_logs" ("id", "sent_at", "overdue_tasks", "upcoming_tasks", "status", "message") VALUES
 (1,	'2026-07-13 01:00:53.714045',	1,	3,	'SUCCESS',	'Notification payload broadcast report item #1'),
 (2,	'2026-07-12 17:00:53.714045',	2,	4,	'SUCCESS',	'Notification payload broadcast report item #2'),
@@ -540,6 +545,7 @@ CREATE TABLE "sys_admin"."slack_settings" (
 )
 WITH (oids = false);
 
+TRUNCATE "slack_settings";
 INSERT INTO "slack_settings" ("id", "webhook_url", "channel", "enable_notification", "notify_time", "notify_mon", "notify_tue", "notify_wed", "notify_thu", "notify_fri", "notify_sat", "notify_sun", "warning_days", "created_at", "updated_at") VALUES
 (1,	'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX',	'#crm-alerts',	'1',	'08:00:00',	'1',	'1',	'1',	'1',	'1',	'0',	'0',	5,	'2026-07-13 08:59:41.361568',	'2026-07-13 08:59:41.361568');
 
@@ -551,4 +557,4 @@ ALTER TABLE ONLY "sys_admin"."export_logs" ADD CONSTRAINT "export_logs_exported_
 
 ALTER TABLE ONLY "sys_admin"."import_logs" ADD CONSTRAINT "import_logs_imported_by_fkey" FOREIGN KEY (imported_by) REFERENCES core.members(id);
 
--- 2026-07-13 09:30:41 UTC
+-- 2026-07-17 08:30:17 UTC

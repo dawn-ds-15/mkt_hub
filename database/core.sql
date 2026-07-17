@@ -17,6 +17,7 @@ WITH (oids = false);
 
 CREATE INDEX idx_dropdown_category ON core.dropdowns USING btree (category);
 
+TRUNCATE "dropdowns";
 INSERT INTO "dropdowns" ("id", "category", "value", "sort_order", "is_active", "created_at") VALUES
 (1,	'project_status',	'Planning',	1,	'1',	'2026-07-08 08:49:43.455966'),
 (2,	'project_status',	'Active',	2,	'1',	'2026-07-08 08:49:43.455966'),
@@ -86,6 +87,7 @@ WITH (oids = false);
 
 CREATE UNIQUE INDEX idx_members_email ON core.members USING btree (email);
 
+TRUNCATE "members";
 INSERT INTO "members" ("id", "name", "email", "role", "avatar_url", "is_active", "created_at", "password_hash", "updated_at") VALUES
 (1,	'Nguyen Van A',	'a.nguyen@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.230727',	NULL,	'2026-07-13 08:40:09.230727'),
 (2,	'Tran Thi B',	'b.tran@company.com',	'manager',	NULL,	'1',	'2026-07-13 08:40:09.233592',	NULL,	'2026-07-13 08:40:09.233592'),
@@ -131,6 +133,7 @@ CREATE INDEX idx_projects_type ON core.projects USING btree (project_type_id);
 
 CREATE INDEX idx_projects_date ON core.projects USING btree (planned_start_date);
 
+TRUNCATE "projects";
 INSERT INTO "projects" ("id", "project_name", "project_type_id", "status_id", "owner_id", "description", "planned_start_date", "planned_end_date", "actual_start_date", "actual_end_date", "created_at", "updated_at", "budget_plan", "actual_cost") VALUES
 (1,	'Warehouse AI Vision Phase 1',	14,	2,	2,	NULL,	'2024-01-15',	'2024-06-30',	NULL,	NULL,	'2026-07-13 08:45:13.269366',	'2026-07-13 08:45:13.269366',	0.00,	0.00),
 (2,	'CRM Internal Phase 2',	14,	2,	11,	NULL,	'2024-02-01',	'2024-08-15',	NULL,	NULL,	'2026-07-13 08:45:13.27432',	'2026-07-13 08:45:13.27432',	0.00,	0.00),
@@ -175,6 +178,7 @@ CREATE INDEX idx_taskstakeholder_task ON core.task_stakeholders USING btree (tas
 
 CREATE INDEX idx_taskstakeholder_stakeholder ON core.task_stakeholders USING btree (stakeholder_id);
 
+TRUNCATE "task_stakeholders";
 INSERT INTO "task_stakeholders" ("task_id", "stakeholder_id") VALUES
 (142,	20),
 (54,	22),
@@ -464,6 +468,7 @@ CREATE INDEX idx_tasks_priority ON core.tasks USING btree (priority_id);
 
 CREATE INDEX idx_tasks_due ON core.tasks USING btree (due_date);
 
+TRUNCATE "tasks";
 INSERT INTO "tasks" ("id", "task_name", "description", "project_id", "assignee_id", "status_id", "priority_id", "start_date", "due_date", "completed_date", "exec_week", "reason", "needed_support_bod", "link", "remark", "created_at", "updated_at") VALUES
 (1,	'Database Design',	NULL,	2,	2,	7,	11,	'2024-01-23',	'2024-03-04',	NULL,	2,	NULL,	NULL,	NULL,	NULL,	'2026-07-13 08:46:39.532899',	'2026-07-13 08:46:39.532899'),
 (2,	'API Development',	NULL,	3,	3,	8,	12,	'2024-01-26',	'2024-03-07',	NULL,	3,	NULL,	NULL,	NULL,	NULL,	'2026-07-13 08:46:39.532899',	'2026-07-13 08:46:39.532899'),
@@ -678,4 +683,4 @@ ALTER TABLE ONLY "core"."tasks" ADD CONSTRAINT "tasks_priority_id_fkey" FOREIGN 
 ALTER TABLE ONLY "core"."tasks" ADD CONSTRAINT "tasks_project_id_fkey" FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
 ALTER TABLE ONLY "core"."tasks" ADD CONSTRAINT "tasks_status_id_fkey" FOREIGN KEY (status_id) REFERENCES dropdowns(id);
 
--- 2026-07-13 09:30:00 UTC
+-- 2026-07-17 08:26:54 UTC

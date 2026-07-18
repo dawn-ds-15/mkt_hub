@@ -10,7 +10,7 @@ const statusConfig = {
 const taskStatusConfig = {
   Done: { label: 'Hoàn thành', bg: 'bg-green-100', text: 'text-green-700' },
   Processing: { label: 'Đang làm', bg: 'bg-blue-100', text: 'text-blue-700' },
-  Planning: { label: 'Chưa bắt đầu', bg: 'bg-slate-100', text: 'text-slate-600' },
+  Planning: { label: 'Chưa làm', bg: 'bg-slate-100', text: 'text-slate-600' },
   Backlog: { label: 'Backlog', bg: 'bg-amber-100', text: 'text-amber-700' },
   Pending: { label: 'Đang chờ', bg: 'bg-purple-100', text: 'text-purple-700' },
   Cancel: { label: 'Đã huỷ', bg: 'bg-gray-100', text: 'text-gray-600' },

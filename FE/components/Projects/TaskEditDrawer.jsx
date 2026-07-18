@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { updateTask, deleteTask } from '../../services/api';
 
 const statusOptions = [
-  { value: 'Planning', label: 'Chưa bắt đầu' },
+  { value: 'Planning', label: 'Chưa làm' },
   { value: 'Processing', label: 'Đang làm' },
   { value: 'Done', label: 'Hoàn thành' },
-  { value: 'Backlog', label: 'Backlog' },
-  { value: 'Pending', label: 'Đang chờ' },
+  { value: 'Backlog', label: 'Tồn đọng' },
+  { value: 'Pending', label: 'Chờ xử lý' },
   { value: 'Cancel', label: 'Đã huỷ' },
 ];
 
@@ -45,6 +45,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
   const [link, setLink] = useState(task.link?.url || '');
   const [remark, setRemark] = useState(task.remark || '');
   const [reason, setReason] = useState(task.reason || '');
+  const [neededSupportBod, setNeededSupportBod] = useState(task.neededSupportBod || '');
   const [stakeholders, setStakeholders] = useState(() => {
     if (Array.isArray(task.stakeholders)) return task.stakeholders;
     return task.stakeholders ? task.stakeholders.split(', ').filter(Boolean) : [];
@@ -56,7 +57,15 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
   const isSpecialist = role === 'specialist';
   const showReason = ['Backlog', 'Pending', 'Cancel'].includes(status);
   const reasonRequired = showReason && !reason.trim();
-  const reasonLabel = status === 'Backlog' ? 'Lý do chuyển Backlog' : 'Lý do Pending / Đã huỷ';
+  const reasonLabel = status === 'Backlog' ? 'Lý do chuyển Tồn đọng' : 'Lý do Chờ xử lý / Đã huỷ';
+  const showBodSupport = stakeholders.includes('BOD');
+
+  useEffect(() => {
+    if (status === 'Done' && !completedDate) {
+      const today = new Date().toISOString().split('T')[0];
+      setCompletedDate(today);
+    }
+  }, [status]);
 
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
@@ -94,6 +103,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
         execWeek: execWeek ? parseInt(execWeek) : undefined,
         link: link || undefined,
         remark,
+        neededSupportBod: neededSupportBod || undefined,
       };
       if (showReason) payload.reason = reason;
       await updateTask(task.id, payload);
@@ -125,7 +135,8 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
       <div className="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col">
-        <div className="flex items-center justify-end px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+          <h3 className="text-base font-bold">Chi tiết Task</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
 
@@ -262,6 +273,18 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
             <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Ghi chú</label>
             <textarea className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none resize-vertical h-16" value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="Ghi chú thêm..." />
           </div>
+
+          {showBodSupport && (
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Cần BOD hỗ trợ</label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none resize-vertical h-20"
+                value={neededSupportBod}
+                onChange={(e) => setNeededSupportBod(e.target.value)}
+                placeholder="Mô tả nội dung cần BOD hỗ trợ..."
+              />
+            </div>
+          )}
         </div>
 
         <div className="border-t border-gray-200 px-6 py-4 flex items-center gap-3">

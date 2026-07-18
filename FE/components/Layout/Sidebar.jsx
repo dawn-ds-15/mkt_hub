@@ -17,9 +17,8 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
-  const { year, setYear } = useDashboard();
+  const { year, setYear, selectedProjectId, setSelectedProjectId } = useDashboard();
   const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
 
   useEffect(() => {
     import('../../services/api').then(({ getProjects }) => {
@@ -75,10 +74,14 @@ export default function Sidebar() {
             <label className="text-[11px] text-slate-400">Dự án</label>
             <select
               value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedProjectId(id);
+                if (id) navigate(`/projects?project=${id}`);
+              }}
               className="w-full bg-slate-800 border-none rounded text-white text-xs py-1.5 focus:ring-1 focus:ring-primary"
             >
-              <option value="">Tất cả</option>
+              <option value="">Tất cả dự án</option>
               {projects.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}

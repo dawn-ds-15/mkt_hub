@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const TOKEN_KEY = 'mkt_hub_token';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://mkt-hub.onrender.com/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -318,19 +318,27 @@ export const getProjects = async () => {
       name: p.name,
       type: p.type,
       owner: p.owner?.name || 'Unknown',
+      ownerId: p.ownerId || p.owner?.id || '',
       deadline: p.deadline ? formatDate(p.deadline) : 'No deadline',
+      deadlineRaw: p.deadline || null,
       status: projectStatusToMock(p.status, p.deadline),
       statusLabel: p.status,
       tasksCompleted: p.progress?.done || 0,
       tasksTotal: p.progress?.total || 0,
       progress: p.progress?.percentage || 0,
+      budgetPlanDirect: p.budgetPlanDirect || 0,
+      budgetPlanOverhead: p.budgetPlanOverhead || 0,
+      actualCostDirect: p.actualCostDirect || 0,
+      actualCostOverhead: p.actualCostOverhead || 0,
+      kpiRawLeadsPlan: p.kpiRawLeadsPlan || 0,
+      kpiRawLeadsActual: p.kpiRawLeadsActual || 0,
       tasks: (p.tasks || []).map((t) => ({
         name: t.name,
         assignee: t.assignee?.name || 'Unknown',
         due: t.dueDate ? formatDate(t.dueDate) : '-',
         dueDate: t.dueDate || null,
-      status: taskStatusToMock(t.status, t.isOverdue),
-      statusLabel: t.status,
+        status: taskStatusToMock(t.status, t.isOverdue),
+        statusLabel: t.status,
       })),
     })),
   };
@@ -435,11 +443,11 @@ export const deleteTask = async (id) => {
 // ===================== KANBAN =====================
 
 const columnMeta = {
-  Planning: { title: 'CHƯA BẮT ĐẦU', badgeColor: 'bg-slate-50 text-slate-600' },
+  Planning: { title: 'CHƯA LÀM', badgeColor: 'bg-slate-50 text-slate-600' },
   Processing: { title: 'ĐANG LÀM', badgeColor: 'bg-blue-50 text-blue-600' },
   Done: { title: 'HOÀN THÀNH', badgeColor: 'bg-green-50 text-green-600' },
-  Backlog: { title: 'BACKLOG', badgeColor: 'bg-amber-50 text-amber-600' },
-  Pending: { title: 'ĐANG CHỜ', badgeColor: 'bg-purple-50 text-purple-600' },
+  Backlog: { title: 'TỒN ĐỌNG', badgeColor: 'bg-amber-50 text-amber-600' },
+  Pending: { title: 'CHỜ XỬ LÝ', badgeColor: 'bg-purple-50 text-purple-600' },
   Cancel: { title: 'ĐÃ HUỶ', badgeColor: 'bg-gray-100 text-gray-600' },
 };
 

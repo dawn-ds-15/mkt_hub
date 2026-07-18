@@ -103,10 +103,61 @@ export default function Dashboard() {
             tasksMap[`${p.id}_${periodType}-${periodValue}-${year}`] = periodTasks;
           }
         }
-        if (result.projectProgress && activeProjectIds.size > 0) {
-          result.projectProgress = result.projectProgress.filter(
-            p => activeProjectIds.has(p.id)
-          );
+        result.projectProgress = (result.projectProgress || []).filter(p => activeProjectIds.has(p.id));
+        const totalTasks = { Planning: 0, Processing: 0, Done: 0, Backlog: 0, Pending: 0, Cancel: 0 };
+        const overdueTasks = [];
+        const upcomingTasks = [];
+        const now = new Date();
+        for (const p of allProjects) {
+          const periodTasks = tasksMap[`${p.id}_${periodType}-${periodValue}-${year}`] || [];
+          for (const t of periodTasks) {
+            if (totalTasks[t.status] !== undefined) totalTasks[t.status]++;
+            const due = t.dueDate ? new Date(t.dueDate) : null;
+            if (due && !isNaN(due) && t.status !== 'Done' && t.status !== 'Cancel') {
+              if (due < now) {
+                overdueTasks.push({
+                  taskName: t.name,
+                  assigneeName: t.assignee || '',
+                  dueDate: t.due,
+                });
+              } else if (due <= new Date(now.getTime() + 7 * 86400000)) {
+                upcomingTasks.push({
+                  taskName: t.name,
+                  assigneeName: t.assignee || '',
+                  dueDate: t.due,
+                });
+              }
+            }
+          }
+        }
+        const hasClientData = activeProjectIds.size > 0;
+        if (hasClientData) {
+          const apiIds = new Set((result.projectProgress || []).map(p => p.id));
+          const missing = allProjects.filter(p => activeProjectIds.has(p.id) && !apiIds.has(p.id));
+          if (missing.length > 0) {
+            const built = missing.map(p => ({
+              id: p.id,
+              name: p.name,
+              progress: p.progress || 0,
+              color: p.progress >= 80 ? 'bg-success' : p.progress >= 40 ? 'bg-warning' : 'bg-primary',
+            }));
+            result.projectProgress = [...(result.projectProgress || []), ...built];
+          }
+          const totalPct = result.projectProgress.reduce((s, p) => s + p.progress, 0);
+          result.totalPct = result.projectProgress.length > 0 ? Math.round(totalPct / result.projectProgress.length) : 0;
+          result.taskStatus = {
+            total: Object.values(totalTasks).reduce((s, v) => s + v, 0),
+            completed: totalTasks.Done || 0,
+            inProgress: totalTasks.Processing || 0,
+            pending: totalTasks.Planning || 0,
+            waiting: (totalTasks.Pending || 0) + (totalTasks.Backlog || 0),
+            canceled: totalTasks.Cancel || 0,
+            overdue: overdueTasks.length,
+          };
+          result.alerts = [
+            ...overdueTasks.map(t => ({ type: 'error', title: `Quá hạn: ${t.taskName || ''}`, assignee: t.assigneeName || '', due: t.dueDate || '', icon: 'error' })),
+            ...upcomingTasks.map(t => ({ type: 'warning', title: `Sắp tới: ${t.taskName || ''}`, assignee: t.assigneeName || '', due: t.dueDate || '', icon: 'schedule' })),
+          ];
         }
         setProjectTasksCache(tasksMap);
         setData(result);
@@ -167,6 +218,7 @@ export default function Dashboard() {
   const handleRetry = () => loadData();
 
   const hasData = data && (
+    (data.projectProgress && data.projectProgress.length > 0) ||
     (data.kpis && data.kpis.some(k => {
       const raw = k.value?.replace(/[$,.BMTNK]/g, '') || '0';
       return parseInt(raw, 10) > 0;

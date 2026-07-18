@@ -61,6 +61,20 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
   const [loading, setLoading] = useState(true);
 
   const currentWeek = periodType === 'week' ? periodValue : '1';
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const exportCSV = (rows, filename, columns) => {
+    const header = columns.map(c => c.label).join(',');
+    const body = rows.map(r => columns.map(c => r[c.key]).join(',')).join('\n');
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + header + '\n' + body], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     loadData();
@@ -294,9 +308,30 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Pipeline Value by Segment */}
         <div className="bg-white border border-border-light rounded-lg overflow-hidden">
-          <div className="p-4 border-b border-border-light bg-surface-container-lowest flex justify-between items-center">
+          <div className="p-4 border-b border-border-light bg-surface-container-lowest flex justify-between items-center relative">
             <h4 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider">Giá trị Pipeline theo Phân khúc</h4>
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px] cursor-pointer hover:text-primary">more_horiz</span>
+            <span className="material-symbols-outlined text-on-surface-variant text-[20px] cursor-pointer hover:text-primary relative" onClick={(e) => { e.stopPropagation(); setMenuOpen(prev => !prev); }}>more_horiz</span>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute top-full right-2 mt-1 bg-white border border-border-light rounded-lg shadow-lg z-20 py-1 min-w-[160px]">
+                  <button
+                    onClick={() => { setMenuOpen(false); exportCSV(segmentData, 'pipeline-by-segment.csv', [{ key: 'segment', label: 'Phân khúc' }, { key: 'activeDeals', label: 'Giao dịch đang mở' }, { key: 'value', label: 'Giá trị' }, { key: 'growth', label: 'Tăng trưởng (%)' }]); }}
+                    className="w-full px-4 py-2 text-left text-body-sm text-on-surface hover:bg-surface-container flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">file_download</span>
+                    Xuất CSV
+                  </button>
+                  <button
+                    onClick={() => { setMenuOpen(false); alert('Tính năng đang phát triển'); }}
+                    className="w-full px-4 py-2 text-left text-body-sm text-on-surface hover:bg-surface-container flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                    Xem chi tiết
+                  </button>
+                </div>
+              </>
+            )}
           </div>
           <table className="w-full text-left">
             <thead className="bg-surface-container-low border-b border-border-light">
@@ -326,7 +361,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
         <div className="bg-white border border-border-light rounded-lg overflow-hidden">
           <div className="p-4 border-b border-border-light bg-surface-container-lowest flex justify-between items-center">
             <h4 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider">Giá trị Hợp đồng đã ký</h4>
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px] cursor-pointer hover:text-primary">download</span>
+            <span className="material-symbols-outlined text-on-surface-variant text-[20px] cursor-pointer hover:text-primary" onClick={() => exportCSV(closedDealQuarters, 'closed-deals.csv', [{ key: 'quarter', label: 'Quý' }, { key: 'count', label: 'Số lượng thắng' }, { key: 'revenue', label: 'Doanh thu' }, { key: 'target', label: 'So mục tiêu' }])}>download</span>
           </div>
           <table className="w-full text-left">
             <thead className="bg-surface-container-low border-b border-border-light">

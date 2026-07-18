@@ -8,7 +8,7 @@ const statusConfig = {
 const taskStatusConfig = {
   done: { label: 'Hoàn thành', bg: 'bg-green-100', text: 'text-green-700' },
   in_progress: { label: 'Đang làm', bg: 'bg-blue-100', text: 'text-blue-700' },
-  todo: { label: 'Chưa bắt đầu', bg: 'bg-slate-100', text: 'text-slate-600' },
+  todo: { label: 'Chưa làm', bg: 'bg-slate-100', text: 'text-slate-600' },
   review: { label: 'Đang review', bg: 'bg-amber-100', text: 'text-amber-700' },
   overdue: { label: 'Quá hạn', bg: 'bg-red-100', text: 'text-red-700' },
 };

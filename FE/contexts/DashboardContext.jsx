@@ -20,6 +20,7 @@ export function DashboardProvider({ children }) {
   const [year, setYear] = useState(currentYear);
   const [periodType, setPeriodType] = useState('week');
   const [periodValue, setPeriodValue] = useState(currentWeek);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
 
   const updatePeriod = useCallback((type) => {
     setPeriodType(type);
@@ -44,7 +45,7 @@ export function DashboardProvider({ children }) {
   }, []);
 
   return (
-    <DashboardContext.Provider value={{ year, periodType, periodValue, setYear: changeYear, setPeriodType: updatePeriod, setPeriodValue }}>
+    <DashboardContext.Provider value={{ year, periodType, periodValue, selectedProjectId, setYear: changeYear, setPeriodType: updatePeriod, setPeriodValue, setSelectedProjectId }}>
       {children}
     </DashboardContext.Provider>
   );

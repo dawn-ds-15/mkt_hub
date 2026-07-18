@@ -16,10 +16,10 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 const statusStyles = {
   overdue: { bg: 'bg-red-100', text: 'text-red-700', label: 'Quá hạn', row: 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100', icon: 'error', iconColor: 'text-red-600', fill: true },
-  Planning: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Chưa bắt đầu', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
+  Planning: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Chưa làm', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
   Processing: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Đang làm', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
   Done: { bg: 'bg-green-100', text: 'text-green-700', label: 'Hoàn thành', row: 'opacity-70 hover:opacity-100', icon: 'check_circle', iconColor: 'text-green-600' },
-  Backlog: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Backlog', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
+  Backlog: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Tồn đọng', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
   Pending: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Đang chờ', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
   Cancel: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Đã huỷ', row: 'opacity-60 hover:opacity-80', icon: 'cancel', iconColor: 'text-gray-500' },
 };
@@ -40,15 +40,15 @@ const priorityWeight = { high: 3, medium: 2, low: 1 };
 
 const statsMeta = [
   { key: 'total', label: 'Tổng cộng', color: 'text-primary' },
-  { key: 'Planning', label: 'Chưa bắt đầu', color: 'text-secondary' },
+  { key: 'Planning', label: 'Chưa làm', color: 'text-secondary' },
   { key: 'Processing', label: 'Đang làm', color: 'text-primary-container' },
   { key: 'Done', label: 'Hoàn thành', color: 'text-green-700' },
-  { key: 'Backlog', label: 'Backlog', color: 'text-amber-600' },
+  { key: 'Backlog', label: 'Tồn đọng', color: 'text-amber-600' },
   { key: 'Pending', label: 'Đang chờ', color: 'text-purple-600' },
   { key: 'overdue', label: 'Quá hạn', color: 'text-red-700' },
 ];
 
-const statusFilterOptions = ['Tất cả', 'Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'Cancel'];
+const statusFilterOptions = ['Tất cả', 'Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'overdue'];
 
 export default function TaskList() {
   const [tasks, setTasks] = useState([]);
@@ -107,7 +107,11 @@ export default function TaskList() {
       result = result.filter(t => t.project === filters.project);
     }
     if (filters.status !== 'Tất cả') {
-      result = result.filter(t => t.status === filters.status);
+      if (filters.status === 'overdue') {
+        result = result.filter(t => t.status === 'overdue');
+      } else {
+        result = result.filter(t => t.status === filters.status);
+      }
     }
     if (filters.priority !== 'Tất cả') {
       result = result.filter(t => t.priority === filters.priority);
@@ -129,7 +133,10 @@ export default function TaskList() {
   const stats = useCallback(() => {
     const total = tasks.length;
     const st = { total, Planning: 0, Processing: 0, Done: 0, Backlog: 0, Pending: 0, overdue: 0 };
-    tasks.forEach(t => { if (st[t.status] !== undefined) st[t.status]++; });
+    tasks.forEach(t => {
+      if (t.status === 'overdue') st.overdue++;
+      else if (st[t.status] !== undefined) st[t.status]++;
+    });
     return st;
   }, [tasks]);
 
@@ -238,7 +245,7 @@ export default function TaskList() {
               onChange={(e) => setFilters(prev => ({ ...prev, [def.key]: e.target.value }))}
             >
               {def.options.map((opt) => {
-                const statusLabels = { 'Tất cả': 'Tất cả', Planning: 'Chưa bắt đầu', Processing: 'Đang làm', Done: 'Hoàn thành', Backlog: 'Backlog', Pending: 'Đang chờ', Cancel: 'Đã huỷ' };
+                const statusLabels = { 'Tất cả': 'Tất cả', Planning: 'Chưa làm', Processing: 'Đang làm', Done: 'Hoàn thành', Backlog: 'Tồn đọng', Pending: 'Chờ xử lý', overdue: 'Quá hạn' };
                 const priorityLabelsMap = { 'Tất cả': 'Tất cả', high: 'Cao', medium: 'Trung bình', low: 'Thấp' };
                 const label = def.key === 'status' ? (statusLabels[opt] || opt) : def.key === 'priority' ? (priorityLabelsMap[opt] || opt) : opt;
                 return (
@@ -337,9 +344,9 @@ export default function TaskList() {
                   onChange={(e) => setQuickTask(prev => ({ ...prev, priority: e.target.value }))}
                 >
                   <option value="">Chọn</option>
-                  <option>high</option>
-                  <option>medium</option>
-                  <option>low</option>
+                  <option value="high">Cao</option>
+                  <option value="medium">Trung bình</option>
+                  <option value="low">Thấp</option>
                 </select>
               </div>
               <div className="space-y-1">

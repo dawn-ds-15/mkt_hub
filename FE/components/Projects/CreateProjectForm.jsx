@@ -40,7 +40,8 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
       setType(reverseTypeMap[project.type] || 'Nội bộ');
       setStatus(reverseStatusMap[project.statusLabel] || 'Lên kế hoạch');
       setOwnerId(project.ownerId || '');
-      setDeadline(project.deadline ? project.deadline.split('T')[0] || project.deadline : '');
+      const rawDeadline = project.deadlineRaw || project.deadline;
+      setDeadline(rawDeadline ? rawDeadline.split('T')[0] : '');
       setBudget(String(project.budgetPlanDirect || ''));
       setOverhead(String(project.budgetPlanOverhead || ''));
       setKpiPlan(String(project.kpiRawLeadsPlan || ''));

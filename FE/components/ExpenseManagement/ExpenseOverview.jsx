@@ -2,16 +2,18 @@ import { useState, useEffect } from 'react';
 import { getExpenseOverview } from '../../services/api';
 
 function formatCurrency(n) {
+  n = n ?? 0;
   if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'B';
   if (n >= 1000000) return (n / 1000000).toFixed(0) + 'M';
   return n.toLocaleString('vi-VN');
 }
 
 function formatFullCurrency(n) {
-  return n.toLocaleString('vi-VN') + ' ₫';
+  return (n ?? 0).toLocaleString('vi-VN') + ' ₫';
 }
 
 function formatSignedCurrency(n) {
+  n = n ?? 0;
   const prefix = n > 0 ? '+' : '';
   return prefix + n.toLocaleString('vi-VN');
 }
@@ -35,7 +37,23 @@ export default function ExpenseOverview() {
     );
   }
 
-  const filteredRows = data.projectExpenses.filter((r) =>
+  const projectExpenses = data.projectExpenses || [];
+  const kpis = data.kpis || [];
+  const budgetAllocation = data.budgetAllocation || [];
+  const hasData = projectExpenses.length > 0 || kpis.length > 0 || budgetAllocation.length > 0;
+
+  if (!hasData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-80 gap-4 text-on-surface-variant">
+        <span className="material-symbols-outlined text-[64px] text-outline-variant">finance_chart</span>
+        <p className="font-headline-sm">Chưa có dữ liệu tổng quan</p>
+        <p className="text-body-md text-outline">Nhập chi phí ở tab Nhập chi phí để xem dữ liệu tổng quan và báo cáo.</p>
+        <p className="text-body-sm text-outline italic">(API /v1/expenses/overview hiện chưa trả về dữ liệu)</p>
+      </div>
+    );
+  }
+
+  const filteredRows = projectExpenses.filter((r) =>
     r.project.toLowerCase().includes(search.toLowerCase())
   );
   const totalRows = filteredRows.length;
@@ -46,7 +64,7 @@ export default function ExpenseOverview() {
     <div className="space-y-6">
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {data.kpis.map((kpi) => (
+        {kpis.map((kpi) => (
           <div
             key={kpi.label}
             className={`bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 shadow-sm ${
@@ -84,19 +102,27 @@ export default function ExpenseOverview() {
             </h4>
             <div className="space-y-4 relative z-10">
               <div className="bg-white/10 p-4 rounded-lg border border-white/20 backdrop-blur-sm">
-                <p className="font-label-md text-label-md uppercase text-primary-fixed mb-1">Customer Acquisition Cost (CAC)</p>
+                <p className="font-label-md text-label-md uppercase text-primary-fixed mb-1">Chi phí Thu hút Khách hàng (CAC)</p>
                 <p className="font-body-md text-body-md leading-relaxed">
                   CAC = Tổng chi phí Marketing / Số khách hàng mới từ nguồn trả phí.
                 </p>
               </div>
               <div className="bg-white/10 p-4 rounded-lg border border-white/20 backdrop-blur-sm">
-                <p className="font-label-md text-label-md uppercase text-primary-fixed mb-1">Lifetime Value (LTV)</p>
+                <p className="font-label-md text-label-md uppercase text-primary-fixed mb-1">Giá trị Vòng đời KH (LTV)</p>
                 <p className="font-body-md text-body-md leading-relaxed">
                   LTV = Giá trị đơn hàng TB × Tần suất mua × Thời gian gắn bó. (Tự động ước tính dựa trên dữ liệu lịch sử)
                 </p>
               </div>
               <div className="pt-2">
-                <button className="w-full py-2 bg-white text-primary font-bold rounded hover:bg-primary-fixed transition-colors text-label-md">
+                <button
+                  onClick={() => {
+                    const rows = projectExpenses.map(r => [r.project, r.directCost, r.overhead, r.total].join(',')).join('\n');
+                    const csv = 'Dự án,Chi phí trực tiếp,Gián tiếp,Tổng\n' + rows;
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'expense-overview.csv'; a.click();
+                  }}
+                  className="w-full py-2 bg-white text-primary font-bold rounded hover:bg-primary-fixed transition-colors text-label-md"
+                >
                   XUẤT BÁO CÁO CHI TIẾT
                 </button>
               </div>
@@ -107,7 +133,7 @@ export default function ExpenseOverview() {
           <div className="bg-surface-container-lowest border border-border-subtle rounded-lg p-6 shadow-sm">
             <h4 className="font-title-lg text-title-lg mb-4 text-on-surface">Phân bổ Ngân sách</h4>
             <div className="space-y-4">
-              {data.budgetAllocation.map((item) => (
+              {budgetAllocation.map((item) => (
                 <div key={item.channel} className="space-y-2">
                   <div className="flex justify-between font-label-md text-label-md">
                     <span>{item.channel}</span>
@@ -133,6 +159,7 @@ export default function ExpenseOverview() {
               <div className="flex gap-2">
                 <div className="relative">
                   <input
+                    id="expense-overview-search"
                     className="pl-9 pr-4 py-2 border border-border-subtle rounded-lg text-body-sm focus:ring-1 focus:ring-primary focus:border-primary w-48 outline-none"
                     placeholder="Tìm dự án..."
                     value={search}
@@ -140,7 +167,13 @@ export default function ExpenseOverview() {
                   />
                   <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
                 </div>
-                <button className="p-2 border border-border-subtle rounded-lg hover:bg-surface-container transition-colors">
+                <button
+                  onClick={() => {
+                    const input = document.querySelector('#expense-overview-search');
+                    if (input) { input.focus(); input.select(); }
+                  }}
+                  className="p-2 border border-border-subtle rounded-lg hover:bg-surface-container transition-colors"
+                >
                   <span className="material-symbols-outlined text-[20px] text-on-surface-variant">filter_list</span>
                 </button>
               </div>
@@ -151,7 +184,7 @@ export default function ExpenseOverview() {
                   <tr>
                     <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline">Dự án</th>
                     <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline">Loại</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Budget</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Ngân sách</th>
                     <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Thực tế</th>
                     <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Chênh lệch</th>
                     <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-center">KH Mới</th>
@@ -180,7 +213,7 @@ export default function ExpenseOverview() {
               </table>
             </div>
             <div className="p-4 border-t border-border-subtle bg-surface-muted flex justify-between items-center">
-              <span className="text-body-sm text-outline">Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong {data.totalProjects} Dự án</span>
+              <span className="text-body-sm text-outline">Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong {(data.totalProjects || 0)} Dự án</span>
               <div className="flex gap-2">
                 <button
                   disabled={page === 1}

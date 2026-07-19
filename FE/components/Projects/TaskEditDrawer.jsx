@@ -29,7 +29,7 @@ function getUserRole() {
   return 'manager';
 }
 
-export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
+export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, readOnly }) {
   const [name, setName] = useState(task.taskName || task.title || '');
   const [description, setDescription] = useState(task.description || '');
   const [status, setStatus] = useState(() => {
@@ -136,7 +136,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
       <div className="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h3 className="text-base font-bold">Chi tiết Task</h3>
+          <h3 className="text-base font-bold">{readOnly ? 'Xem chi tiết Task' : 'Chi tiết Task'}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
 
@@ -150,6 +150,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Tên task..."
+              disabled={readOnly}
             />
           </div>
 
@@ -160,6 +161,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Mô tả chi tiết..."
+              disabled={readOnly}
             />
           </div>
 
@@ -180,7 +182,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
               {stakeholders.map((s) => (
                 <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[11px] font-medium">
                   {s}
-                  <button onClick={() => removeStakeholder(s)} className="text-blue-400 hover:text-blue-700">×</button>
+                  <button onClick={() => removeStakeholder(s)} className="text-blue-400 hover:text-blue-700" disabled={readOnly}>×</button>
                 </span>
               ))}
             </div>
@@ -203,6 +205,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
                 className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                 value={status}
                 onChange={(e) => { setStatus(e.target.value); setError(''); }}
+                disabled={readOnly}
               >
                 {statusOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -215,6 +218,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
                 className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
+                disabled={readOnly}
               >
                 {priorityOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -233,6 +237,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Nhập lý do..."
+                disabled={readOnly}
               />
             </div>
           )}
@@ -247,31 +252,31 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Ngày bắt đầu</label>
-              <input type="date" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <input type="date" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={readOnly} />
             </div>
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Hạn chót</label>
-              <input type="date" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <input type="date" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={readOnly} />
             </div>
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Ngày hoàn thành</label>
-              <input type="date" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={completedDate} onChange={(e) => setCompletedDate(e.target.value)} />
+              <input type="date" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={completedDate} onChange={(e) => setCompletedDate(e.target.value)} disabled={readOnly} />
             </div>
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Tuần thực hiện</label>
-              <input type="number" min="1" max="53" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={execWeek} onChange={(e) => setExecWeek(e.target.value)} placeholder="VD: 24" />
+              <input type="number" min="1" max="53" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={execWeek} onChange={(e) => setExecWeek(e.target.value)} placeholder="VD: 24" disabled={readOnly} />
               <div className="text-[10px] text-gray-400 mt-0.5">→ Dùng để lọc trong báo cáo tuần</div>
             </div>
           </div>
 
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Link (Drive / Công cụ)</label>
-            <input className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..." />
+            <input className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..." disabled={readOnly} />
           </div>
 
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Ghi chú</label>
-            <textarea className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none resize-vertical h-16" value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="Ghi chú thêm..." />
+            <textarea className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none resize-vertical h-16" value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="Ghi chú thêm..." disabled={readOnly} />
           </div>
 
           {showBodSupport && (
@@ -282,13 +287,14 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
                 value={neededSupportBod}
                 onChange={(e) => setNeededSupportBod(e.target.value)}
                 placeholder="Mô tả nội dung cần BOD hỗ trợ..."
+                disabled={readOnly}
               />
             </div>
           )}
         </div>
 
         <div className="border-t border-gray-200 px-6 py-4 flex items-center gap-3">
-          {!isSpecialist && (
+          {!readOnly && !isSpecialist && (
             <button
               onClick={handleDelete}
               disabled={saving}
@@ -299,8 +305,9 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
           )}
           <div className="flex-1" />
           <button onClick={onClose} className="px-4 py-2 border border-gray-200 rounded text-xs font-bold text-gray-500 hover:bg-gray-50 transition-all">
-            Hủy
+            {readOnly ? 'Đóng' : 'Hủy'}
           </button>
+          {!readOnly && (
           <button
             onClick={handleSave}
             disabled={saving || reasonRequired}
@@ -310,6 +317,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted }) {
           >
             {saving ? 'Đang lưu...' : 'Lưu'}
           </button>
+          )}
         </div>
       </div>
     </>

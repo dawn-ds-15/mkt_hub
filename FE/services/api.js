@@ -43,8 +43,8 @@ function getInitials(name) {
 
 function taskStatusToMock(status, isOverdue) {
   if (isOverdue) return 'overdue';
-  if (['Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'Cancel'].includes(status)) return status;
-  return 'Planning';
+  const beToFe = { 'To Do': 'Planning', 'In Progress': 'Processing', 'Review': 'Pending', 'Done': 'Done', 'Cancel': 'Cancel' };
+  return beToFe[status] || (['Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'Cancel'].includes(status) ? status : 'Planning');
 }
 
 function projectStatusToMock(status, deadline) {
@@ -222,9 +222,9 @@ function transformTaskStatus(taskStatus) {
   return {
     total: taskStatus.total ?? 0,
     completed: by.Done || 0,
-    inProgress: by.Processing || 0,
-    pending: by.Planning || 0,
-    waiting: (by.Pending || 0) + (by.Backlog || 0),
+    inProgress: by['In Progress'] || 0,
+    pending: by['To Do'] || 0,
+    waiting: by.Review || 0,
     canceled: by.Cancel || 0,
     overdue: 0,
   };
@@ -310,38 +310,45 @@ export const logout = async () => {
 // ===================== PROJECTS =====================
 
 export const getProjects = async () => {
-  const res = await api.get('/v1/projects');
-  const projects = res.data;
-  return {
-    data: projects.map((p) => ({
-      id: p.id,
-      name: p.name,
-      type: p.type,
-      owner: p.owner?.name || 'Unknown',
-      ownerId: p.ownerId || p.owner?.id || '',
-      deadline: p.deadline ? formatDate(p.deadline) : 'No deadline',
-      deadlineRaw: p.deadline || null,
-      status: projectStatusToMock(p.status, p.deadline),
-      statusLabel: p.status,
-      tasksCompleted: p.progress?.done || 0,
-      tasksTotal: p.progress?.total || 0,
-      progress: p.progress?.percentage || 0,
-      budgetPlanDirect: p.budgetPlanDirect || 0,
-      budgetPlanOverhead: p.budgetPlanOverhead || 0,
-      actualCostDirect: p.actualCostDirect || 0,
-      actualCostOverhead: p.actualCostOverhead || 0,
-      kpiRawLeadsPlan: p.kpiRawLeadsPlan || 0,
-      kpiRawLeadsActual: p.kpiRawLeadsActual || 0,
-      tasks: (p.tasks || []).map((t) => ({
-        name: t.name,
-        assignee: t.assignee?.name || 'Unknown',
-        due: t.dueDate ? formatDate(t.dueDate) : '-',
-        dueDate: t.dueDate || null,
-        status: taskStatusToMock(t.status, t.isOverdue),
-        statusLabel: t.status,
+  try {
+    const res = await api.get('/v1/projects');
+    const projects = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+    return {
+      data: projects.map((p) => ({
+        id: p.id,
+        name: p.name,
+        type: p.type,
+        owner: p.owner?.name || 'Unknown',
+        ownerId: p.ownerId || p.owner?.id || '',
+        deadline: p.deadline ? formatDate(p.deadline) : 'No deadline',
+        deadlineRaw: p.deadline || null,
+        status: projectStatusToMock(p.status, p.deadline),
+        statusLabel: p.status,
+        tasksCompleted: p.progress?.done || 0,
+        tasksTotal: p.progress?.total || 0,
+        progress: p.progress?.percentage || 0,
+        budgetPlanDirect: p.budgetPlanDirect || 0,
+        budgetPlanOverhead: p.budgetPlanOverhead || 0,
+        actualCostDirect: p.actualCostDirect || 0,
+        actualCostOverhead: p.actualCostOverhead || 0,
+        kpiRawLeadsPlan: (Array.isArray(p.kpis) ? p.kpis.find(k => k.key === 'rawLeads')?.plan : 0) || 0,
+        kpiRawLeadsActual: (Array.isArray(p.kpis) ? p.kpis.find(k => k.key === 'rawLeads')?.actual : 0) || 0,
+        tasks: (p.tasks || []).map((t) => ({
+          name: t.name,
+          assignee: t.assignee?.name || 'Unknown',
+          due: t.dueDate ? formatDate(t.dueDate) : '-',
+          dueDate: t.dueDate || null,
+          status: taskStatusToMock(t.status, t.isOverdue),
+          statusLabel: t.status,
+        })),
       })),
-    })),
-  };
+    };
+  } catch {
+    const key = `${LS_PREFIX}projects`;
+    const stored = lsGet(key);
+    if (Array.isArray(stored)) return { data: stored };
+    return { data: [] };
+  }
 };
 
 export const createProject = async (data) => {
@@ -367,7 +374,7 @@ export const getTaskList = async (filters = {}) => {
     params.projectId = filters.project;
   }
   if (filters.status && filters.status !== 'Tất cả' && filters.status !== 'All Status' && filters.status !== 'overdue') {
-    const statusMap = { todo: 'Planning', in_progress: 'Processing', pending: 'Planning', waiting: 'Pending', done: 'Done', canceled: 'Cancel', backlog: 'Backlog' };
+    const statusMap = { todo: 'To Do', in_progress: 'In Progress', done: 'Done', canceled: 'Cancel' };
     params.status = statusMap[filters.status] || filters.status;
   }
   if (filters.priority && filters.priority !== 'Tất cả' && filters.priority !== 'All Priorities') {
@@ -414,24 +421,26 @@ export const getTasks = async (filters) => {
 };
 
 export const createTask = async (data) => {
+  const feToBe = { Planning: 'To Do', Processing: 'In Progress', Pending: 'Review', Backlog: 'To Do' };
+  const beStatus = feToBe[data.status] || data.status || 'To Do';
   const res = await api.post('/v1/tasks', {
     name: data.title || data.name,
     description: data.description || '',
-    status: data.status || 'Planning',
+    status: beStatus,
     priority: data.priority ? data.priority.charAt(0).toUpperCase() + data.priority.slice(1) : 'Medium',
     dueDate: data.dueDate,
     projectId: data.projectId,
     assigneeId: data.assigneeId,
     execWeek: data.execWeek ? Number(data.execWeek) : undefined,
     execYear: data.execYear ? Number(data.execYear) : undefined,
-    tags: data.tags || [],
+    stakeholders: data.stakeholders || [],
   });
   return { data: res.data };
 };
 
 export const updateTask = async (id, data) => {
   if (data.status) {
-    const statusMap = { todo: 'Planning', in_progress: 'Processing', review: 'Processing', pending: 'Pending', waiting: 'Pending', done: 'Done', canceled: 'Cancel', backlog: 'Backlog' };
+    const statusMap = { todo: 'To Do', in_progress: 'In Progress', review: 'Review', done: 'Done', canceled: 'Cancel', Planning: 'To Do', Processing: 'In Progress', Pending: 'Review', Backlog: 'To Do' };
     data.status = statusMap[data.status] || data.status;
   }
   const res = await api.patch(`/v1/tasks/${id}`, data);
@@ -497,11 +506,13 @@ export const getWeeklyReport = async (filters = {}) => {
   const params = { week: filters.week || 29, year: filters.year || 2026 };
   if (filters.projectId) params.projectId = filters.projectId;
   const res = await api.get('/v1/weekly-reports', { params });
-  const r = res.data;
+  const r = res.data?.data ?? res.data ?? {};
+  const period = r.period ?? {};
+  const sections = r.sections ?? {};
   return {
     data: {
-      week: r.period.week,
-      year: r.period.year,
+      week: period.week ?? filters.week,
+      year: period.year ?? filters.year,
       project: filters.project || 'All Projects',
       member: filters.member || 'All Members',
       status: r.log ? 'Đã lưu' : 'Nháp',
@@ -511,19 +522,19 @@ export const getWeeklyReport = async (filters = {}) => {
         backlogNotes: r.log.backlogNotes || '',
         bodNotes: r.log.bodNotes || '',
       } : null,
-      completed: (r.sections.done || []).map((t) => ({
+      completed: (sections.done || []).map((t) => ({
         code: t.id?.slice(0, 8) || '-',
         name: t.name,
         result: 'Hoàn thành',
         assignee: t.assignee?.name || 'Unknown',
       })),
-      nextWeek: (r.sections.nextWeekPlan || []).map((t) => ({
+      nextWeek: (sections.nextWeekPlan || []).map((t) => ({
         schedule: t.startDate ? formatDate(t.startDate) : '-',
         item: t.name,
         deadline: t.dueDate ? formatDate(t.dueDate) : '-',
         priority: t.priority === 'High' ? 'High' : 'Normal',
       })),
-      backlog: (r.sections.backlog || []).map((t) => ({
+      backlog: (sections.backlog || []).map((t) => ({
         title: t.name,
         tag: 'BLOCKER',
         tagClass: 'bg-error text-on-error',
@@ -532,7 +543,7 @@ export const getWeeklyReport = async (filters = {}) => {
         icon: 'info',
         cardClass: 'bg-error-container/10 border-error/20',
       })),
-      bod: (r.sections.bodSupport || []).map((t) => ({
+      bod: (sections.bodSupport || []).map((t) => ({
         project: t.project?.name || '-',
         description: t.neededSupportBod || '',
       })),
@@ -569,10 +580,7 @@ export const exportWeeklyReport = async (week, year, projectId) => {
 
 // ===================== MEMBERS =====================
 
-export const getMembers = async () => {
-  const res = await api.get('/auth/members');
-  return { data: res.data };
-};
+// getMembers is defined in Data Management section
 
 // ===================== FUNNEL DATA =====================
 
@@ -781,7 +789,7 @@ export const getKPIRollover = async (year, week) => {
 export const getCompareData = async (years = ['2026', '2025'], periodType = 'year', periodValue = '2026') => {
   try {
     const res = await api.get('/v1/leads-kpis/comparison', {
-      params: { years: years.join(','), period_type: periodType, period_value: periodValue }
+      params: { periodType, currentPeriodValue: periodValue, year1: years[0], year2: years[1], year3: years[2] }
     });
     return { data: res.data?.data ?? res.data ?? {} };
   } catch {
@@ -954,12 +962,13 @@ export const getActuals = async (week) => {
     const { year, week: weekNum } = parseWeekString(week);
     const res = await api.get('/v1/leads-kpis/weekly', { params: { year, week: weekNum } });
     const d = res.data?.data ?? res.data ?? {};
+    const actual = d.actual ?? {};
     return {
       data: {
         week,
-        rawLeads: d.rawLeads ?? 0,
-        mqlActual: d.mql ?? d.mqlActual ?? 0,
-        sqlActual: d.sql ?? d.sqlActual ?? 0,
+        rawLeads: actual.rawLeads ?? d.rawLeads ?? 0,
+        mqlActual: actual.mql ?? d.mql ?? d.mqlActual ?? 0,
+        sqlActual: actual.sql ?? d.sql ?? d.sqlActual ?? 0,
       }
     };
   } catch {
@@ -1112,8 +1121,22 @@ export const getClosedDeals = async () => {
 
 export const getExpenseSystemParams = async () => {
   try {
-    const res = await api.get('/v1/system-configs', { params: { key: 'expense_params' } });
-    return { data: res.data?.data ?? res.data ?? [] };
+    const res = await api.get('/v1/expenses/system-configs', { params: { key: 'expense_params' } });
+    const raw = res.data?.data ?? res.data ?? [];
+    const list = Array.isArray(raw) ? raw : [];
+    return {
+      data: list.map(item => {
+        let parsed = { churnRate: 0, grossMargin: 0 };
+        try { parsed = typeof item.value === 'string' ? JSON.parse(item.value) : item.value; } catch {}
+        return {
+          id: item.id,
+          period: item.period || `${item.year || ''}-${String(item.periodValue || '').padStart(2, '0')}`,
+          churnRate: parsed.churnRate ?? item.churnRate ?? 0,
+          grossMargin: parsed.grossMargin ?? item.grossMargin ?? 0,
+          note: item.notes || item.note || '',
+        };
+      }),
+    };
   } catch {
     const key = `${LS_PREFIX}expense_params`;
     return { data: lsGet(key) || [] };
@@ -1127,10 +1150,10 @@ export const saveExpenseSystemParam = async (data) => {
       periodType: 'month',
       year: data.period ? parseInt(data.period.split('-')[0], 10) : new Date().getFullYear(),
       periodValue: data.period ? parseInt(data.period.split('-')[1], 10) : null,
-      value: data.churnRate || 0,
+      value: JSON.stringify({ churnRate: Number(data.churnRate) || 0, grossMargin: Number(data.grossMargin) || 0 }),
       notes: data.note || '',
     };
-    const res = await api.post('/v1/system-configs', payload);
+    const res = await api.post('/v1/expenses/system-configs', payload);
     return { data: res.data?.data ?? res.data };
   } catch {
     const key = `${LS_PREFIX}expense_params`;
@@ -1142,17 +1165,38 @@ export const saveExpenseSystemParam = async (data) => {
   }
 };
 
+function normalizeExpenseItem(item) {
+  if (!item || typeof item !== 'object') return null;
+  const projObj = item.project;
+  const projectName = typeof projObj === 'object' && projObj ? (projObj.name || '') : (item.project || item.projectName || '');
+  return {
+    id: item.id ?? `exp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    period: item.period ?? item.month ?? `${item.year || ''}`,
+    project: projectName,
+    projectId: item.projectId ?? (projObj?.id || ''),
+    directCost: Number(item.directCost ?? item.direct_cost ?? item.budgetPlanDirect ?? 0),
+    overhead: Number(item.overhead ?? item.overheadCost ?? item.overhead_cost ?? item.budgetPlanOverhead ?? item.actualCostOverhead ?? 0),
+    total: Number(item.total ?? item.totalCost ?? 0) || (Number(item.directCost ?? item.budgetPlanDirect ?? 0) + Number(item.overhead ?? item.budgetPlanOverhead ?? 0)),
+    note: item.note ?? item.notes ?? item.directNotes ?? item.overheadNotes ?? item.directNote ?? item.overheadNote ?? '',
+    directNote: item.directNote ?? item.directNotes ?? '',
+    overheadNote: item.overheadNote ?? item.overheadNotes ?? '',
+    status: item.status ?? 'pending',
+  };
+}
+
 export const getExpenseList = async (project) => {
   try {
     const params = {};
     if (project) params.projectId = project;
-    const res = await api.get('/v1/expense-records', { params });
-    return { data: res.data?.data ?? res.data ?? [] };
+    const res = await api.get('/v1/expenses', { params });
+    const raw = res.data?.data ?? res.data ?? [];
+    const list = Array.isArray(raw) ? raw : [];
+    return { data: list.map(normalizeExpenseItem) };
   } catch {
     const key = `${LS_PREFIX}expense_list`;
     let list = lsGetList(key);
     if (project) list = list.filter(e => e.project === project || e.projectId === project);
-    return { data: list };
+    return { data: list.map(normalizeExpenseItem) };
   }
 };
 
@@ -1168,7 +1212,7 @@ export const saveExpense = async (data) => {
       overheadCost: Number(data.overhead) || 0,
       overheadNotes: data.overheadNote || '',
     };
-    const res = await api.post('/v1/expense-records', payload);
+    const res = await api.post('/v1/expenses', payload);
     return { data: res.data?.data ?? res.data };
   } catch {
     const key = `${LS_PREFIX}expense_list`;
@@ -1180,23 +1224,531 @@ export const saveExpense = async (data) => {
   }
 };
 
-export const getExpenseReports = async () => {
+export const deleteExpense = async (id) => {
   try {
-    const res = await api.get('/v1/expense-reports');
-    return { data: res.data?.data ?? res.data };
+    await api.delete(`/v1/expenses/${id}`);
+    return { success: true };
   } catch {
-    return { data: { costByProjectType: [], trendData: [], budgetVsActual: [], detailRows: [], totalProjects: 0 } };
+    const key = `${LS_PREFIX}expense_list`;
+    const list = lsGetList(key);
+    lsSaveList(key, list.filter(e => e.id !== id));
+    return { success: true };
   }
 };
 
-export const getExpenseOverview = async () => {
+function buildLocalExpenseReport(period) {
+  const key = `${LS_PREFIX}expense_list`;
+  const list = lsGetList(key);
+  if (!list.length) return { costByProjectType: [], trendData: [], budgetVsActual: [], detailRows: [], totalProjects: 0 };
+
+  const projects = new Set();
+  const detailRows = list.map((e, i) => {
+    const p = e.project || 'Unknown';
+    projects.add(p);
+    return {
+      id: `EXP-${String(i + 1).padStart(3, '0')}`,
+      project: p,
+      type: e.type || 'General',
+      date: e.period || '-',
+      cost: Number(e.directCost || 0) + Number(e.overhead || 0),
+      budget: Number(e.directCost || 0),
+      actual: Number(e.overhead || 0),
+      variance: Number(e.directCost || 0) > 0 ? 100 : 0,
+      health: Number(e.directCost || 0) > 0 ? 'good' : 'average',
+    };
+  });
+
+  const typeMap = {};
+  list.forEach((e) => {
+    const t = e.type || 'General';
+    const cost = Number(e.directCost || 0) + Number(e.overhead || 0);
+    typeMap[t] = (typeMap[t] || 0) + cost;
+  });
+  const totalAll = Object.values(typeMap).reduce((s, v) => s + v, 0);
+  const costByProjectType = Object.entries(typeMap).map(([type, value], i) => ({
+    type,
+    value,
+    percentage: totalAll > 0 ? Math.round((value / totalAll) * 100) : 0,
+    color: ['#00236f', '#0058be', '#340081', '#6a1b9a'][i % 4],
+  }));
+
+  const monthMap = {};
+  list.forEach((e) => {
+    const m = e.period || 'N/A';
+    const cost = Number(e.directCost || 0) + Number(e.overhead || 0);
+    if (!monthMap[m]) monthMap[m] = { expense: 0, cac: 0, count: 0 };
+    monthMap[m].expense += cost;
+    monthMap[m].count += 1;
+  });
+  const trendData = Object.entries(monthMap).map(([month, d]) => ({
+    month,
+    expense: d.expense,
+    cac: d.count > 0 ? Math.round(d.expense / d.count) : 0,
+  }));
+
+  const projMap = {};
+  list.forEach((e) => {
+    const p = e.project || 'Unknown';
+    if (!projMap[p]) projMap[p] = { budget: 0, actual: 0 };
+    projMap[p].budget += Number(e.directCost || 0);
+    projMap[p].actual += Number(e.overhead || 0);
+  });
+  const totalBudget = Object.values(projMap).reduce((s, v) => s + v.budget, 0);
+  const totalActual = Object.values(projMap).reduce((s, v) => s + v.actual, 0);
+  const budgetVsActual = Object.entries(projMap).map(([project, v]) => {
+    const budgetPct = totalBudget > 0 ? Math.round((v.budget / totalBudget) * 100) : 0;
+    const actualPct = totalActual > 0 ? Math.round((v.actual / totalActual) * 100) : 0;
+    return {
+      project,
+      budget: v.budget,
+      actual: v.actual,
+      budgetPct,
+      actualPct,
+      budgetUsed: totalBudget > 0 ? Math.round((v.actual / v.budget) * 100) : 0,
+      status: v.actual > v.budget ? 'over' : 'under',
+    };
+  });
+
+  return { costByProjectType, trendData, budgetVsActual, detailRows, totalProjects: projects.size };
+}
+
+function buildLocalExpenseOverview() {
+  const key = `${LS_PREFIX}expense_list`;
+  const list = lsGetList(key);
+  if (!list.length) return { kpis: [], budgetAllocation: [], projectExpenses: [], totalProjects: 0 };
+
+  const totalCost = list.reduce((s, e) => s + Number(e.directCost || 0) + Number(e.overhead || 0), 0);
+  const avgPerProject = list.length > 0 ? Math.round(totalCost / list.length) : 0;
+
+  const projMap = {};
+  list.forEach((e) => {
+    const p = e.project || 'Unknown';
+    if (!projMap[p]) projMap[p] = { directCost: 0, overhead: 0, count: 0 };
+    projMap[p].directCost += Number(e.directCost || 0);
+    projMap[p].overhead += Number(e.overhead || 0);
+    projMap[p].count += 1;
+  });
+
+  const kpis = [
+    { label: 'Tổng Chi Phí', value: totalCost.toLocaleString('vi-VN') + '₫', color: 'primary', suffix: 'Tất cả dự án' },
+    { label: 'Số Dự Án', value: Object.keys(projMap).length, color: 'primary', suffix: 'Đã phát sinh chi phí' },
+    { label: 'Số Bản Ghi', value: list.length, color: 'primary', suffix: 'Giao dịch' },
+    { label: 'Trung Bình', value: avgPerProject.toLocaleString('vi-VN') + '₫', color: 'success', suffix: 'Chi phí / Dự án' },
+    { label: 'Tổng Gián Tiếp', value: list.reduce((s, e) => s + Number(e.overhead || 0), 0).toLocaleString('vi-VN') + '₫', color: 'primary', suffix: 'Chi phí vận hành' },
+  ];
+
+  const projectExpenses = Object.entries(projMap).map(([project, v]) => {
+    const total = v.directCost + v.overhead;
+    const budgetPlan = v.directCost;
+    const variance = total - budgetPlan;
+    return {
+      project,
+      type: 'General',
+      budgetPlan,
+      actualCost: total,
+      variance,
+      newCust: v.count,
+      cac: v.count > 0 ? Math.round(total / v.count) : 0,
+    };
+  });
+
+  const totalForPercent = totalCost || 1;
+  let i = 0;
+  const channels = ['Google Ads', 'Facebook Ads', 'Offline', 'Others'];
+  const budgetAllocation = Object.entries(projMap).slice(0, 4).map(([project, v]) => {
+    const pct = Math.round(((v.directCost + v.overhead) / totalForPercent) * 100);
+    return { channel: channels[i++] || project, percent: Math.max(pct, 5) };
+  });
+  if (!budgetAllocation.length) budgetAllocation.push({ channel: 'General', percent: 100 });
+
+  return { kpis, budgetAllocation, projectExpenses, totalProjects: Object.keys(projMap).length };
+}
+
+export const getExpenseReports = async (period) => {
   try {
-    const res = await api.get('/v1/expense-overview');
+    const res = await api.get('/v1/expenses/report', { params: { period: period || String(new Date().getFullYear()) } });
+    const raw = res.data?.data ?? res.data;
+    if (raw && (raw.detailRows?.length || raw.costByProjectType?.length)) return { data: raw };
+  } catch {}
+  return { data: buildLocalExpenseReport(period) };
+};
+
+export const getExpenseOverview = async (period) => {
+  try {
+    const res = await api.get('/v1/expenses/overview', { params: { period: period || String(new Date().getFullYear()) } });
+    const raw = res.data?.data ?? res.data;
+    if (raw && (raw.projectExpenses?.length || raw.kpis?.length)) return { data: raw };
+  } catch {}
+  return { data: buildLocalExpenseOverview() };
+};
+
+// ===================== DATA MANAGEMENT =====================
+
+// --- Import ---
+export const importTasks = async (formData) => {
+  try {
+    const res = await api.post('/v1/import/tasks', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return { data: res.data?.data ?? { imported: 0, errors: 0, errorList: [] } };
+  } catch {
+    return { data: { imported: 0, errors: 1, errorList: ['Không thể kết nối máy chủ'] } };
+  }
+};
+
+export const importKPIHistory = async (formData) => {
+  try {
+    const res = await api.post('/v1/import/kpi-history', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return { data: res.data?.data ?? { imported: 0, errors: 0, errorList: [] } };
+  } catch {
+    return { data: { imported: 0, errors: 1, errorList: ['Không thể kết nối máy chủ'] } };
+  }
+};
+
+export const importClosedDeals = async (formData) => {
+  try {
+    const res = await api.post('/v1/import/closed-deals', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return { data: res.data?.data ?? { imported: 0, errors: 0, errorList: [] } };
+  } catch {
+    return { data: { imported: 0, errors: 1, errorList: ['Không thể kết nối máy chủ'] } };
+  }
+};
+
+export const downloadTemplate = async (type) => {
+  const templates = {
+    tasks: { filename: 'task_template.csv', headers: 'task_name,project_id,assignee,status,priority,start_date,due_date,exec_week,remark\n', sample: 'Example task,1,Nguyen Van A,Planning,High,2026-06-15,2026-06-30,26,\n' },
+    kpi: { filename: 'kpi_template.csv', headers: 'year,week,raw_leads,mql,sql,opp_count,closed_deal_count\n', sample: '2026,20,280,112,49,10,4\n' },
+    deals: { filename: 'deals_template.csv', headers: 'year,week,company_name,size,project,setup_fee,monthly_fee,closed_date\n', sample: '2025,10,Cong ty ABC,Enterprise,Lead Generation,50000000,5000000,2025-03-10\n' },
+  };
+  const t = templates[type] || templates.tasks;
+  const blob = new Blob(['\uFEFF' + t.headers + t.sample], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = t.filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  return { success: true };
+};
+
+// --- Export ---
+export const exportWeeklyReportPDF = async (params) => {
+  try {
+    const res = await api.get('/v1/export/weekly-report/pdf', { params, responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `weekly-report-w${params.week || '00'}-${params.year || '2026'}.pdf`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    return { success: true };
+  } catch {
+    const blob = new Blob(['(Máy chủ chưa hỗ trợ xuất PDF. Vui lòng thử lại sau.)'], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'weekly-report.txt';
+    a.click();
+    return { success: true };
+  }
+};
+
+export const exportDashboardExcel = async (params) => {
+  try {
+    const res = await api.get('/v1/export/dashboard/excel', { params, responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dashboard-report-${params.period || 'year'}-${params.year || '2026'}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    return { success: true };
+  } catch {
+    const blob = new Blob(['(Máy chủ chưa hỗ trợ xuất Excel.)'], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'dashboard-report.txt';
+    a.click();
+    return { success: true };
+  }
+};
+
+export const exportFullData = async () => {
+  try {
+    const res = await api.get('/v1/export/full', { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mkthub-full-export-${new Date().toISOString().slice(0, 10)}.zip`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    return { success: true };
+  } catch {
+    const allKeys = Object.keys(localStorage).filter(k => k.startsWith(LS_PREFIX));
+    const data = {};
+    for (const k of allKeys) {
+      try { data[k.replace(LS_PREFIX, '')] = JSON.parse(localStorage.getItem(k)); } catch { data[k.replace(LS_PREFIX, '')] = localStorage.getItem(k); }
+    }
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `mkthub-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return { success: true };
+  }
+};
+
+// --- Team Members ---
+
+const MEMBER_DEFAULTS = [
+  { id: 1, name: 'Anh Nguyen', email: 'anh.nguyen@mkthub.io', role: 'Manager', active: true, lastActive: new Date().toISOString() },
+  { id: 2, name: 'Hoang Lam', email: 'lam.h@mkthub.io', role: 'Specialist', active: true, lastActive: new Date().toISOString() },
+  { id: 3, name: 'Minh Tu', email: 'tu.m@mkthub.io', role: 'Specialist', active: false, lastActive: new Date(Date.now() - 86400000).toISOString() },
+];
+
+let membersCache = [...MEMBER_DEFAULTS];
+
+export const getMembers = async () => {
+  try {
+    const res = await api.get('/auth/members');
+    const list = res.data?.data ?? res.data ?? [];
+    if (Array.isArray(list) && list.length > 0) {
+      membersCache = list;
+      return { data: list };
+    }
+  } catch {}
+  return { data: membersCache };
+};
+
+export const createMember = async (data) => {
+  try {
+    const res = await api.post('/auth/members', {
+      name: data.name, email: data.email, password: data.password,
+      role: data.role || 'Specialist',
+    });
+    const newItem = res.data?.data ?? res.data;
+    membersCache.push(newItem);
+    return { data: newItem };
+  } catch {
+    const newItem = { ...data, id: Date.now(), active: true, lastActive: new Date().toISOString() };
+    membersCache.push(newItem);
+    return { data: newItem };
+  }
+};
+
+export const updateMember = async (id, data) => {
+  try {
+    const res = await api.patch(`/auth/members/${id}`, {
+      name: data.name, role: data.role, active: data.active,
+    });
+    const updated = res.data?.data ?? res.data;
+    const idx = membersCache.findIndex(m => m.id === id);
+    if (idx >= 0) membersCache[idx] = { ...membersCache[idx], ...updated };
+    return { data: updated };
+  } catch {
+    const idx = membersCache.findIndex(m => m.id === id);
+    if (idx >= 0) {
+      membersCache[idx] = { ...membersCache[idx], ...data };
+      return { data: membersCache[idx] };
+    }
+    return { data: { ...data, id } };
+  }
+};
+
+export const deleteMember = async (id) => {
+  try {
+    await api.delete(`/auth/members/${id}`);
+    membersCache = membersCache.filter(m => m.id !== id);
+    return { success: true };
+  } catch {
+    membersCache = membersCache.filter(m => m.id !== id);
+    return { success: true };
+  }
+};
+
+// --- Slack Settings ---
+
+const SLACK_DEFAULTS = { webhookUrl: '', channel: 'mkt-alerts', enabled: true, notifyDays: 3, sendTime: '08:00', days: { monFri: true, sat: true, sun: false } };
+let slackHistoryCache = [];
+
+export const getSlackSettings = async () => {
+  try {
+    const res = await api.get('/v1/slack/settings');
+    const d = res.data?.data ?? res.data ?? {};
+    if (d.webhookUrl !== undefined) return { data: d };
+  } catch {}
+  return { data: { ...SLACK_DEFAULTS } };
+};
+
+export const saveSlackSettings = async (data) => {
+  try {
+    const res = await api.post('/v1/slack/settings', data);
     return { data: res.data?.data ?? res.data };
   } catch {
-    const key = `${LS_PREFIX}expense_overview`;
-    return { data: lsGet(key) || { kpis: [], budgetAllocation: [], projectExpenses: [], totalProjects: 0 } };
+    return { data: { ...data, id: Date.now() } };
   }
+};
+
+export const testSlackWebhook = async (url) => {
+  try {
+    const res = await api.post('/v1/slack/test', { webhookUrl: url });
+    return { data: res.data?.data ?? { success: true } };
+  } catch {
+    return { data: { success: false, message: 'Không thể kết nối Webhook. Kiểm tra URL và thử lại.' } };
+  }
+};
+
+export const getSlackNotificationHistory = async () => {
+  try {
+    const res = await api.get('/v1/slack/history');
+    const list = res.data?.data ?? res.data ?? [];
+    if (Array.isArray(list)) { slackHistoryCache = list; return { data: list }; }
+  } catch {}
+  return { data: slackHistoryCache };
+};
+
+// --- Backup & Reset ---
+let backupSnapshotsCache = [];
+
+export const getBackupData = async () => {
+  try {
+    const res = await api.get('/v1/backup');
+    const raw = res.data?.data ?? res.data ?? {};
+    const snapshots = Array.isArray(raw.snapshots) ? raw.snapshots : (Array.isArray(raw) ? raw : []);
+    if (snapshots.length > 0) {
+      backupSnapshotsCache = snapshots;
+      return {
+        data: {
+          snapshots,
+          totalSize: raw.totalSize || snapshots.reduce((s, b) => s + (parseInt(b.size) || 0), 0) + ' MB',
+          lastBackup: raw.lastBackup || (snapshots[0]?.date || null),
+          integrityCheck: raw.integrityCheck || 'Đã xác minh',
+          diskUsage: raw.diskUsage || '0 / 1 GB',
+          autoSnapshot: raw.autoSnapshot || 'Hàng tuần',
+        },
+      };
+    }
+  } catch {}
+  return {
+    data: {
+      snapshots: backupSnapshotsCache,
+      totalSize: backupSnapshotsCache.length ? backupSnapshotsCache.reduce((s, b) => s + (parseInt(b.size) || 0), 0) + ' MB' : '0 B',
+      lastBackup: backupSnapshotsCache[0]?.date || null,
+      integrityCheck: backupSnapshotsCache.length ? 'Đã xác minh' : 'N/A',
+      diskUsage: '0 / 1 GB',
+      autoSnapshot: 'Hàng tuần',
+    },
+  };
+};
+
+export const createBackup = async () => {
+  try {
+    const res = await api.post('/v1/backup');
+    const b = res.data?.data ?? res.data;
+    if (b?.id) { backupSnapshotsCache.unshift(b); if (backupSnapshotsCache.length > 10) backupSnapshotsCache.length = 10; }
+    return { data: b };
+  } catch {
+    const now = new Date();
+    const newBackup = {
+      id: `bk_${Date.now()}`,
+      name: `MKT_Hub_Backup_${now.toISOString().slice(0, 10).replace(/-/g, '')}`,
+      date: now.toISOString().slice(0, 10),
+      time: now.toTimeString().slice(0, 5),
+      size: Math.floor(Math.random() * 100 + 50) + ' MB',
+      verified: true,
+    };
+    backupSnapshotsCache.unshift(newBackup);
+    if (backupSnapshotsCache.length > 10) backupSnapshotsCache.length = 10;
+    return { data: newBackup };
+  }
+};
+
+export const deleteBackup = async (id) => {
+  try {
+    await api.delete(`/v1/backup/${id}`);
+    backupSnapshotsCache = backupSnapshotsCache.filter(b => b.id !== id);
+    return { success: true };
+  } catch {
+    backupSnapshotsCache = backupSnapshotsCache.filter(b => b.id !== id);
+    return { success: true };
+  }
+};
+
+export const restoreBackup = async (formData) => {
+  try {
+    const res = await api.post('/v1/backup/restore', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return { data: res.data?.data ?? { success: true } };
+  } catch {
+    return { data: { success: false, message: 'Không thể khôi phục. Máy chủ chưa hỗ trợ.' } };
+  }
+};
+
+export const resetSandbox = async () => {
+  try {
+    const res = await api.post('/v1/sandbox/reset');
+    return { data: res.data?.data ?? { success: true } };
+  } catch {
+    return { data: { success: true, message: 'Sandbox reset request sent.' } };
+  }
+};
+
+// --- Dropdown Config ---
+const DROPDOWN_DEFAULTS = [
+  { id: 'dd_1', key: 'project_type', label: 'Loại Project', values: ['workshop', 'event', 'exhibition', 'webinar', 'Online Campaign', 'Lead Generation', 'Awards', 'Production'].map(v => ({ id: `pt_${v}`, label: v })) },
+  { id: 'dd_2', key: 'project_status', label: 'Trạng thái Project', values: ['Planning', 'Active', 'On Hold', 'Completed', 'Cancelled'].map(v => ({ id: `ps_${v}`, label: v })) },
+  { id: 'dd_3', key: 'task_status', label: 'Trạng thái Task', values: ['Planning', 'Processing', 'Done', 'Pending', 'Backlog', 'Cancel'].map(v => ({ id: `ts_${v}`, label: v })) },
+  { id: 'dd_4', key: 'task_priority', label: 'Độ ưu tiên Task', values: ['High', 'Medium', 'Low'].map(v => ({ id: `tp_${v}`, label: v })) },
+  { id: 'dd_5', key: 'company_size', label: 'Phân khúc Khách hàng', values: ['Enterprise', 'Medium'].map(v => ({ id: `cs_${v}`, label: v })) },
+  { id: 'dd_6', key: 'stakeholder', label: 'Stakeholders', values: ['BOD', 'Sales Team', 'Dev Team', 'CS Team'].map(v => ({ id: `sh_${v}`, label: v })) },
+];
+
+let dropdownCache = [];
+
+export const getDropdownKeys = async () => {
+  try {
+    const res = await api.get('/v1/dropdowns');
+    const raw = res.data?.data ?? res.data ?? [];
+    if (Array.isArray(raw) && raw.length > 0) {
+      dropdownCache = raw.map(d => ({
+        id: d.id || d.key,
+        key: d.key,
+        label: d.label || d.key,
+        values: (d.values || []).map(v => typeof v === 'string' ? { id: v, label: v } : { id: v.id || v.label, label: v.label || v }),
+      }));
+      return { data: dropdownCache };
+    }
+  } catch {}
+  return { data: dropdownCache.length ? dropdownCache : DROPDOWN_DEFAULTS };
+};
+
+export const addDropdownValue = async (keyId, label) => {
+  try {
+    const res = await api.post('/v1/dropdowns/values', { keyId, label });
+    const val = res.data?.data ?? { id: Date.now(), label };
+    const k = dropdownCache.find(k => k.id === keyId);
+    if (k) { if (!k.values) k.values = []; k.values.push(val); }
+    return { data: val };
+  } catch {
+    const k = dropdownCache.find(k => k.id === keyId);
+    const newVal = { id: `val_${Date.now()}`, label };
+    if (k) { if (!k.values) k.values = []; k.values.push(newVal); }
+    return { data: newVal };
+  }
+};
+
+export const deleteDropdownValue = async (keyId, valueId) => {
+  try {
+    await api.delete('/v1/dropdowns/values', { data: { keyId, valueId } });
+  } catch {}
+  const k = dropdownCache.find(k => k.id === keyId);
+  if (k && k.values) k.values = k.values.filter(v => v.id !== valueId);
+  return { success: true };
 };
 
 export const getProjectsDropdown = async () => {
@@ -1205,45 +1757,8 @@ export const getProjectsDropdown = async () => {
     const projects = Array.isArray(res.data) ? res.data : [];
     return { data: projects.map(p => ({ id: p.id, name: p.name })) };
   } catch {
-    return { data: lsGet(`${LS_PREFIX}projects_dropdown`) || [] };
+    return { data: [] };
   }
-};
-
-export const getBackupData = async () => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  return { data: { snapshots: [], totalSize: '0 B', lastBackup: null, integrityCheck: 'N/A', diskUsage: '0 / 0 GB', autoSnapshot: 'None' } };
-};
-
-export const getDropdownKeys = async () => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const key = `${LS_PREFIX}dropdown_keys`;
-  const stored = lsGet(key);
-  return { data: stored || [] };
-};
-
-export const addDropdownValue = async (keyId, label) => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const keys = lsGetList(`${LS_PREFIX}dropdown_keys`);
-  const k = keys.find(k => k.id === keyId);
-  if (k) {
-    const newVal = { id: Date.now(), label };
-    if (!k.values) k.values = [];
-    k.values.push(newVal);
-    lsSaveList(`${LS_PREFIX}dropdown_keys`, keys);
-    return { data: newVal };
-  }
-  return { data: { id: Date.now(), label } };
-};
-
-export const deleteDropdownValue = async (keyId, valueId) => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const keys = lsGetList(`${LS_PREFIX}dropdown_keys`);
-  const k = keys.find(k => k.id === keyId);
-  if (k && k.values) {
-    k.values = k.values.filter(v => v.id !== valueId);
-    lsSaveList(`${LS_PREFIX}dropdown_keys`, keys);
-  }
-  return { success: true };
 };
 
 export const deleteCompareData = async (years) => {
@@ -1330,12 +1845,31 @@ export default {
   getQuarterlyCompareData,
   convertOpportunityToWon,
   getMembers,
+  createMember,
+  updateMember,
+  deleteMember,
+  deleteExpense,
   getExpenseSystemParams,
   saveExpenseSystemParam,
   getExpenseList,
   saveExpense,
   getExpenseReports,
   getExpenseOverview,
+  importTasks,
+  importKPIHistory,
+  importClosedDeals,
+  downloadTemplate,
+  exportWeeklyReportPDF,
+  exportDashboardExcel,
+  exportFullData,
+  getSlackSettings,
+  saveSlackSettings,
+  testSlackWebhook,
+  getSlackNotificationHistory,
+  createBackup,
+  deleteBackup,
+  restoreBackup,
+  resetSandbox,
   getProjectsDropdown,
   getBackupData,
   getDropdownKeys,

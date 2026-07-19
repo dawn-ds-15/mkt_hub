@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getTaskList, createTask, deleteTask, getProjects, getMembers } from '../../services/api';
 import TaskEditDrawer from './TaskEditDrawer';
+import TaskViewModal from './TaskViewModal';
 
 function getISOWeek() {
   const now = new Date();
@@ -56,6 +57,7 @@ export default function TaskList() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [editTask, setEditTask] = useState(null);
+  const [viewTask, setViewTask] = useState(null);
   const [projects, setProjects] = useState([]);
   const [members, setMembers] = useState([]);
   const [filters, setFilters] = useState({
@@ -480,10 +482,18 @@ export default function TaskList() {
                       <td className="p-3">
                         <div className="flex justify-center gap-2">
                           <button
+                            onClick={() => setViewTask(task)}
+                            className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors"
+                            title="Xem chi tiết"
+                          >
+                            <span className="material-symbols-outlined text-lg">visibility</span>
+                          </button>
+                          <button
                             onClick={() => setEditTask(task)}
                             className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors"
+                            title="Chỉnh sửa"
                           >
-                            <span className="material-symbols-outlined text-lg">{task.status === 'done' ? 'visibility' : 'edit'}</span>
+                            <span className="material-symbols-outlined text-lg">edit</span>
                           </button>
                           {userRole === 'manager' && (
                             <button
@@ -542,6 +552,12 @@ export default function TaskList() {
 
     </div>
 
+      {viewTask && (
+        <TaskViewModal
+          task={viewTask}
+          onClose={() => setViewTask(null)}
+        />
+      )}
       {editTask && (
         <TaskEditDrawer
           task={editTask}

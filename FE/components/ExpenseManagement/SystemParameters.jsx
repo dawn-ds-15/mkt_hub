@@ -10,18 +10,29 @@ export default function SystemParameters() {
   const [churnRate, setChurnRate] = useState('');
   const [grossMargin, setGrossMargin] = useState('');
   const [note, setNote] = useState('');
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     getExpenseSystemParams().then((res) => setParams(res.data));
   }, []);
 
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 2500);
+  };
+
   const handleSave = async () => {
-    await saveExpenseSystemParam({
-      period,
-      churnRate: parseFloat(churnRate),
-      grossMargin: parseFloat(grossMargin),
-      note,
-    });
+    try {
+      await saveExpenseSystemParam({
+        period,
+        churnRate: parseFloat(churnRate),
+        grossMargin: parseFloat(grossMargin),
+        note,
+      });
+      showToast('Cập nhật thông số thành công');
+    } catch {
+      showToast('Lỗi khi cập nhật thông số', 'error');
+    }
     const res = await getExpenseSystemParams();
     setParams(res.data);
     setChurnRate('');
@@ -45,14 +56,14 @@ export default function SystemParameters() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block font-label-md text-on-surface-variant mb-1">Churn Rate (%)</label>
+                <label className="block font-label-md text-on-surface-variant mb-1">Tỷ lệ rời bỏ (%)</label>
                 <div className="relative">
                   <input className="w-full border border-border-light rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="5.2" step="0.1" type="number" value={churnRate} onChange={(e) => setChurnRate(e.target.value)} />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant">%</span>
                 </div>
               </div>
               <div>
-                <label className="block font-label-md text-on-surface-variant mb-1">Gross Margin (%)</label>
+                <label className="block font-label-md text-on-surface-variant mb-1">Biên lợi nhuận gộp (%)</label>
                 <div className="relative">
                   <input className="w-full border border-border-light rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="65.0" step="0.1" type="number" value={grossMargin} onChange={(e) => setGrossMargin(e.target.value)} />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant">%</span>
@@ -79,8 +90,9 @@ export default function SystemParameters() {
             <thead>
               <tr className="bg-background-subtle">
                 <th className="px-4 py-2 font-label-md text-on-surface-variant border-b border-border-light">Kỳ</th>
-                <th className="px-4 py-2 font-label-md text-on-surface-variant border-b border-border-light">Churn</th>
-                <th className="px-4 py-2 font-label-md text-on-surface-variant border-b border-border-light">GM</th>
+                <th className="px-4 py-2 font-label-md text-on-surface-variant border-b border-border-light">Rời bỏ (%)</th>
+                <th className="px-4 py-2 font-label-md text-on-surface-variant border-b border-border-light">Lợi nhuận gộp (%)</th>
+                <th className="px-4 py-2 font-label-md text-on-surface-variant border-b border-border-light">Ghi chú</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light">
@@ -89,12 +101,21 @@ export default function SystemParameters() {
                   <td className="px-4 py-2 text-body-md">{p.period}</td>
                   <td className="px-4 py-2 text-body-md font-medium">{p.churnRate}%</td>
                   <td className="px-4 py-2 text-body-md font-medium">{p.grossMargin}%</td>
+                  <td className="px-4 py-2 text-body-sm text-on-surface-variant">{p.note || '-'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-semibold transition-all ${
+          toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+        }`}>
+          {toast.msg}
+        </div>
+      )}
     </section>
   );
 }

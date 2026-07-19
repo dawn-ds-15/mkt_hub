@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ProfileModal from './ProfileModal';
 
 function getInitials(name) {
   return (name || 'U')
@@ -12,6 +13,7 @@ function getInitials(name) {
 
 export default function Topbar({ title = 'Tổng quan' }) {
   const [open, setOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const navigate = useNavigate();
 
   let userName = 'Người dùng';
@@ -54,7 +56,15 @@ export default function Topbar({ title = 'Tổng quan' }) {
           {open && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-border-light rounded-lg shadow-xl z-20 py-1">
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-border-light rounded-lg shadow-xl z-20 py-1">
+                <button
+                  onClick={() => { setOpen(false); setShowProfile(true); }}
+                  className="w-full px-4 py-2.5 text-left text-body-md text-on-surface hover:bg-blue-50 flex items-center gap-3"
+                >
+                  <span className="material-symbols-outlined text-[18px]">person</span>
+                  Chỉnh sửa thông tin
+                </button>
+                <hr className="my-1 border-border-light" />
                 <button
                   onClick={handleLogout}
                   className="w-full px-4 py-2.5 text-left text-body-md text-danger hover:bg-red-50 flex items-center gap-3"
@@ -67,6 +77,11 @@ export default function Topbar({ title = 'Tổng quan' }) {
           )}
         </div>
       </div>
+      {showProfile && (
+        <ProfileModal
+          onClose={() => setShowProfile(false)}
+        />
+      )}
     </header>
   );
 }

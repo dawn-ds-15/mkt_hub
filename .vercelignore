@@ -1,0 +1,11 @@
+BE
+node_modules
+.git
+.gitattributes
+.gitignore
+database
+specification
+*.sql
+*.xlsx
+*.csv
+README.md

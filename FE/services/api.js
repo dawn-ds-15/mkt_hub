@@ -366,7 +366,7 @@ export const getTaskList = async (filters = {}) => {
   if (filters.project && filters.project !== 'Tất cả' && filters.project !== 'All Projects') {
     params.projectId = filters.project;
   }
-  if (filters.status && filters.status !== 'Tất cả' && filters.status !== 'All Status') {
+  if (filters.status && filters.status !== 'Tất cả' && filters.status !== 'All Status' && filters.status !== 'overdue') {
     const statusMap = { todo: 'Planning', in_progress: 'Processing', pending: 'Planning', waiting: 'Pending', done: 'Done', canceled: 'Cancel', backlog: 'Backlog' };
     params.status = statusMap[filters.status] || filters.status;
   }
@@ -377,6 +377,8 @@ export const getTaskList = async (filters = {}) => {
   if (filters.assignee && filters.assignee !== 'Tất cả' && filters.assignee !== 'Everyone') {
     params.assigneeId = filters.assignee;
   }
+  if (filters.dateFrom) params.dueDateFrom = filters.dateFrom;
+  if (filters.dateTo) params.dueDateTo = filters.dateTo;
   const res = await api.get('/v1/tasks', { params });
   const { data: tasks } = res.data;
   return {
@@ -395,7 +397,8 @@ export const getTaskList = async (filters = {}) => {
       dueDate: t.dueDate || '',
       done: t.completedDate ? formatDate(t.completedDate) : null,
       completedDate: t.completedDate || '',
-      link: t.link ? { type: 'link', url: t.link } : null,
+      link: t.link || null,
+      linkUrl: t.link || null,
       remark: t.remark || '',
     })),
     total: res.data.stats?.total || tasks.length,
@@ -474,6 +477,7 @@ export const getKanbanData = async () => {
             assignee: t.assignee?.name || 'Unknown',
             priority: t.priority || 'Medium',
             due: t.dueDate ? formatDate(t.dueDate) : '-',
+            dueDate: t.dueDate || '',
             dueColor: isOverdue ? 'text-red-500' : isDone ? 'text-green-600' : 'text-gray-400',
             statusIcon: isOverdue ? 'error' : isDone ? 'check_circle' : 'east',
             statusColor: isOverdue ? 'text-red-500' : isDone ? 'text-green-600' : 'text-amber-500',
@@ -702,21 +706,29 @@ function buildCardsFromLocal(loc) {
 
 export const getKpiCardsData = async (periodType = 'year', periodValue = '2026', year = '2026') => {
   const numericYear = parseInt(year, 10);
-  const localOverride = getLocalOverrideCards(periodType, periodValue, numericYear);
-  if (localOverride) return { data: buildCardsFromLocal(localOverride) };
-
-  let apiCards = [];
   try {
     const res = await api.get('/v1/dashboard/kpi-cards', {
       params: { period_type: periodType, period_value: periodValue, year },
     });
-    apiCards = res.data?.data ?? res.data ?? [];
-  } catch { apiCards = []; }
-  return { data: apiCards };
+    const apiCards = res.data?.data ?? res.data ?? [];
+    if (apiCards.length > 0) return { data: apiCards };
+  } catch { /* fallback to local */ }
+
+  const localOverride = getLocalOverrideCards(periodType, periodValue, numericYear);
+  if (localOverride) return { data: buildCardsFromLocal(localOverride) };
+  return { data: [] };
 };
 
 export const getFunnelData = async (periodType = 'year', periodValue = '2026', year = '2026') => {
   const numericYear = parseInt(year, 10);
+  try {
+    const res = await api.get('/v1/dashboard/funnel', {
+      params: { period_type: periodType, period_value: periodValue, year },
+    });
+    const apiData = res.data?.data ?? res.data ?? [];
+    if (apiData.length > 0) return { data: apiData };
+  } catch { /* fallback to local */ }
+
   const localOverride = getLocalOverrideCards(periodType, periodValue, numericYear);
   if (localOverride) {
     const cards = buildCardsFromLocal(localOverride);
@@ -728,15 +740,7 @@ export const getFunnelData = async (periodType = 'year', periodValue = '2026', y
     }));
     return { data };
   }
-
-  let apiData = [];
-  try {
-    const res = await api.get('/v1/dashboard/funnel', {
-      params: { period_type: periodType, period_value: periodValue, year },
-    });
-    apiData = res.data?.data ?? res.data ?? [];
-  } catch { apiData = []; }
-  return { data: apiData };
+  return { data: [] };
 };
 
 // ===================== KPI ROLLOVER =====================
@@ -775,27 +779,34 @@ export const getKPIRollover = async (year, week) => {
 // ===================== COMPARE PERIODS =====================
 
 export const getCompareData = async (years = ['2026', '2025'], periodType = 'year', periodValue = '2026') => {
-  const results = await Promise.all(
-    years.map(year =>
-      getKpiCardsData(periodType, periodValue, year).then(r => ({ year, data: r.data }))
-    )
-  );
-  const byYear = {};
-  for (const { year, data } of results) {
-    byYear[year] = {};
-    for (const kpi of data) {
-      byYear[year][kpi.label] = {
-        actual: kpi.actual,
-        plan: kpi.plan,
-        percentVsPlan: kpi.percentVsPlan,
-        cac: kpi.cac,
-        ltv: kpi.ltv,
-        ratio: kpi.ratio,
-        health: kpi.health,
-      };
+  try {
+    const res = await api.get('/v1/leads-kpis/comparison', {
+      params: { years: years.join(','), period_type: periodType, period_value: periodValue }
+    });
+    return { data: res.data?.data ?? res.data ?? {} };
+  } catch {
+    const results = await Promise.all(
+      years.map(year =>
+        getKpiCardsData(periodType, periodValue, year).then(r => ({ year, data: r.data }))
+      )
+    );
+    const byYear = {};
+    for (const { year, data } of results) {
+      byYear[year] = {};
+      for (const kpi of data) {
+        byYear[year][kpi.label] = {
+          actual: kpi.actual,
+          plan: kpi.plan,
+          percentVsPlan: kpi.percentVsPlan,
+          cac: kpi.cac,
+          ltv: kpi.ltv,
+          ratio: kpi.ratio,
+          health: kpi.health,
+        };
+      }
     }
+    return { data: byYear };
   }
-  return { data: byYear };
 };
 
 export const getQuarterlyCompareData = async (selectedYears, metric = 'Raw Leads') => {
@@ -877,41 +888,108 @@ function lsSaveList(key, list) {
 // ===================== PLAN KPIs =====================
 
 export const getPlanKPIs = async (year) => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const key = `${LS_PREFIX}plan_kpis_${year}`;
-  const stored = lsGet(key);
-  if (stored) return { data: stored };
-  return { data: { year: Number(year), targetLeads: 0, mqlTarget: 0, sqlTarget: 0, opportunityCount: 0, closedDealCount: 0, pipelineValue: 0, wonValue: 0 } };
+  try {
+    const res = await api.get(`/v1/leads-kpis/plan/${year}`);
+    const d = res.data?.data ?? res.data ?? {};
+    return {
+      data: {
+        year: Number(year),
+        targetLeads: d.totalRawLeads ?? d.targetLeads ?? 0,
+        mqlTarget: d.targetMql ?? d.mqlTarget ?? 0,
+        sqlTarget: d.targetSql ?? d.sqlTarget ?? 0,
+        opportunityCount: d.targetOpp ?? d.opportunityCount ?? 0,
+        closedDealCount: d.targetClosedDeal ?? d.closedDealCount ?? 0,
+        pipelineValue: d.targetPipelineVal ?? d.pipelineValue ?? 0,
+        wonValue: d.targetWonVal ?? d.wonValue ?? 0,
+      }
+    };
+  } catch {
+    const key = `${LS_PREFIX}plan_kpis_${year}`;
+    const stored = lsGet(key);
+    if (stored) return { data: stored };
+    return { data: { year: Number(year), targetLeads: 0, mqlTarget: 0, sqlTarget: 0, opportunityCount: 0, closedDealCount: 0, pipelineValue: 0, wonValue: 0 } };
+  }
 };
 
 export const savePlanKPIs = async (data) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const year = data.year || new Date().getFullYear();
-  const key = `${LS_PREFIX}plan_kpis_${year}`;
-  const existing = lsGet(key) || {};
-  const saved = { ...existing, ...data, id: Date.now(), year };
-  lsSet(key, saved);
-  return { data: saved };
+  try {
+    const payload = {
+      year: data.year,
+      totalRawLeads: Number(data.targetLeads) || 0,
+      targetMql: Number(data.mqlTarget) || 0,
+      targetSql: Number(data.sqlTarget) || 0,
+      targetOpp: Number(data.opportunityCount) || 0,
+      targetClosedDeal: Number(data.closedDealCount) || 0,
+      targetPipelineVal: Number(data.pipelineValue) || 0,
+      targetWonVal: Number(data.wonValue) || 0,
+    };
+    const res = await api.post('/v1/leads-kpis/plan', payload);
+    return { data: res.data?.data ?? res.data };
+  } catch {
+    const year = data.year || new Date().getFullYear();
+    const key = `${LS_PREFIX}plan_kpis_${year}`;
+    const existing = lsGet(key) || {};
+    const saved = { ...existing, ...data, id: Date.now(), year };
+    lsSet(key, saved);
+    return { data: saved };
+  }
 };
 
 // ===================== ACTUALS =====================
 
+function parseWeekString(weekStr) {
+  const parts = String(weekStr).split('-W');
+  if (parts.length === 2) {
+    return { year: parseInt(parts[0], 10), week: parseInt(parts[1], 10) };
+  }
+  const fallback = weekStr.split('W');
+  if (fallback.length === 2) {
+    return { year: parseInt(fallback[0], 10), week: parseInt(fallback[1], 10) };
+  }
+  return { year: new Date().getFullYear(), week: 1 };
+}
+
 export const getActuals = async (week) => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const key = `${LS_PREFIX}actuals_${week}`;
-  const stored = lsGet(key);
-  if (stored) return { data: stored };
-  return { data: { week, rawLeads: 0, mqlActual: 0, sqlActual: 0 } };
+  try {
+    const { year, week: weekNum } = parseWeekString(week);
+    const res = await api.get('/v1/leads-kpis/weekly', { params: { year, week: weekNum } });
+    const d = res.data?.data ?? res.data ?? {};
+    return {
+      data: {
+        week,
+        rawLeads: d.rawLeads ?? 0,
+        mqlActual: d.mql ?? d.mqlActual ?? 0,
+        sqlActual: d.sql ?? d.sqlActual ?? 0,
+      }
+    };
+  } catch {
+    const key = `${LS_PREFIX}actuals_${week}`;
+    const stored = lsGet(key);
+    if (stored) return { data: stored };
+    return { data: { week, rawLeads: 0, mqlActual: 0, sqlActual: 0 } };
+  }
 };
 
 export const saveActuals = async (data) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const week = data.week;
-  const key = `${LS_PREFIX}actuals_${week}`;
-  const existing = lsGet(key) || {};
-  const saved = { ...existing, ...data, id: Date.now() };
-  lsSet(key, saved);
-  return { data: saved };
+  try {
+    const { year, week: weekNum } = parseWeekString(data.week);
+    const payload = {
+      year,
+      week: weekNum,
+      rawLeads: Number(data.rawLeads) || 0,
+      mql: Number(data.mqlActual) || 0,
+      sql: Number(data.sqlActual) || 0,
+    };
+    const res = await api.post('/v1/leads-kpis/weekly', payload);
+    return { data: res.data?.data ?? res.data };
+  } catch {
+    const week = data.week;
+    const key = `${LS_PREFIX}actuals_${week}`;
+    const existing = lsGet(key) || {};
+    const saved = { ...existing, ...data, id: Date.now() };
+    lsSet(key, saved);
+    return { data: saved };
+  }
 };
 
 // ===================== OPPORTUNITIES =====================
@@ -920,29 +998,62 @@ const OPP_KEY = `${LS_PREFIX}opportunities`;
 const DEAL_KEY = `${LS_PREFIX}closed_deals`;
 
 export const getOpportunities = async () => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  return { data: lsGetList(OPP_KEY) };
+  try {
+    const res = await api.get('/v1/leads-kpis/opportunities');
+    const list = res.data?.data ?? res.data ?? [];
+    return { data: Array.isArray(list) ? list.map(o => ({
+      id: o.id,
+      companyName: o.companyName || o.company_name || '',
+      size: o.size || 'S',
+      project: o.project?.name || o.project || '',
+      fees: o.setupFee ?? o.fees ?? 0,
+      expectedCloseDate: o.expectedCloseDate || o.expected_close_date || '',
+      status: o.status || 'open',
+    })) : [] };
+  } catch {
+    return { data: lsGetList(OPP_KEY) };
+  }
 };
 
 export const addOpportunity = async (data) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const list = lsGetList(OPP_KEY);
-  const newItem = { ...data, id: Date.now(), status: 'open' };
-  list.push(newItem);
-  lsSaveList(OPP_KEY, list);
-  return { data: newItem };
+  try {
+    const payload = {
+      companyName: data.companyName,
+      size: data.size || 'S',
+      projectId: data.projectId || undefined,
+      setupFee: Number(data.fees) || 0,
+      expectedCloseDate: data.expectedCloseDate || undefined,
+    };
+    const res = await api.post('/v1/leads-kpis/opportunities', payload);
+    return { data: res.data?.data ?? res.data };
+  } catch {
+    const list = lsGetList(OPP_KEY);
+    const newItem = { ...data, id: Date.now(), status: 'open' };
+    list.push(newItem);
+    lsSaveList(OPP_KEY, list);
+    return { data: newItem };
+  }
 };
 
 export const updateOpportunity = async (id, data) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const list = lsGetList(OPP_KEY);
-  const idx = list.findIndex(o => o.id === id);
-  if (idx >= 0) {
-    list[idx] = { ...list[idx], ...data };
-    lsSaveList(OPP_KEY, list);
-    return { data: list[idx] };
+  try {
+    const res = await api.patch(`/v1/leads-kpis/opportunities/${id}`, {
+      companyName: data.companyName,
+      size: data.size,
+      setupFee: Number(data.fees) || 0,
+      expectedCloseDate: data.expectedCloseDate || undefined,
+    });
+    return { data: res.data?.data ?? res.data };
+  } catch {
+    const list = lsGetList(OPP_KEY);
+    const idx = list.findIndex(o => o.id === id);
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...data };
+      lsSaveList(OPP_KEY, list);
+      return { data: list[idx] };
+    }
+    return { data: { ...data, id } };
   }
-  return { data: { ...data, id } };
 };
 
 export const convertToWon = async (id) => {
@@ -950,91 +1061,152 @@ export const convertToWon = async (id) => {
 };
 
 export const convertOpportunityToWon = async (id, signedDate) => {
-  await new Promise(resolve => setTimeout(resolve, 400));
-  const list = lsGetList(OPP_KEY);
-  const opp = list.find(o => o.id === id);
-  if (opp) {
-    opp.status = 'won';
-    opp.wonDate = signedDate;
-    lsSaveList(OPP_KEY, list);
+  try {
+    const res = await api.post(`/v1/leads-kpis/opportunities/${id}/won`, { signedDate });
+    return { data: res.data?.data ?? { id, status: 'won', signedDate } };
+  } catch {
+    const list = lsGetList(OPP_KEY);
+    const opp = list.find(o => o.id === id);
+    if (opp) {
+      opp.status = 'won';
+      opp.wonDate = signedDate;
+      lsSaveList(OPP_KEY, list);
+    }
+
+    const deals = lsGetList(DEAL_KEY);
+    const newDeal = {
+      id: Date.now() + Math.random(),
+      customer: opp?.companyName || 'Unknown',
+      contract: opp?.project || '-',
+      finalFees: Number(opp?.fees || 0),
+      signedDate: signedDate || new Date().toISOString().split('T')[0],
+      status: 'completed',
+    };
+    deals.push(newDeal);
+    lsSaveList(DEAL_KEY, deals);
+
+    return { data: { id, status: 'won', signedDate } };
   }
-
-  const deals = lsGetList(DEAL_KEY);
-  const newDeal = {
-    id: Date.now() + Math.random(),
-    customer: opp?.companyName || 'Unknown',
-    contract: opp?.project || '-',
-    finalFees: Number(opp?.fees || 0),
-    signedDate: signedDate || new Date().toISOString().split('T')[0],
-    status: 'completed',
-  };
-  deals.push(newDeal);
-  lsSaveList(DEAL_KEY, deals);
-
-  return { data: { id, status: 'won', signedDate } };
 };
 
 // ===================== CLOSED DEALS =====================
 
 export const getClosedDeals = async () => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  return { data: lsGetList(DEAL_KEY) };
+  try {
+    const res = await api.get('/v1/leads-kpis/closed-deals');
+    const list = res.data?.data ?? res.data ?? [];
+    return { data: Array.isArray(list) ? list.map(d => ({
+      id: d.id,
+      customer: d.companyName || d.company_name || d.customer || '',
+      contract: d.project?.name || d.contract || '',
+      finalFees: d.setupFee ?? d.finalFees ?? 0,
+      signedDate: d.closedDate || d.signedDate || d.closed_date || '',
+      status: 'completed',
+    })) : [] };
+  } catch {
+    return { data: lsGetList(DEAL_KEY) };
+  }
 };
 
 // ===================== EXPENSES =====================
 
 export const getExpenseSystemParams = async () => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const key = `${LS_PREFIX}expense_params`;
-  const stored = lsGet(key);
-  return { data: stored || [] };
+  try {
+    const res = await api.get('/v1/system-configs', { params: { key: 'expense_params' } });
+    return { data: res.data?.data ?? res.data ?? [] };
+  } catch {
+    const key = `${LS_PREFIX}expense_params`;
+    return { data: lsGet(key) || [] };
+  }
 };
 
 export const saveExpenseSystemParam = async (data) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const key = `${LS_PREFIX}expense_params`;
-  const list = lsGetList(key);
-  const newItem = { ...data, id: Date.now() };
-  list.push(newItem);
-  lsSaveList(key, list);
-  return { data: newItem };
+  try {
+    const payload = {
+      key: 'expense_params',
+      periodType: 'month',
+      year: data.period ? parseInt(data.period.split('-')[0], 10) : new Date().getFullYear(),
+      periodValue: data.period ? parseInt(data.period.split('-')[1], 10) : null,
+      value: data.churnRate || 0,
+      notes: data.note || '',
+    };
+    const res = await api.post('/v1/system-configs', payload);
+    return { data: res.data?.data ?? res.data };
+  } catch {
+    const key = `${LS_PREFIX}expense_params`;
+    const list = lsGetList(key);
+    const newItem = { ...data, id: Date.now() };
+    list.push(newItem);
+    lsSaveList(key, list);
+    return { data: newItem };
+  }
 };
 
 export const getExpenseList = async (project) => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const key = `${LS_PREFIX}expense_list`;
-  let list = lsGetList(key);
-  if (project) list = list.filter(e => e.project === project);
-  return { data: list };
+  try {
+    const params = {};
+    if (project) params.projectId = project;
+    const res = await api.get('/v1/expense-records', { params });
+    return { data: res.data?.data ?? res.data ?? [] };
+  } catch {
+    const key = `${LS_PREFIX}expense_list`;
+    let list = lsGetList(key);
+    if (project) list = list.filter(e => e.project === project || e.projectId === project);
+    return { data: list };
+  }
 };
 
 export const saveExpense = async (data) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const key = `${LS_PREFIX}expense_list`;
-  const list = lsGetList(key);
-  const newItem = { ...data, id: Date.now() };
-  list.push(newItem);
-  lsSaveList(key, list);
-  return { data: newItem };
+  try {
+    const periodParts = (data.period || '').split('-');
+    const payload = {
+      projectId: data.projectId || data.project,
+      month: parseInt(periodParts[1], 10) || new Date().getMonth() + 1,
+      year: parseInt(periodParts[0], 10) || new Date().getFullYear(),
+      directCost: Number(data.directCost) || 0,
+      directNotes: data.directNote || '',
+      overheadCost: Number(data.overhead) || 0,
+      overheadNotes: data.overheadNote || '',
+    };
+    const res = await api.post('/v1/expense-records', payload);
+    return { data: res.data?.data ?? res.data };
+  } catch {
+    const key = `${LS_PREFIX}expense_list`;
+    const list = lsGetList(key);
+    const newItem = { ...data, id: Date.now() };
+    list.push(newItem);
+    lsSaveList(key, list);
+    return { data: newItem };
+  }
 };
 
 export const getExpenseReports = async () => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  return { data: { costByProjectType: [], trendData: [], budgetVsActual: [], detailRows: [], totalProjects: 0 } };
+  try {
+    const res = await api.get('/v1/expense-reports');
+    return { data: res.data?.data ?? res.data };
+  } catch {
+    return { data: { costByProjectType: [], trendData: [], budgetVsActual: [], detailRows: [], totalProjects: 0 } };
+  }
 };
 
 export const getExpenseOverview = async () => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const key = `${LS_PREFIX}expense_overview`;
-  const stored = lsGet(key);
-  return { data: stored || { kpis: [], budgetAllocation: [], projectExpenses: [], totalProjects: 0 } };
+  try {
+    const res = await api.get('/v1/expense-overview');
+    return { data: res.data?.data ?? res.data };
+  } catch {
+    const key = `${LS_PREFIX}expense_overview`;
+    return { data: lsGet(key) || { kpis: [], budgetAllocation: [], projectExpenses: [], totalProjects: 0 } };
+  }
 };
 
 export const getProjectsDropdown = async () => {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const key = `${LS_PREFIX}projects_dropdown`;
-  const stored = lsGet(key);
-  return { data: stored || [] };
+  try {
+    const res = await getProjects();
+    const projects = Array.isArray(res.data) ? res.data : [];
+    return { data: projects.map(p => ({ id: p.id, name: p.name })) };
+  } catch {
+    return { data: lsGet(`${LS_PREFIX}projects_dropdown`) || [] };
+  }
 };
 
 export const getBackupData = async () => {

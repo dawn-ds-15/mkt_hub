@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
 
@@ -17,16 +16,7 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
-  const { year, setYear, selectedProjectId, setSelectedProjectId } = useDashboard();
-  const [projects, setProjects] = useState([]);
-
-  useEffect(() => {
-    import('../../services/api').then(({ getProjects }) => {
-      getProjects().then(res => {
-        setProjects(res.data);
-      }).catch(() => {});
-    });
-  }, []);
+  const { year, setYear } = useDashboard();
 
   return (
     <aside className="fixed left-0 top-0 h-full w-sidebar-width bg-sidebar-bg flex flex-col p-4 overflow-y-auto z-50">
@@ -70,23 +60,7 @@ export default function Sidebar() {
               ))}
             </select>
           </div>
-          <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">Dự án</label>
-            <select
-              value={selectedProjectId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSelectedProjectId(id);
-                if (id) navigate(`/projects?project=${id}`);
-              }}
-              className="w-full bg-slate-800 border-none rounded text-white text-xs py-1.5 focus:ring-1 focus:ring-primary"
-            >
-              <option value="">Tất cả dự án</option>
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
+
         </div>
       </div>
 

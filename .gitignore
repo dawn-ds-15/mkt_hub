@@ -4,3 +4,6 @@ dist/
 *.local
 BE/
 *.tar
+out/
+.vercel
+.env*

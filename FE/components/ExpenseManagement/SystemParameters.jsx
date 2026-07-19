@@ -3,7 +3,10 @@ import { getExpenseSystemParams, saveExpenseSystemParam } from '../../services/a
 
 export default function SystemParameters() {
   const [params, setParams] = useState([]);
-  const [period, setPeriod] = useState('2023-11');
+  const [period, setPeriod] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [churnRate, setChurnRate] = useState('');
   const [grossMargin, setGrossMargin] = useState('');
   const [note, setNote] = useState('');

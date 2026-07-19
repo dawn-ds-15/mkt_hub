@@ -14,13 +14,13 @@ export default function ExpenseHistory({ refreshKey }) {
   const [expenses, setExpenses] = useState([]);
 
   useEffect(() => {
-    getExpenseList('Project Alpha - SEO').then((res) => setExpenses(res.data));
+    getExpenseList().then((res) => setExpenses(res.data));
   }, [refreshKey]);
 
   return (
     <div className="bg-surface-container-lowest border border-border-light rounded-xl overflow-hidden">
       <div className="px-6 py-4 border-b border-border-light flex justify-between items-center">
-        <h3 className="font-title-lg text-headline-sm text-on-surface">Lịch sử Chi Phí - Project Alpha</h3>
+        <h3 className="font-title-lg text-headline-sm text-on-surface">Lịch sử Chi Phí</h3>
         <div className="flex items-center gap-2 text-xs text-on-surface-variant">
           <span className="flex items-center gap-1">
             <span className="w-3 h-3 bg-success rounded-full" /> Đã duyệt

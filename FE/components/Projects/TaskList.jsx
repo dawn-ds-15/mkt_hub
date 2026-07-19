@@ -470,10 +470,10 @@ export default function TaskList() {
                         {task.done || '-'}
                       </td>
                       <td className="p-3 text-center">
-                        {task.link ? (
-                          <span className="material-symbols-outlined text-outline cursor-pointer hover:text-primary">{task.link.type}</span>
+                        {task.linkUrl ? (
+                          <a href={task.linkUrl} target="_blank" rel="noopener noreferrer" className="material-symbols-outlined text-outline cursor-pointer hover:text-primary no-underline">open_in_new</a>
                         ) : (
-                          <span className="material-symbols-outlined text-outline-variant cursor-pointer hover:text-primary">open_in_new</span>
+                          <span className="material-symbols-outlined text-outline-variant">link_off</span>
                         )}
                       </td>
                       <td className="p-3 text-xs italic text-outline">{task.remark}</td>

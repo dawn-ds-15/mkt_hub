@@ -1,19 +1,23 @@
 import { useEffect, useState } from 'react';
-import { getProjectsDropdown, saveExpense } from '../../services/api';
+import { getProjects, saveExpense } from '../../services/api';
 
 export default function ExpenseEntryForm({ onSaved }) {
   const [projects, setProjects] = useState([]);
-  const [project, setProject] = useState('');
-  const [period, setPeriod] = useState('2023-11');
+  const [projectId, setProjectId] = useState('');
+  const [period, setPeriod] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [directCost, setDirectCost] = useState('');
   const [overhead, setOverhead] = useState('');
   const [directNote, setDirectNote] = useState('');
   const [overheadNote, setOverheadNote] = useState('');
 
   useEffect(() => {
-    getProjectsDropdown().then((res) => {
-      setProjects(res.data);
-      if (res.data.length > 0) setProject(res.data[0].name);
+    getProjects().then((res) => {
+      const list = Array.isArray(res.data) ? res.data : [];
+      setProjects(list);
+      if (list.length > 0) setProjectId(list[0].id);
     });
   }, []);
 
@@ -26,14 +30,14 @@ export default function ExpenseEntryForm({ onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     await saveExpense({
-      project,
+      projectId,
+      project: projects.find(p => p.id === projectId)?.name || projectId,
       period,
       directCost: parseFloat(directCost) || 0,
       overhead: parseFloat(overhead) || 0,
       total,
       directNote,
       overheadNote,
-      status: 'pending',
     });
     setDirectCost('');
     setOverhead('');
@@ -50,9 +54,9 @@ export default function ExpenseEntryForm({ onSaved }) {
           <h2 className="font-headline-sm text-headline-sm text-on-surface">Nhập Chi Phí Project</h2>
           <div className="flex items-center gap-3">
             <label className="font-label-md text-on-surface-variant">Chọn Dự án:</label>
-            <select className="border border-border-light rounded-lg px-4 py-1.5 text-body-md bg-background-subtle font-medium focus:ring-1 focus:ring-primary focus:border-primary outline-none min-w-[200px]" value={project} onChange={(e) => setProject(e.target.value)}>
+            <select className="border border-border-light rounded-lg px-4 py-1.5 text-body-md bg-background-subtle font-medium focus:ring-1 focus:ring-primary focus:border-primary outline-none min-w-[200px]" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
               {projects.map((p) => (
-                <option key={p.id} value={p.name}>{p.name}</option>
+                <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </div>

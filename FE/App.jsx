@@ -1,14 +1,17 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import Layout from './components/Layout';
-import Dashboard from './components/Dashboard';
 import Login from './components/Login';
-import ProjectsTasks from './pages/ProjectsTasks';
-import LeadsKPIs from './pages/LeadsKPIs';
-import ExpenseManagement from './pages/ExpenseManagement';
-import DataManagementPage from './pages/DataManagement';
-import ApiDocs from './pages/ApiDocs';
+import NotFound from './components/NotFound';
 import { DashboardProvider } from './contexts/DashboardContext';
 import { ToastProvider } from './contexts/ToastContext';
+
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const ProjectsTasks = lazy(() => import('./pages/ProjectsTasks'));
+const LeadsKPIs = lazy(() => import('./pages/LeadsKPIs'));
+const ExpenseManagement = lazy(() => import('./pages/ExpenseManagement'));
+const DataManagementPage = lazy(() => import('./pages/DataManagement'));
+const ApiDocs = lazy(() => import('./pages/ApiDocs'));
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('mkt_hub_token');
@@ -18,11 +21,23 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-sidebar-bg flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-on-surface-variant text-sm">Đang tải...</p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
       <DashboardProvider>
       <ToastProvider>
+      <Suspense fallback={<LoadingFallback />}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={
@@ -55,7 +70,9 @@ function App() {
             <ApiDocs />
           </ProtectedRoute>
         } />
+        <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
       </ToastProvider>
       </DashboardProvider>
     </BrowserRouter>

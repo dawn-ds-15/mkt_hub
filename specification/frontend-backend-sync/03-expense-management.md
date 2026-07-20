@@ -9,7 +9,7 @@
 | Components | `ExpenseManagement/ExpenseOverview`, `ExpenseEntryForm`, `ExpenseHistory`, `ExpenseReports`, `SystemParameters` |
 | Service file | `FE/services/api.js` |
 | Backend prefix | `/api` (NestJS) |
-| Trạng thái | **ĐÃ FIX**: Các hàm đã thử gọi BE trước, fallback localStorage. BE chưa có controller cho Expense |
+| Trạng thái | **ĐÃ XOÁ localStorage fallback** — gọi BE trực tiếp 100% |
 
 ---
 
@@ -25,105 +25,97 @@
 
 ## 3. API Endpoints — Frontend gọi
 
-| Function | Endpoint FE gọi (đã fix) | Fallback |
-|----------|--------------------------|----------|
-| `getExpenseSystemParams()` | `GET /v1/system-configs?key=expense_params` | localStorage `mkt_hub_expense_params` |
-| `saveExpenseSystemParam(data)` | `POST /v1/system-configs` | localStorage `mkt_hub_expense_params` |
-| `getExpenseList(project?)` | `GET /v1/expense-records?projectId=` | localStorage `mkt_hub_expense_list` |
-| `saveExpense(data)` | `POST /v1/expense-records` | localStorage `mkt_hub_expense_list` |
-| `getExpenseReports()` | `GET /v1/expense-reports` | hardcoded empty data |
-| `getExpenseOverview()` | `GET /v1/expense-overview` | localStorage `mkt_hub_expense_overview` |
-| `getProjectsDropdown()` | **ĐÃ FIX**: dùng `getProjects()` thay vì localStorage riêng | localStorage `mkt_hub_projects_dropdown` |
+| Function | Endpoint FE gọi | Method | Ghi chú |
+|----------|-----------------|--------|---------|
+| `getExpenses(filters)` | `/v1/expenses` | GET | Query: `projectId`, `month`, `year` |
+| `saveExpense(data)` | `/v1/expenses` | POST | Body: `projectId`, `month`, `year`, `directCost`, `directNotes`, `overheadCost`, `overheadNotes` |
+| `deleteExpense(id)` | `/v1/expenses/:id` | DELETE | |
+| `getSystemConfigs(key?)` | `/v1/expenses/system-configs` | GET | Query: `key` (churn_rate, gross_margin) |
+| `saveSystemConfig(data)` | `/v1/expenses/system-configs` | POST | Body: `key`, `periodType`, `year`, `periodValue`, `value`, `effectiveFrom`, `notes` |
+| `getExpenseOverview(period)` | `/v1/expenses/overview` | GET | Query: `period` (YYYY, YYYY-MM, YYYY-QX) |
+| `getExpenseReport(period)` | `/v1/expenses/report` | GET | Query: `period` |
 
 ---
 
-## 4. Backend endpoints thực tế
+## 4. Backend endpoints thực tế (BE module4.md)
 
-### ❌ Chưa có controller/endpoint nào cho Expense
-
-Prisma model `ExpenseRecord` và `SystemConfig` có tồn tại, nhưng **chưa có NestJS controller/service implement**. FE đã chuẩn bị sẵn các endpoint pattern để kết nối khi BE được implement.
-
-### Database models available
-
-**Prisma: ExpenseRecord**
-| Column | Type | Ghi chú |
-|--------|------|---------|
-| `id` | UUID | PK |
-| `projectId` | String | FK → Project |
-| `month` | Int | combo unique với year |
-| `year` | Int | combo unique với month |
-| `directCost` | Decimal | |
-| `directNotes` | String? | |
-| `overheadCost` | Decimal | |
-| `overheadNotes` | String? | |
-| `createdById` | String | FK → Member |
-
-**Prisma: SystemConfig**
-| Column | Type | Ghi chú |
-|--------|------|---------|
-| `id` | UUID | PK |
-| `key` | String | |
-| `periodType` | String | |
-| `year` | Int | |
-| `periodValue` | Int? | |
-| `value` | Decimal | |
-| `effectiveFrom` | DateTime | |
-| `notes` | String? | |
+| Method | Backend Endpoint | Controller | Notes |
+|--------|-----------------|------------|-------|
+| POST | `/api/v1/expenses` | expense.controller | ✅ FE gọi |
+| GET | `/api/v1/expenses` | expense.controller | ✅ FE gọi |
+| DELETE | `/api/v1/expenses/:id` | expense.controller | ✅ FE gọi |
+| POST | `/api/v1/expenses/system-configs` | expense.controller | ✅ FE gọi |
+| GET | `/api/v1/expenses/system-configs` | expense.controller | ✅ FE gọi |
+| GET | `/api/v1/expenses/overview` | expense.controller | ✅ FE gọi |
+| GET | `/api/v1/expenses/report` | expense.controller | ✅ FE gọi |
 
 ---
 
 ## 5. Data shape mapping
 
-### 5.1 Expense System Param
+### 5.1 Expense Entry
 
-| FE field | BE field (payload) | Ghi chú |
-|----------|-------------------|---------|
-| `period` (YYYY-MM) | `periodType`='month', `year`, `periodValue` | **ĐÃ FIX**: FE parse period → year+month |
-| `churnRate` | `value` (khi `key='expense_params'`) | ✅ |
-| `note` | `notes` | ✅ |
+| FE field | BE field | Ghi chú |
+|----------|----------|---------|
+| `projectId` | `projectId` | ✅ |
+| `month` | `month` | ✅ |
+| `year` | `year` | ✅ |
+| `directCost` | `directCost` (Decimal) | ✅ |
+| `directNotes` | `directNotes` (String?) | ✅ |
+| `overheadCost` | `overheadCost` (Decimal) | ✅ FE gửi `overhead` → BE `overheadCost` |
+| `overheadNotes` | `overheadNotes` (String?) | ✅ |
 
-### 5.2 Expense Entry
+### 5.2 System Config (churn_rate / gross_margin)
 
-| FE field | BE field (payload) | Ghi chú |
-|----------|-------------------|---------|
-| `projectId` | `projectId` | **ĐÃ FIX**: FE dùng ID thay vì name string |
-| `period` (YYYY-MM) | `month` + `year` | **ĐÃ FIX**: FE parse period |
-| `directCost` | `directCost` | ✅ |
-| `overhead` | `overheadCost` | ⚠️ FE: `overhead`, BE: `overheadCost` |
-| `directNote` | `directNotes` | ✅ |
-| `overheadNote` | `overheadNotes` | ✅ |
+| FE field | BE field | Ghi chú |
+|----------|----------|---------|
+| `key` | `key` (String) | ✅ `churn_rate` hoặc `gross_margin` |
+| `periodType` | `periodType` (String) | ✅ `month`, `quarter`, `year` |
+| `year` | `year` (Int) | ✅ |
+| `periodValue` | `periodValue` (Int?) | ✅ |
+| `value` | `value` (Decimal) | ✅ |
+| `effectiveFrom` | `effectiveFrom` (DateTime) | ✅ |
+| `notes` | `notes` (String?) | ✅ |
 
-### 5.3 Projects Dropdown (đã fix)
+### 5.3 Expense Overview Response
 
-| Trước (localStorage riêng) | Sau (dùng getProjects) |
-|---------------------------|----------------------|
-| `mkt_hub_projects_dropdown` key riêng | `getProjects()` → map thành `{ id, name }` |
+| BE field | FE uses | Ghi chú |
+|----------|---------|---------|
+| `metrics.totalExpense` | ✅ | Tổng chi phí |
+| `metrics.newCustomersCount` | ✅ | Số khách hàng mới |
+| `metrics.cac` | ✅ | Chi phí sở hữu khách hàng |
+| `metrics.ltv` | ✅ | Giá trị trọn đời |
+| `metrics.ratio` | ✅ | Tỉ số LTV/CAC |
+| `metrics.health` | ✅ | Trạng thái sức khoẻ (blue/green/yellow/red) |
+| `projects[].projectId` | ✅ | |
+| `projects[].projectName` | ✅ | |
+| `projects[].projectType` | ✅ | |
+| `projects[].budgetTotal` | ✅ | |
+| `projects[].actualTotal` | ✅ | |
+| `projects[].variance` | ✅ | |
+| `projects[].newCustomers` | ✅ | |
+| `projects[].projectCac` | ✅ | |
+
+### 5.4 Expense Report Response
+
+| BE field | FE uses | Ghi chú |
+|----------|---------|---------|
+| `costByType` | ✅ | Donut chart data |
+| `monthlyTrend` | ✅ | Line chart: chi phí và CAC qua tháng |
+| `projectComparison` | ✅ | Bar chart: budget vs actual |
+| `detailedTable` | ✅ | Bảng chi tiết |
 
 ---
 
-## 6. Các lỗi đã fix
+## 6. Các vấn đề / lưu ý
 
-| # | Lỗi | File | Mô tả |
-|---|------|------|-------|
-| 1 | **Tất cả expense functions dùng localStorage, không gọi BE** | `api.js` | Đã thêm try/catch gọi BE trước cho tất cả functions |
-| 2 | **Hardcoded project name trong ExpenseHistory** | `ExpenseHistory.jsx` | Đã bỏ `'Project Alpha - SEO'`, gọi `getExpenseList()` không filter |
-| 3 | **Hardcoded tiêu đề "Project Alpha"** | `ExpenseHistory.jsx` | Đã đổi thành "Lịch sử Chi Phí" |
-| 4 | **`getProjectsDropdown()` dùng localStorage riêng** | `api.js:getProjectsDropdown` | Đã đổi thành gọi `getProjects()` → map `{ id, name }` |
-| 5 | **ExpenseEntryForm dùng project name thay vì ID** | `ExpenseEntryForm.jsx` | Đã đổi select dùng `projectId`, gửi `projectId` lên BE |
-| 6 | **ExpenseEntryForm default period cứng `2023-11`** | `ExpenseEntryForm.jsx` | Đã đổi dynamic: `new Date()` → `YYYY-MM` |
-| 7 | **SystemParameters default period cứng `2023-11`** | `SystemParameters.jsx` | Đã đổi dynamic: `new Date()` → `YYYY-MM` |
+| # | Vấn đề | Mức độ | Mô tả |
+|---|--------|--------|-------|
+| 1 | **Endpoint paths khớp hoàn toàn với BE module4.md** | ✅ | FE và BE đồng bộ. |
+| 2 | **Không có localStorage fallback** | ✅ | Tất cả gọi BE trực tiếp. |
 
-### 6.1 Cần BE implement
+---
 
-| Endpoint cần implement | Model |
-|------------------------|-------|
-| `GET /api/v1/system-configs` | SystemConfig |
-| `POST /api/v1/system-configs` | SystemConfig |
-| `GET /api/v1/expense-records` | ExpenseRecord |
-| `POST /api/v1/expense-records` | ExpenseRecord |
-| `GET /api/v1/expense-reports` | Aggregate |
-| `GET /api/v1/expense-overview` | Aggregate |
+## 7. Kết luận
 
-### 6.2 Kết luận
-
-**Module Expense Management: FE đã sẵn sàng kết nối BE.** Các function đã được cập nhật để gọi BE first + localStorage fallback. Cần implement NestJS controller/service cho ExpenseRecord và SystemConfig.
+**Module Expense Management đồng bộ hoàn toàn.** FE không dùng localStorage, tất cả 7 endpoints đều gọi BE trực tiếp và khớp với BE module4.md.

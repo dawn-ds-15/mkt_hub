@@ -77,13 +77,13 @@
 | PATCH | `/api/v1/tasks/:id` | tasks.controller | Update |
 | DELETE | `/api/v1/tasks/:id` | tasks.controller | Delete |
 | GET | `/api/v1/tasks/kanban/board` | tasks.controller | Kanban grouped |
-| GET | `/api/v1/tasks/import/template` | tasks.controller | Template download — FE **không gọi** |
-| POST | `/api/v1/tasks/import` | tasks.controller | Import CSV/XLSX — FE **không gọi** |
+| GET | `/api/v1/tasks/import/template` | tasks.controller | Template download — ✅ FE **đã kết nối** (fallback client-side) |
+| POST | `/api/v1/tasks/import` | tasks.controller | Import CSV/XLSX — ✅ FE **đã fix** path |
 | GET | `/api/v1/weekly-reports` | weekly-reports.controller | Get report |
 | POST | `/api/v1/weekly-reports/logs` | weekly-reports.controller | Save log |
 | GET | `/api/v1/weekly-reports/export.txt` | weekly-reports.controller | Export |
 | GET | `/api/auth/members` | members.controller | List members |
-| PATCH | `/api/auth/members/:id/role` | members.controller | Update role — FE **không gọi** |
+| PATCH | `/api/auth/members/:id/role` | members.controller | Update role — FE dùng `PUT /v1/data-management/members/:id` |
 
 ---
 
@@ -100,7 +100,7 @@
 | `ownerId` | `ownerId` | String | ✅ |
 | `deadline` | `deadline` | DateTime → formatted | ✅ FE format en-GB |
 | `deadlineRaw` | `deadline` | ISO string | ✅ |
-| `status` | `status` | String (mapped) | ⚠️ FE transform: `Active` → `active/near_deadline`, `Completed` → `completed`, v.v. |
+| `status` | `status` | String (mapped) | ✅ FE transform: `Active` → `active/near_deadline`, `Completed` → `completed`, v.v. |
 | `statusLabel` | `status` | String | ✅ raw status from BE |
 | `tasksCompleted` | `progress.done` | Number | ✅ |
 | `tasksTotal` | `progress.total` | Number | ✅ |
@@ -114,7 +114,7 @@
 | `tasks[].name` | `tasks[].name` | String | ✅ nested |
 | `tasks[].assignee` | `tasks[].assignee.name` | String | ✅ |
 | `tasks[].due` | `tasks[].dueDate` | formatted | ✅ |
-| `tasks[].status` | `tasks[].status` | mapped | ⚠️ FE transform status |
+| `tasks[].status` | `tasks[].status` | mapped | ✅ FE transform status |
 
 ### 5.2 Task
 
@@ -122,7 +122,7 @@
 |---------------|--------------|------|---------|
 | `id` | `id` | UUID | ✅ |
 | `project` | `project.name` | String | ✅ |
-| `taskName` | `name` | String | ⚠️ FE gọi là `taskName`, BE là `name` |
+| `taskName` | `name` | String | ✅ FE gọi là `taskName`, BE là `name` |
 | `description` | `description` | String | ✅ |
 | `assignee.initials` | computed | String | ✅ FE tự tính |
 | `assignee.name` | `assignee.name` | String | ✅ |
@@ -132,7 +132,7 @@
 | `start` / `startDate` | `startDate` | DateTime | ✅ |
 | `due` / `dueDate` | `dueDate` | DateTime | ✅ |
 | `done` / `completedDate` | `completedDate` | DateTime | ✅ |
-| `link` / `linkUrl` | `link` | String? | ✅ **ĐÃ FIX**: FE giữ nguyên String, không wrap object |
+| `link` / `linkUrl` | `link` | String? | ✅ FE giữ nguyên String, không wrap object |
 | `remark` | `remark` | String | ✅ |
 
 ### 5.3 Kanban Column
@@ -147,7 +147,7 @@
 | `tasks[].assignee` | `tasks[].assignee.name` | ✅ |
 | `tasks[].priority` | `tasks[].priority` | ✅ |
 | `tasks[].due` | `tasks[].dueDate` | formatted ✅ |
-| `tasks[].dueDate` | `tasks[].dueDate` | String ✅ **ĐÃ FIX**: thêm raw field để date filter hoạt động |
+| `tasks[].dueDate` | `tasks[].dueDate` | String ✅ |
 | `tasks[].overdue` | `tasks[].isOverdue` | ✅ |
 | `tasks[].done` | `tasks[].status === 'Done'` | ✅ |
 
@@ -169,34 +169,16 @@
 
 ---
 
-## 6. Các lỗi đã fix
+## 6. Các fix đã thực hiện
 
-| # | Lỗi | File | Mô tả |
-|---|------|------|-------|
-| 1 | **Thiếu `dueDateFrom`/`dueDateTo` trong API call** | `api.js:getTaskList` | Đã thêm mapping `dateFrom`→`dueDateFrom`, `dateTo`→`dueDateTo` vào query params |
-| 2 | **Status `overdue` gửi lên BE** | `api.js:getTaskList` | Đã thêm check `filters.status !== 'overdue'` để skip gửi status này lên BE (overdue là FE concept) |
-| 3 | **Link field wrap object sai format** | `api.js:getTaskList` | Đã đổi `{ type: 'link', url: t.link }` → `link: t.link` (string), thêm `linkUrl` để dùng cho `<a>` |
-| 4 | **Link display dùng sai field** | `TaskList.jsx` | Đã sửa `task.link.type` → `task.linkUrl` + render `<a href>` thay vì icon |
-| 5 | **Thiếu `dueDate` trong Kanban task** | `api.js:getKanbanData` | Đã thêm field `dueDate: t.dueDate || ''` để KanbanBoard date filter hoạt động |
+| # | Vấn đề | File:Function | Mô tả |
+|---|--------|---------------|-------|
+| 1 | **Import task path sai** | `api.js:importTasks` | Đổi từ `POST /v1/import/tasks` → `POST /v1/tasks/import` (đúng BE TasksController). |
+| 2 | **Template download** | `api.js:downloadTemplate` | Thêm gọi BE trước (`GET /v1/tasks/import/template`), fallback client-side gen. |
+| 3 | **Members CRUD path sai** | `api.js:createMember/updateMember/deleteMember` | Đổi từ `/auth/members` → `/v1/data-management/members`, method `PATCH`→`PUT`. (Xem doc 04-data-management.md) |
 
-### 6.1 Frontend ✅ / Backend ✅
+---
 
-| Endpoint FE gọi | Status |
-|-----------------|--------|
-| `GET /v1/projects` | ✅ |
-| `POST /v1/projects` | ✅ |
-| `PATCH /v1/projects/:id` | ✅ |
-| `DELETE /v1/projects/:id` | ✅ |
-| `GET /v1/tasks` | ✅ |
-| `POST /v1/tasks` | ✅ |
-| `PATCH /v1/tasks/:id` | ✅ |
-| `DELETE /v1/tasks/:id` | ✅ |
-| `GET /v1/tasks/kanban/board` | ✅ |
-| `GET /v1/weekly-reports` | ✅ |
-| `POST /v1/weekly-reports/logs` | ✅ |
-| `GET /v1/weekly-reports/export.txt` | ✅ |
-| `GET /auth/members` | ✅ |
+## 7. Kết luận
 
-### 6.2 Kết luận
-
-**Module Projects & Tasks đồng bộ hoàn toàn.** Tất cả endpoints FE gọi đều có BE tương ứng. Các lỗi về link field, date filter params, kanban dueDate đã được fix.
+**Module Projects & Tasks đồng bộ hoàn toàn.** Tất cả endpoints FE gọi đều có BE tương ứng. Các vấn đề path mismatch đã được fix.

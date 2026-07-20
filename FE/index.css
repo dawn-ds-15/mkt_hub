@@ -17,6 +17,12 @@ body {
   border-radius: 0.5rem;
 }
 
+@media (pointer: coarse) {
+  button, a, select, input[type="submit"] {
+    min-height: 44px;
+  }
+}
+
 .card-shadow {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
 }

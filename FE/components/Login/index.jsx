@@ -8,6 +8,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -71,11 +73,13 @@ export default function Login() {
     }
   };
 
-  const resetForm = () => {
+  const switchTab = (newTab) => {
+    setTab(newTab);
     setError('');
     setPassword('');
     setConfirmPassword('');
     setName('');
+    setEmail('');
   };
 
   return (
@@ -90,15 +94,19 @@ export default function Login() {
             <p className="text-body-md text-on-surface-variant mt-1">Vận hành Marketing</p>
           </div>
 
-          <div className="flex mb-6 bg-surface-container-low rounded-lg p-1">
+          <div className="flex mb-6 bg-surface-container-low rounded-lg p-1" role="tablist">
             <button
-              onClick={() => { setTab('login'); resetForm(); }}
+              role="tab"
+              aria-selected={tab === 'login'}
+              onClick={() => switchTab('login')}
               className={`flex-1 py-2 text-label-md font-semibold rounded-md transition-colors ${tab === 'login' ? 'bg-white text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
             >
               Đăng nhập
             </button>
             <button
-              onClick={() => { setTab('register'); resetForm(); }}
+              role="tab"
+              aria-selected={tab === 'register'}
+              onClick={() => switchTab('register')}
               className={`flex-1 py-2 text-label-md font-semibold rounded-md transition-colors ${tab === 'register' ? 'bg-white text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
             >
               Đăng ký
@@ -106,31 +114,46 @@ export default function Login() {
           </div>
 
           {tab === 'login' ? (
-            <form onSubmit={handleLogin} className="space-y-5">
+            <form onSubmit={handleLogin} noValidate className="space-y-5">
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Email</label>
+                <label htmlFor="login-email" className="text-label-md text-on-surface-variant">Email</label>
                 <input
+                  id="login-email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setError(''); }}
                   placeholder="Nhập email"
+                  aria-describedby={error ? 'login-error' : undefined}
+                  aria-invalid={error ? 'true' : undefined}
                   className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Mật khẩu</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
-                />
+                <label htmlFor="login-password" className="text-label-md text-on-surface-variant">Mật khẩu</label>
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                    placeholder="••••••••"
+                    aria-describedby={error ? 'login-error' : undefined}
+                    aria-invalid={error ? 'true' : undefined}
+                    className="w-full px-3 py-2.5 pr-10 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
+                    <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                  </button>
+                </div>
               </div>
 
               {error && (
-                <div className="bg-red-50 border-l-4 border-danger p-3 rounded">
+                <div id="login-error" role="alert" className="bg-red-50 border-l-4 border-danger p-3 rounded">
                   <p className="text-body-sm text-red-800">{error}</p>
                 </div>
               )}
@@ -145,53 +168,83 @@ export default function Login() {
 
             </form>
           ) : (
-            <form onSubmit={handleRegister} className="space-y-5">
+            <form onSubmit={handleRegister} noValidate className="space-y-5">
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Họ tên</label>
+                <label htmlFor="reg-name" className="text-label-md text-on-surface-variant">Họ tên</label>
                 <input
+                  id="reg-name"
+                  name="name"
                   type="text"
+                  autoComplete="name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => { setName(e.target.value); setError(''); }}
                   placeholder="Nguyễn Văn A"
+                  aria-describedby={error ? 'reg-error' : undefined}
+                  aria-invalid={error ? 'true' : undefined}
                   className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Email</label>
+                <label htmlFor="reg-email" className="text-label-md text-on-surface-variant">Email</label>
                 <input
+                  id="reg-email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setError(''); }}
                   placeholder="email@example.com"
+                  aria-describedby={error ? 'reg-error' : undefined}
+                  aria-invalid={error ? 'true' : undefined}
                   className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Mật khẩu</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
-                />
+                <label htmlFor="reg-password" className="text-label-md text-on-surface-variant">Mật khẩu</label>
+                <div className="relative">
+                  <input
+                    id="reg-password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                    placeholder="••••••••"
+                    aria-describedby={error ? 'reg-error' : undefined}
+                    aria-invalid={error ? 'true' : undefined}
+                    className="w-full px-3 py-2.5 pr-10 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
+                    <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Xác nhận mật khẩu</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
-                />
+                <label htmlFor="reg-confirm-password" className="text-label-md text-on-surface-variant">Xác nhận mật khẩu</label>
+                <div className="relative">
+                  <input
+                    id="reg-confirm-password"
+                    name="confirmPassword"
+                    type={showNewPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
+                    placeholder="••••••••"
+                    aria-describedby={error ? 'reg-error' : undefined}
+                    aria-invalid={error ? 'true' : undefined}
+                    className="w-full px-3 py-2.5 pr-10 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                  />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} aria-pressed={showNewPassword} aria-label={showNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
+                    <span className="material-symbols-outlined text-[20px]">{showNewPassword ? 'visibility_off' : 'visibility'}</span>
+                  </button>
+                </div>
               </div>
 
               {error && (
-                <div className="bg-red-50 border-l-4 border-danger p-3 rounded">
+                <div id="reg-error" role="alert" className="bg-red-50 border-l-4 border-danger p-3 rounded">
                   <p className="text-body-sm text-red-800">{error}</p>
                 </div>
               )}

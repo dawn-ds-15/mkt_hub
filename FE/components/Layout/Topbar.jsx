@@ -17,12 +17,14 @@ export default function Topbar({ title = 'Tổng quan' }) {
   const navigate = useNavigate();
 
   let userName = 'Người dùng';
+  let userEmail = '';
   let userRole = 'Thành viên';
   try {
     const raw = localStorage.getItem('mkt_hub_user');
     if (raw) {
       const u = JSON.parse(raw);
       userName = u.name || u.email || 'Người dùng';
+      userEmail = u.email || '';
       userRole = u.role === 'manager' ? 'Quản lý' : 'Specialist';
     }
   } catch {}
@@ -80,6 +82,7 @@ export default function Topbar({ title = 'Tổng quan' }) {
       {showProfile && (
         <ProfileModal
           onClose={() => setShowProfile(false)}
+          userEmail={userEmail}
         />
       )}
     </header>

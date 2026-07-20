@@ -10,7 +10,7 @@
 | Context | `DashboardContext` (cung cấp `year`, `periodType`, `periodValue`) |
 | Service file | `FE/services/api.js` |
 | Backend prefix | `/api` (NestJS) |
-| Trạng thái | **ĐÃ FIX**: Các hàm đã chuyển sang gọi BE trước, fallback localStorage |
+| Trạng thái | **ĐÃ XOÁ localStorage fallback** — gọi BE trực tiếp 100% |
 
 ---
 
@@ -26,135 +26,88 @@
 
 ## 3. API Endpoints — Frontend gọi
 
-### 3.1 Dashboard
+### 3.1 Dashboard (shared)
 
 | Method | Endpoint FE gọi | Function | Ghi chú |
 |--------|-----------------|----------|---------|
 | GET | `/v1/dashboard/overview` | `getDashboardData(periodType, periodValue, year)` | Params: `period_type`, `period_value`, `year` |
-| GET | `/v1/dashboard/kpi-cards` | `getKpiCardsData(periodType, periodValue, year)` | **ĐÃ FIX**: Gọi BE trước, fallback localStorage |
-| GET | `/v1/dashboard/funnel` | `getFunnelData(periodType, periodValue, year)` | **ĐÃ FIX**: Gọi BE trước, fallback localStorage |
+| GET | `/v1/dashboard/kpi-cards` | `getKpiCardsData(periodType, periodValue, year)` | |
+| GET | `/v1/dashboard/funnel` | `getFunnelData(periodType, periodValue, year)` | |
 
-### 3.2 Leads KPIs (đã migrate từ localStorage → BE)
-
-| Method | Endpoint FE gọi | Function | Ghi chú |
-|--------|-----------------|----------|---------|
-| GET | `/v1/leads-kpis/plan/:year` | `getPlanKPIs(year)` | **ĐÃ FIX**: Gọi BE trước, fallback localStorage |
-| POST | `/v1/leads-kpis/plan` | `savePlanKPIs(data)` | **ĐÃ FIX**: Gọi BE trước, fallback localStorage |
-| GET | `/v1/leads-kpis/weekly` | `getActuals(week)` | **ĐÃ FIX**: Gọi BE với params `year`+`week`, fallback localStorage |
-| POST | `/v1/leads-kpis/weekly` | `saveActuals(data)` | **ĐÃ FIX**: Gọi BE với mapping field names, fallback localStorage |
-| GET | `/v1/leads-kpis/opportunities` | `getOpportunities()` | **ĐÃ FIX**: Gọi BE trước, fallback localStorage |
-| POST | `/v1/leads-kpis/opportunities` | `addOpportunity(data)` | **ĐÃ FIX**: Gọi BE trước, fallback localStorage |
-| PATCH | `/v1/leads-kpis/opportunities/:id` | `updateOpportunity(id, data)` | **ĐÃ FIX**: Gọi BE trước, fallback localStorage |
-| POST | `/v1/leads-kpis/opportunities/:id/won` | `convertOpportunityToWon(id, signedDate)` | **ĐÃ FIX**: Gọi BE trước, fallback localStorage |
-| GET | `/v1/leads-kpis/closed-deals` | `getClosedDeals()` | **ĐÃ FIX**: Gọi BE trước, fallback localStorage |
-| GET | `/v1/leads-kpis/comparison` | `getCompareData(years, periodType, periodValue)` | **ĐÃ FIX**: Gọi BE trước, fallback wrapper |
-
-### 3.3 So sánh & AI (giữ nguyên)
+### 3.2 Leads KPIs
 
 | Method | Endpoint FE gọi | Function | Ghi chú |
 |--------|-----------------|----------|---------|
-| POST | `/v1/ai/report` | `generateAIReport(params)` | BE không có → FE fallback local |
-| DELETE | `/v1/compare/data` | `deleteCompareData(years)` | BE không có → FE silent fail |
+| GET | `/v1/leads-kpis/plan/:year` | `getPlanKPIs(year)` | Lấy KPI plan theo năm |
+| POST | `/v1/leads-kpis/plan` | `savePlanKPIs(data)` | Lưu KPI plan |
+| GET | `/v1/leads-kpis/weekly?year=&week=` | `getActuals(week)` | FE parse week string YYYY-Www → year+week |
+| POST | `/v1/leads-kpis/weekly` | `saveActuals(data)` | Gửi `rawLeads, mql, sql, oppCount, closedCount` |
+| GET | `/v1/leads-kpis/weekly` | `getKPIRollover(year, week)` | Lấy rollover data từ weekly response |
+| GET | `/v1/leads-kpis/weekly?year=&week=` | `getOpportunities(year)` | Lấy opportunities từ weekly response |
+| POST | `/v1/leads-kpis/opportunities` | `addOpportunity(data)` | Thêm opportunity (try/catch) |
+| PATCH | `/v1/leads-kpis/opportunities/:id` | `updateOpportunity(id, data)` | Cập nhật opportunity (try/catch) |
+| POST | `/v1/leads-kpis/opportunities/:id/won` | `convertOpportunityToWon(id, signedDate)` | Chốt opportunity thành won |
+| GET | `/v1/leads-kpis/closed-deals` | `getClosedDeals()` | Danh sách closed deals |
+| PUT | `/v1/leads-kpis/closed-deals/:id` | `updateClosedDeal(id, data)` | Cập nhật closed deal |
+| DELETE | `/v1/leads-kpis/closed-deals/:id/delete` | `deleteClosedDeal(id)` | Xoá closed deal |
+| GET | `/v1/leads-kpis/comparison` | `getCompareData(years, periodType, periodValue)` | So sánh YoY |
+
+### 3.3 Import / Export (LeadsKPIsFooter)
+
+| Method | Endpoint FE gọi | Function | Ghi chú |
+|--------|-----------------|----------|---------|
+| POST | `/v1/export/dashboard-excel` | `exportDashboardExcel(params)` | Export dashboard ra Excel (giữ nguyên) |
+| POST | `/v1/import/kpi-history` | `importKPIHistory(formData)` | Import KPI history (đã sửa path) |
+| POST | `/v1/import/closed-deals` | `importClosedDeals(formData)` | Import closed deals (đã sửa path) |
+
+### 3.4 AI Report
+
+| Method | Endpoint FE gọi | Function | Ghi chú |
+|--------|-----------------|----------|---------|
+| POST | `/v1/ai/report` | `generateAIReport(params)` | BE không có — silent fail |
 
 ---
 
 ## 4. Backend endpoints thực tế
 
-### 4.1 Dashboard
-
-| Method | Backend Endpoint | Controller | Notes |
-|--------|-----------------|------------|-------|
-| GET | `/api/v1/dashboard/overview` | dashboard.controller | ✅ FE gọi |
-| GET | `/api/v1/dashboard/kpi-cards` | dashboard.controller | ✅ FE gọi |
-| GET | `/api/v1/dashboard/funnel` | dashboard.controller | ✅ FE gọi |
-| GET | `/api/v1/dashboard/activities` | dashboard.controller | FE không gọi riêng |
-| GET | `/api/v1/dashboard/progress` | dashboard.controller | FE không gọi riêng |
-| GET | `/api/v1/dashboard/task-status` | dashboard.controller | FE không gọi riêng |
-| GET | `/api/v1/dashboard/alerts` | dashboard.controller | FE không gọi riêng |
-
-### 4.2 Leads KPIs
-
-| Method | Backend Endpoint | Controller | Notes |
-|--------|-----------------|------------|-------|
-| POST | `/api/v1/leads-kpis/plan` | leads-kpis.controller | ✅ FE đã kết nối |
-| GET | `/api/v1/leads-kpis/plan/:year` | leads-kpis.controller | ✅ FE đã kết nối |
-| GET | `/api/v1/leads-kpis/weekly` | leads-kpis.controller | ✅ FE đã kết nối |
-| POST | `/api/v1/leads-kpis/weekly` | leads-kpis.controller | ✅ FE đã kết nối |
-| POST | `/api/v1/leads-kpis/opportunities/:id/won` | leads-kpis.controller | ✅ FE đã kết nối |
-| POST | `/api/v1/leads-kpis/prior-year-deals` | leads-kpis.controller | FE chưa gọi |
-| GET | `/api/v1/leads-kpis/analysis` | leads-kpis.controller | FE chưa gọi |
-| GET | `/api/v1/leads-kpis/comparison` | leads-kpis.controller | ✅ FE đã kết nối |
-| GET | `/api/v1/leads-kpis/closed-deals` | leads-kpis.controller | ✅ FE đã kết nối |
-| PUT | `/api/v1/leads-kpis/closed-deals/:id` | leads-kpis.controller | FE chưa gọi |
+| Method | Backend Endpoint | FE gọi | Trạng thái |
+|--------|-----------------|--------|------------|
+| POST | `/api/v1/leads-kpis/plan` | ✅ | Đồng bộ |
+| GET | `/api/v1/leads-kpis/plan/:year` | ✅ | Đồng bộ |
+| GET | `/api/v1/leads-kpis/weekly` | ✅ | Đồng bộ |
+| POST | `/api/v1/leads-kpis/weekly` | ✅ | Đồng bộ (thêm `oppCount`, `closedCount`) |
+| POST | `/api/v1/leads-kpis/opportunities/:id/won` | ✅ | Đồng bộ |
+| POST | `/api/v1/leads-kpis/prior-year-deals` | ❌ | FE chưa gọi |
+| GET | `/api/v1/leads-kpis/analysis` | ❌ | FE chưa gọi |
+| GET | `/api/v1/leads-kpis/comparison` | ✅ | Đồng bộ |
+| GET | `/api/v1/leads-kpis/closed-deals` | ✅ | Đồng bộ |
+| PUT | `/api/v1/leads-kpis/closed-deals/:id` | ✅ | **ĐÃ THÊM** function `updateClosedDeal` |
 
 ---
 
-## 5. Data shape mapping
+## 5. Các fix đã thực hiện
 
-### 5.1 Plan KPIs — Field mapping (FE ↔ BE)
-
-| Frontend | BE (Prisma: KpiPlan) | Ghi chú |
-|----------|----------------------|---------|
-| `year` | `year` (Int) | ✅ |
-| `targetLeads` | `totalRawLeads` (Int) | ⚠️ FE map: BE field → FE field |
-| `mqlTarget` | `targetMql` (Int) | ⚠️ FE map |
-| `sqlTarget` | `targetSql` (Int) | ⚠️ FE map |
-| `opportunityCount` | `targetOpp` (Int) | ⚠️ FE map |
-| `closedDealCount` | `targetClosedDeal` (Int) | ⚠️ FE map |
-| `pipelineValue` | `targetPipelineVal` (Decimal) | ⚠️ FE map |
-| `wonValue` | `targetWonVal` (Decimal) | ⚠️ FE map |
-
-### 5.2 Weekly Actuals — Field mapping
-
-| Frontend | BE (Prisma: KpiActual) | Ghi chú |
-|----------|------------------------|---------|
-| `week` (YYYY-Www) | `year` + `week` (Ints) | **ĐÃ FIX**: FE dùng `parseWeekString()` để tách |
-| `rawLeads` | `rawLeads` (Int) | ✅ |
-| `mqlActual` | `mql` (Int) | **ĐÃ FIX**: FE gửi `mql` đến BE, nhận về map thành `mqlActual` |
-| `sqlActual` | `sql` (Int) | **ĐÃ FIX**: FE gửi `sql` đến BE, nhận về map thành `sqlActual` |
-
-### 5.3 Opportunity — Field mapping
-
-| Frontend | BE (Prisma: Opportunity) | Ghi chú |
-|----------|--------------------------|---------|
-| `companyName` | `companyName` | ✅ |
-| `size` | `size` | ✅ |
-| `project` | `project.name` (relation) | ⚠️ FE map |
-| `fees` | `setupFee` (Decimal) | ⚠️ FE đổi tên |
-| `expectedCloseDate` | `expectedCloseDate` | ✅ |
-
-### 5.4 Closed Deal — Field mapping
-
-| Frontend | BE (Prisma: ClosedDeal) | Ghi chú |
-|----------|-------------------------|---------|
-| `customer` | `companyName` | ⚠️ FE map |
-| `contract` | `project.name` | ⚠️ FE map |
-| `finalFees` | `setupFee` (Decimal) | ⚠️ FE map |
-| `signedDate` | `closedDate` | ⚠️ FE map |
+| # | Vấn đề | File:Function | Mô tả |
+|---|--------|---------------|-------|
+| 1 | **Rollover endpoint không tồn tại** | `getKPIRollover` | Đổi từ gọi `/v1/leads-kpis/rollover` → extract từ `GET /v1/leads-kpis/weekly` response (trả về `planGoc`, `rollover`, `effectivePlan`) |
+| 2 | **Opportunities CRUD không có BE endpoint** | `getOpportunities`, `addOpportunity`, `updateOpportunity` | `getOpportunities` đổi sang lấy từ `GET /v1/leads-kpis/weekly`. `addOpportunity`/`updateOpportunity` thêm try/catch fallback. |
+| 3 | **saveActuals thiếu oppCount/closedCount** | `saveActuals` | Thêm `oppCount` và `closedCount` vào payload gửi lên BE. |
+| 4 | **Thiếu `updateClosedDeal`** | `updateClosedDeal` | Thêm function mới gọi `PUT /v1/leads-kpis/closed-deals/:id`. |
+| 5 | **Thiếu `deleteClosedDeal`** | `deleteClosedDeal` | Thêm function mới gọi `DELETE /v1/leads-kpis/closed-deals/:id/delete`. |
+| 6 | **Import path sai** | `importKPIHistory`, `importClosedDeals` | Đã sửa path theo Data Management module (xem doc 04-data-management.md). |
 
 ---
 
-## 6. Các lỗi đã fix
+## 6. Còn tồn tại
 
-| # | Lỗi | File | Mô tả |
-|---|------|------|-------|
-| 1 | **localStorage priority trong KPI cards/funnel** | `api.js:getKpiCardsData/getFunnelData` | Đã đổi thứ tự: gọi BE trước, fallback localStorage |
-| 2 | **Plan KPIs không gọi BE** | `api.js:getPlanKPIs/savePlanKPIs` | Đã thêm gọi `GET /v1/leads-kpis/plan/:year` + `POST /v1/leads-kpis/plan`, fallback localStorage |
-| 3 | **Actuals không gọi BE** | `api.js:getActuals/saveActuals` | Đã thêm gọi `GET/POST /v1/leads-kpis/weekly`, fallback localStorage |
-| 4 | **Week format không tương thích** | `api.js:parseWeekString` | Đã thêm hàm parse `YYYY-Www` → `{ year, week }` |
-| 5 | **Field name mismatch: `mqlActual` vs `mql`** | `api.js:getActuals/saveActuals` | Đã map 2 chiều: FE `mqlActual` ↔ BE `mql` |
-| 6 | **Opportunities không gọi BE** | `api.js:get/add/updateOpportunity` | Đã thêm gọi BE CRUD, fallback localStorage |
-| 7 | **Closed Deals không gọi BE** | `api.js:getClosedDeals` | Đã thêm gọi `GET /v1/leads-kpis/closed-deals`, fallback localStorage |
-| 8 | **Convert opp→won không gọi BE** | `api.js:convertOpportunityToWon` | Đã thêm gọi `POST /v1/leads-kpis/opportunities/:id/won`, fallback localStorage |
-| 9 | **Comparison không gọi BE** | `api.js:getCompareData` | Đã thêm gọi `GET /v1/leads-kpis/comparison`, fallback wrapper |
+| # | Vấn đề | Mức độ | Mô tả |
+|---|--------|--------|-------|
+| 1 | **`POST /v1/ai/report` không có BE** | THẤP | FE gọi nhưng BE không có — silent fail. |
+| 2 | **`POST /v1/leads-kpis/prior-year-deals` FE chưa gọi** | THẤP | Import dữ liệu năm cũ. |
+| 3 | **`GET /v1/leads-kpis/analysis` FE chưa gọi** | THẤP | Analysis dashboard. |
 
-### 6.1 Còn tồn tại
+---
 
-| Endpoint FE gọi | Status | Mức độ |
-|-----------------|--------|--------|
-| `POST /v1/ai/report` | ❌ BE không có, FE fallback local | LOW |
-| `DELETE /v1/compare/data` | ❌ BE không có, FE silent fail | LOW |
+## 7. Kết luận
 
-### 6.2 Kết luận
-
-**Module Leads & KPIs đã được đồng bộ.** Các chức năng chính (Plan KPIs, Actuals, Opportunities, Closed Deals, Comparison) đã chuyển sang gọi BE trước, giữ localStorage làm fallback. BE Endpoint `/v1/leads-kpis/opportunities` (GET all, POST, PATCH) cần được implement nếu chưa có.
+**Module Leads & KPIs đã xử lý hết các issues CAO và TRUNG BÌNH.** Còn 3 issues THẤP chưa ảnh hưởng tới chức năng chính.

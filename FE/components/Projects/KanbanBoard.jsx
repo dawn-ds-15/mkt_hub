@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { getKanbanData, updateTask, getProjects, getMembers } from '../../services/api';
-
-const DESIRED_COLUMNS = ['planning', 'processing', 'done', 'pending', 'backlog', 'cancel'];
+import { getKanbanData, updateTask, getProjects, getMembers, getTask } from '../../services/api';
+import TaskViewModal from './TaskViewModal';
 
 const STATUS_TO_API = {
   planning: 'Planning',
@@ -10,6 +9,7 @@ const STATUS_TO_API = {
   pending: 'Pending',
   backlog: 'Backlog',
   cancel: 'Cancel',
+  overdue: 'Overdue',
 };
 
 const priorityBorders = {
@@ -18,11 +18,16 @@ const priorityBorders = {
   Low: 'border-l-gray-200',
 };
 
-function KanbanCard({ task, onDragStart }) {
+function KanbanCard({ task, onDragStart, onCardClick }) {
+  const handleClick = () => {
+    if (onCardClick) onCardClick(task.id);
+  };
+
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, task.id)}
+      onClick={handleClick}
       className={`bg-white rounded-lg border border-gray-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all space-y-2 border-l-4 ${priorityBorders[task.priority]}`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -52,10 +57,10 @@ function KanbanCard({ task, onDragStart }) {
   );
 }
 
-function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, onDragLeave, isOver }) {
+function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, onDragLeave, isOver, onCardClick }) {
   return (
     <div
-      className="flex flex-col"
+      className="flex flex-col flex-shrink-0 w-64"
       onDragOver={onDragOver}
       onDragEnter={(e) => onDragEnter(e, column.id)}
       onDragLeave={onDragLeave}
@@ -73,7 +78,7 @@ function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, on
         }`}
       >
         {column.tasks.map((task) => (
-          <KanbanCard key={task.id} task={task} onDragStart={onDragStart} />
+          <KanbanCard key={task.id} task={task} onDragStart={onDragStart} onCardClick={onCardClick} />
         ))}
         {column.tasks.length === 0 && (
           <div className="flex items-center justify-center h-32 text-gray-400 text-sm italic">
@@ -96,6 +101,9 @@ export default function KanbanBoard() {
   const [members, setMembers] = useState([]);
   const [reasonPopup, setReasonPopup] = useState(null);
   const [reasonText, setReasonText] = useState('');
+
+  const [viewTask, setViewTask] = useState(null);
+  const [viewTaskData, setViewTaskData] = useState(null);
 
   const [projectFilter, setProjectFilter] = useState('Tất cả dự án');
   const [assigneeFilter, setAssigneeFilter] = useState('Tất cả mọi người');
@@ -120,40 +128,22 @@ export default function KanbanBoard() {
 
   const filteredColumns = useMemo(() => {
     if (!columns.length) return [];
-    const overdueTasks = [];
-    const kept = columns
-      .filter(col => DESIRED_COLUMNS.includes(col.id))
-      .map(col => {
-        let tasks = col.tasks;
-        if (projectFilter !== 'Tất cả dự án') {
-          tasks = tasks.filter(t => t.project === projectFilter || t.projectName === projectFilter);
-        }
-        if (assigneeFilter !== 'Tất cả mọi người') {
-          tasks = tasks.filter(t => t.assignee?.name === assigneeFilter);
-        }
-        if (dateFrom) {
-          tasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) >= new Date(dateFrom));
-        }
-        if (dateTo) {
-          tasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) <= new Date(dateTo));
-        }
-        const overdue = tasks.filter(t => t.overdue);
-        const regular = tasks.filter(t => !t.overdue);
-        if (overdue.length) {
-          overdueTasks.push(...overdue);
-        }
-        return { ...col, tasks: regular, badgeCount: regular.length };
-      });
-    if (overdueTasks.length) {
-      kept.push({
-        id: 'overdue',
-        title: 'QUÁ HẠN',
-        badgeColor: 'bg-red-50 text-red-700',
-        tasks: overdueTasks,
-        badgeCount: overdueTasks.length,
-      });
-    }
-    return kept;
+    return columns.map(col => {
+      let tasks = col.tasks;
+      if (projectFilter !== 'Tất cả dự án') {
+        tasks = tasks.filter(t => t.project === projectFilter || t.projectName === projectFilter);
+      }
+      if (assigneeFilter !== 'Tất cả mọi người') {
+        tasks = tasks.filter(t => t.assignee?.name === assigneeFilter);
+      }
+      if (dateFrom) {
+        tasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) >= new Date(dateFrom));
+      }
+      if (dateTo) {
+        tasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) <= new Date(dateTo));
+      }
+      return { ...col, tasks, badgeCount: tasks.length };
+    });
   }, [columns, projectFilter, assigneeFilter, dateFrom, dateTo]);
 
   const handleDragStart = useCallback((e, taskId) => {
@@ -208,10 +198,21 @@ export default function KanbanBoard() {
     setDraggedFromCol(null);
   }, [draggedTaskId, draggedFromCol, columns]);
 
+  const handleCardClick = useCallback(async (taskId) => {
+    setViewTask(taskId);
+    setViewTaskData(null);
+    try {
+      const res = await getTask(taskId);
+      setViewTaskData(res.data);
+    } catch {
+      setViewTaskData(null);
+    }
+  }, []);
+
   const handleDrop = useCallback((e, targetColId) => {
     e.preventDefault();
     setOverColId(null);
-    if (!draggedTaskId || !draggedFromCol || draggedFromCol === targetColId || targetColId === 'overdue') {
+    if (!draggedTaskId || !draggedFromCol || draggedFromCol === targetColId) {
       setDraggedTaskId(null);
       setDraggedFromCol(null);
       return;
@@ -281,7 +282,7 @@ export default function KanbanBoard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3" style={{ minHeight: 'calc(100vh - 280px)' }}>
+        <div className="flex flex-row flex-nowrap gap-3 overflow-x-auto pb-4" style={{ minHeight: 'calc(100vh - 280px)' }}>
           {filteredColumns.map((column) => (
             <KanbanColumn
               key={column.id}
@@ -292,10 +293,15 @@ export default function KanbanBoard() {
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
               isOver={overColId === column.id}
+              onCardClick={handleCardClick}
             />
           ))}
         </div>
       </div>
+
+      {viewTask && viewTaskData && (
+        <TaskViewModal task={viewTaskData} onClose={() => { setViewTask(null); setViewTaskData(null); }} />
+      )}
 
       {reasonPopup && (
         <>

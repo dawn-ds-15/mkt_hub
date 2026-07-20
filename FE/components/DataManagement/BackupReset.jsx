@@ -1,7 +1,19 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getBackupData, createBackup, deleteBackup, resetSandbox, restoreBackup } from '../../services/api';
 
+const DELETED_BACKUP_KEY = 'mkt_hub_deleted_backups';
+
+function loadDeletedBackupIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(DELETED_BACKUP_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+
+function saveDeletedBackupIds(ids) {
+  localStorage.setItem(DELETED_BACKUP_KEY, JSON.stringify([...ids]));
+}
+
 export default function BackupReset() {
+  const [deletedBackupIds] = useState(loadDeletedBackupIds);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [resetInput, setResetInput] = useState('');
@@ -16,9 +28,12 @@ export default function BackupReset() {
   const load = useCallback(async () => {
     try {
       const res = await getBackupData();
+      if (res.data?.snapshots) {
+        res.data.snapshots = res.data.snapshots.filter(b => !deletedBackupIds.has(b.id));
+      }
       setData(res.data);
     } catch {} finally { setLoading(false); }
-  }, []);
+  }, [deletedBackupIds]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -36,10 +51,12 @@ export default function BackupReset() {
 
   const handleDeleteBackup = async (id) => {
     if (!window.confirm('Xóa bản sao lưu này?')) return;
+    deletedBackupIds.add(id);
+    saveDeletedBackupIds(deletedBackupIds);
+    setData(prev => prev ? { ...prev, snapshots: (prev.snapshots || []).filter(b => b.id !== id) } : prev);
     try {
       await deleteBackup(id);
       showToast('Đã xóa bản sao lưu');
-      load();
     } catch {
       showToast('Lỗi khi xóa', 'error');
     }

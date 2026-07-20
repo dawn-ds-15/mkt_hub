@@ -167,8 +167,9 @@ export default function ComparePeriods({ year: currentYear }) {
         insights: computedInsights,
       });
       setAiReport(res.data?.report || 'Không thể tạo báo cáo.');
-    } catch {
-      setAiReport('Không thể tạo báo cáo AI. Vui lòng thử lại sau.');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Không thể tạo báo cáo AI. Vui lòng thử lại sau.';
+      setAiReport(Array.isArray(msg) ? '• ' + msg.join('\n• ') : String(msg));
     } finally {
       setAiLoading(false);
     }

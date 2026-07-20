@@ -2,12 +2,9 @@ import { useEffect, useState } from 'react';
 import { createProject, updateProject, getMembers } from '../../services/api';
 
 const typeMap = {
-  'Lead Generation': 'Lead Generation', 'Workshop': 'Workshop', 'Online Campaign': 'Online Campaign',
-  'Webinar': 'Webinar', 'Event': 'Event', 'Exhibition': 'Exhibition', 'Awards': 'Awards', 'Production': 'Production',
+  'Nội bộ': 'Internal', 'Khách hàng': 'Client', 'Nghiên cứu': 'Research',
 };
 const statusMap = { 'Lên kế hoạch': 'Planning', 'Đang thực hiện': 'Active', 'Tạm dừng': 'On Hold', 'Hoàn thành': 'Completed', 'Đã huỷ': 'Cancelled' };
-const eventTypes = ['Workshop', 'Event', 'Exhibition', 'Webinar'];
-
 const isUUID = (s) => s && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 
 const reverseTypeMap = Object.fromEntries(Object.entries(typeMap).map(([k, v]) => [v, k]));
@@ -25,7 +22,6 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
   const [overhead, setOverhead] = useState('');
   const [kpiPlan, setKpiPlan] = useState('');
   const [kpiActual, setKpiActual] = useState('');
-  const [applyChecklist, setApplyChecklist] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [initialized, setInitialized] = useState(false);
@@ -120,17 +116,6 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
             </select>
           </div>
         </div>
-        {eventTypes.includes(type) && (
-          <label className="flex items-center gap-3 p-3 bg-surface-container-low rounded-lg border border-outline-variant cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={applyChecklist}
-              onChange={(e) => setApplyChecklist(e.target.checked)}
-              className="w-4 h-4 accent-primary"
-            />
-            <span className="text-body-md font-medium text-on-surface">Áp dụng checklist sự kiện chuẩn</span>
-          </label>
-        )}
         <div className="space-y-1">
           <label className="text-label-sm font-bold text-on-surface-variant uppercase">Chủ sở hữu</label>
           <div className="relative">

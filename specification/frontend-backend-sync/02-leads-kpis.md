@@ -64,7 +64,7 @@
 
 | Method | Endpoint FE gọi | Function | Ghi chú |
 |--------|-----------------|----------|---------|
-| POST | `/v1/ai/report` | `generateAIReport(params)` | BE không có — silent fail |
+| POST | `/v1/ai/report` | `generateAIReport(params)` | Endpoint tồn tại trên Render, có thể trả 400 nếu payload sai format |
 
 ---
 
@@ -93,8 +93,13 @@
 | 2 | **Opportunities CRUD không có BE endpoint** | `getOpportunities`, `addOpportunity`, `updateOpportunity` | `getOpportunities` đổi sang lấy từ `GET /v1/leads-kpis/weekly`. `addOpportunity`/`updateOpportunity` thêm try/catch fallback. |
 | 3 | **saveActuals thiếu oppCount/closedCount** | `saveActuals` | Thêm `oppCount` và `closedCount` vào payload gửi lên BE. |
 | 4 | **Thiếu `updateClosedDeal`** | `updateClosedDeal` | Thêm function mới gọi `PUT /v1/leads-kpis/closed-deals/:id`. |
-| 5 | **Thiếu `deleteClosedDeal`** | `deleteClosedDeal` | Thêm function mới gọi `DELETE /v1/leads-kpis/closed-deals/:id/delete`. |
+| 5 | **Thiếu `deleteClosedDeal`** | `deleteClosedDeal` | Thêm function mới gọi `DELETE /v1/leads-kpis/closed-deals/:id/delete` (sau revert thành no-op — chỉ ẩn UI). |
 | 6 | **Import path sai** | `importKPIHistory`, `importClosedDeals` | Đã sửa path theo Data Management module (xem doc 04-data-management.md). |
+| 7 | **addOpportunity gửi empty row** | `OpportunitiesTable.jsx` | Không gọi API với empty row — tạo local temp row, gọi `addOpportunity` khi có companyName. |
+| 8 | **Convert to Won với temp ID** | `OpportunitiesTable.jsx` | Nếu row còn temp ID (chưa save), gọi `addOpportunity` trước → lấy real ID → `convertOpportunityToWon`. |
+| 9 | **ViewAnalytics silent error** | `ViewAnalytics.jsx` | Thêm error state + banner lỗi + nút Thử lại. |
+| 10 | **ClosedDealsTable rút gọn** | `ClosedDealsTable.jsx` | Chỉ hiện 5 dòng + popup "Xem tất cả". |
+| 11 | **getKPIRollover silent catch** | `api.js:getKPIRollover` | Bỏ silent catch, lỗi propagate lên component. |
 
 ---
 
@@ -102,7 +107,7 @@
 
 | # | Vấn đề | Mức độ | Mô tả |
 |---|--------|--------|-------|
-| 1 | **`POST /v1/ai/report` không có BE** | THẤP | FE gọi nhưng BE không có — silent fail. |
+| 1 | **`POST /v1/ai/report`** | THẤP | Endpoint tồn tại trên Render nhưng có thể payload format chưa khớp. FE gửi cả camelCase + snake_case. |
 | 2 | **`POST /v1/leads-kpis/prior-year-deals` FE chưa gọi** | THẤP | Import dữ liệu năm cũ. |
 | 3 | **`GET /v1/leads-kpis/analysis` FE chưa gọi** | THẤP | Analysis dashboard. |
 
@@ -111,3 +116,7 @@
 ## 7. Kết luận
 
 **Module Leads & KPIs đã xử lý hết các issues CAO và TRUNG BÌNH.** Còn 3 issues THẤP chưa ảnh hưởng tới chức năng chính.
+
+### Ghi chú
+- `deleteClosedDeal` là no-op (không gọi API, dùng trong UI).
+- `deleteCompareData` là no-op (không có BE endpoint).

@@ -113,6 +113,10 @@
 |---|--------|--------|-------|
 | 1 | **Endpoint paths khớp hoàn toàn với BE module4.md** | ✅ | FE và BE đồng bộ. |
 | 2 | **Không có localStorage fallback** | ✅ | Tất cả gọi BE trực tiếp. |
+| 3 | **deleteExpense UI không ẩn** | ✅ | Đã fix: optimistic remove + lưu deletedId vào localStorage để filter khi re-fetch. |
+
+### Ghi chú
+- `deleteExpense` là no-op — không gọi API xoá database, chỉ ẩn khỏi UI.
 
 ---
 

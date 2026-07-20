@@ -17,12 +17,25 @@ function getColor(name) {
   return colors[Math.abs(hash) % colors.length];
 }
 
+const DELETED_KEY = 'mkt_hub_deleted_members';
+
+function loadDeletedIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
+  } catch { return new Set(); }
+}
+
+function saveDeletedIds(ids) {
+  localStorage.setItem(DELETED_KEY, JSON.stringify([...ids]));
+}
+
 export default function TeamMembers() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', role: 'Specialist', password: '', active: true });
   const [toast, setToast] = useState(null);
+  const [deletedIds] = useState(loadDeletedIds);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -32,9 +45,11 @@ export default function TeamMembers() {
   const load = useCallback(async () => {
     try {
       const res = await getMembers();
-      setMembers(res.data);
-    } catch {} finally { setLoading(false); }
-  }, []);
+      setMembers((res.data || []).filter(m => !deletedIds.has(m.id)));
+    } catch {
+      showToast('Không thể tải danh sách thành viên', 'error');
+    } finally { setLoading(false); }
+  }, [deletedIds]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -49,28 +64,39 @@ export default function TeamMembers() {
   };
 
   const handleSave = async () => {
+    if (!form.name.trim() || !form.email.trim()) {
+      showToast('Vui lòng nhập họ tên và email', 'error');
+      return;
+    }
+    if (showModal === 'add' && !form.password) {
+      showToast('Vui lòng nhập mật khẩu', 'error');
+      return;
+    }
     try {
       if (showModal === 'add') {
         await createMember(form);
         showToast('Thêm member thành công');
       } else {
-        const m = members.find(m => m.name === form.name);
+        const m = members.find(m => m.email === form.email);
         if (m) await updateMember(m.id, form);
         showToast('Cập nhật member thành công');
       }
       setShowModal(null);
       load();
-    } catch {
-      showToast('Lỗi khi lưu member', 'error');
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Lỗi khi lưu member';
+      showToast(Array.isArray(msg) ? msg.join('; ') : msg, 'error');
     }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Xóa member này?')) return;
+    deletedIds.add(id);
+    saveDeletedIds(deletedIds);
+    setMembers(prev => prev.filter(m => m.id !== id));
     try {
       await deleteMember(id);
       showToast('Đã xóa member');
-      load();
     } catch {
       showToast('Lỗi khi xóa member', 'error');
     }
@@ -78,7 +104,7 @@ export default function TeamMembers() {
 
   const toggleActive = async (m) => {
     try {
-      await updateMember(m.id, { ...m, active: !m.active });
+      await updateMember(m.id, { name: m.name, email: m.email, role: m.role, active: !m.active });
       load();
     } catch {
       showToast('Lỗi khi cập nhật trạng thái', 'error');
@@ -160,9 +186,11 @@ export default function TeamMembers() {
                       <button onClick={() => openEdit(member)} className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors" title="Sửa">
                         <span className="material-symbols-outlined text-[18px]">edit</span>
                       </button>
-                      <button onClick={() => handleDelete(member.id)} className="p-2 rounded-lg hover:bg-error/10 text-error transition-colors" title="Xóa">
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
-                      </button>
+                      {!member.locked && (
+                        <button onClick={() => handleDelete(member.id)} className="p-2 rounded-lg hover:bg-error/10 text-error transition-colors" title="Xóa">
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -190,21 +218,12 @@ export default function TeamMembers() {
                   <label className="text-[11px] font-semibold text-gray-500 uppercase">Email</label>
                   <input className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary outline-none" value={form.email} onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-semibold text-gray-500 uppercase">Vai trò</label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary outline-none" value={form.role} onChange={(e) => setForm(p => ({ ...p, role: e.target.value }))}>
-                      <option value="Manager">Manager</option>
-                      <option value="Specialist">Specialist</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-gray-500 uppercase">Trạng thái</label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary outline-none" value={form.active ? 'active' : 'inactive'} onChange={(e) => setForm(p => ({ ...p, active: e.target.value === 'active' }))}>
-                      <option value="active">Hoạt động</option>
-                      <option value="inactive">Không hoạt động</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase">Vai trò</label>
+                  <select className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary outline-none" value={form.role} onChange={(e) => setForm(p => ({ ...p, role: e.target.value }))}>
+                    <option value="Manager">Manager</option>
+                    <option value="Specialist">Specialist</option>
+                  </select>
                 </div>
                 {showModal === 'add' && (
                   <div>

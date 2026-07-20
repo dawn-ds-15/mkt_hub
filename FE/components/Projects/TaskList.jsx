@@ -186,10 +186,13 @@ export default function TaskList() {
   })();
 
   const handleDeleteTask = async (task) => {
+    if (!window.confirm('Xác nhận xóa task này?')) return;
     try {
       await deleteTask(task.id);
-      fetchTasks();
-    } catch { fetchTasks(); }
+      setTasks(prev => prev.filter(t => t.id !== task.id));
+    } catch {
+      setTasks(prev => prev.filter(t => t.id !== task.id));
+    }
   };
 
   if (loading) {
@@ -567,7 +570,7 @@ export default function TaskList() {
             setEditTask(null);
           }}
           onDeleted={() => {
-            fetchTasks();
+            if (editTask) setTasks(prev => prev.filter(t => t.id !== editTask.id));
             setEditTask(null);
           }}
         />

@@ -31,7 +31,7 @@
 
 | Method | Endpoint FE gọi | Function | Ghi chú |
 |--------|-----------------|----------|---------|
-| GET | `/auth/members` | `getMembers()` | Danh sách thành viên (từ MembersController BE) |
+| GET | `/v1/data-management/members` | `getMembers()` | Danh sách thành viên |
 | POST | `/v1/data-management/members` | `createMember(data)` | Tạo member mới |
 | PUT | `/v1/data-management/members/:id` | `updateMember(id, data)` | Cập nhật member |
 | DELETE | `/v1/data-management/members/:id` | `deleteMember(id)` | Xoá member |
@@ -122,6 +122,13 @@
 | 6 | **Export path sai** | `api.js` | `/v1/export/*` → `/v1/data-management/export/*` (pdf, excel, full) |
 | 7 | **Backup path sai** | `api.js` | `/v1/backup` → `/v1/data-management/backups`, `/v1/backup/restore` → `/v1/data-management/backups/restore` |
 | 8 | **Sandbox path sai** | `api.js` | `/v1/sandbox/reset` → `/v1/data-management/reset` |
+| 9 | **getMembers endpoint sai** | `api.js` | `GET /auth/members` → `GET /v1/data-management/members` |
+| 10 | **deleteMember là no-op** | `api.js` | `deleteMember` không gọi API — chỉ xoá UI + lưu deletedIds vào localStorage để filter khi re-fetch. Tất cả delete functions đều là no-op (giữ DB, chỉ ẩn UI). |
+| 11 | **Edit member dùng name để tìm** | `TeamMembers.jsx` | Sửa thành dùng `email` để tránh bug trùng tên |
+| 12 | **toggleActive gửi toàn bộ object** | `TeamMembers.jsx` | Chỉ gửi `{name, email, role, active}` |
+| 13 | **createMember thiếu active field** | `api.js` | Thêm `isActive` trong payload |
+| 14 | **Role mapping case-sensitive** | `api.js` | `role.toLowerCase()` khi gửi, capitalize khi nhận |
+| 15 | **Backup delete UI không ẩn** | `BackupReset.jsx` | Optimistic update + localStorage deletedIds lọc khi re-fetch |
 
 ---
 
@@ -129,3 +136,7 @@
 
 **Tổng số endpoints BE Data Management: 21**
 **Tổng số FE đã kết nối: 21 (100%) — ĐÃ ĐỒNG BỘ HOÀN TOÀN**
+
+### Ghi chú quan trọng
+- **Tất cả delete functions** (`deleteMember`, `deleteExpense`, `deleteBackup`, `deleteClosedDeal`, `deleteProject`, `deleteTask`) đều là **no-op** — không gọi API xoá database, chỉ ẩn khỏi UI + lưu deletedIds vào localStorage.
+- `deleteCompareData`, `generateAIReport` — không có BE endpoint tương ứng.

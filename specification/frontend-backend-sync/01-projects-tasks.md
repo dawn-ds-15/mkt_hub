@@ -176,9 +176,21 @@
 | 1 | **Import task path sai** | `api.js:importTasks` | Đổi từ `POST /v1/import/tasks` → `POST /v1/tasks/import` (đúng BE TasksController). |
 | 2 | **Template download** | `api.js:downloadTemplate` | Thêm gọi BE trước (`GET /v1/tasks/import/template`), fallback client-side gen. |
 | 3 | **Members CRUD path sai** | `api.js:createMember/updateMember/deleteMember` | Đổi từ `/auth/members` → `/v1/data-management/members`, method `PATCH`→`PUT`. (Xem doc 04-data-management.md) |
+| 4 | **getTask response parse** | `api.js:getTaskList` | Xử lý multiple response formats (res.data?.data ?? res.data). |
+| 5 | **createTask thiếu fields** | `api.js:createTask` | Thêm `startDate`, `completedDate`, `link`, `remark`, `neededSupportBod`. |
+| 6 | **updateTask mutate input** | `api.js:updateTask` | Copy payload thay vì mutate input object. |
+| 7 | **Status mapping Kanban** | `api.js:getKanbanData` | Map 10 BE statuses → 7 FE columns (planning, processing, done, pending, cancel, backlog, overdue). |
+| 8 | **Kanban layout responsive** | `KanbanBoard.jsx` | Đổi từ `grid-cols-*` sang `flex-row flex-nowrap overflow-x-auto`. |
+| 9 | **TaskViewModal từ Kanban** | `KanbanBoard.jsx` | Thêm onClick card → fetch `GET /v1/tasks/:id` → hiện TaskViewModal. |
+| 10 | **Project type mismatch** | `CreateProjectForm.jsx` | `typeMap` sai giá trị backend — fix thành `Internal/Client/Research`. |
+| 11 | **Weekly report 304 cache** | `api.js` | Thêm `_t=Date.now()` vào request interceptor cho all GET requests. |
 
 ---
 
 ## 7. Kết luận
 
 **Module Projects & Tasks đồng bộ hoàn toàn.** Tất cả endpoints FE gọi đều có BE tương ứng. Các vấn đề path mismatch đã được fix.
+
+### Ghi chú
+- `deleteTask` không gọi API — chỉ ẩn khỏi UI (theo yêu cầu).
+- `deleteProject` là no-op (không dùng trong UI hiện tại).

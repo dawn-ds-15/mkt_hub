@@ -44,14 +44,8 @@ export default function OpportunitiesTable({ onConvertSuccess }) {
     loadOpportunities();
   }, [loadOpportunities]);
 
-  const addRow = async () => {
-    try {
-      const res = await addOpportunity({ ...emptyRow });
-      setRows(prev => [...prev, { ...res.data }]);
-      addToast('Đã thêm cơ hội mới!', 'success');
-    } catch {
-      setRows(prev => [...prev, { ...emptyRow, id: Date.now() }]);
-    }
+  const addRow = () => {
+    setRows(prev => [...prev, { ...emptyRow, id: Date.now() }]);
   };
 
   const handleRowChange = (index, field, value) => {
@@ -65,7 +59,18 @@ export default function OpportunitiesTable({ onConvertSuccess }) {
     if (saveTimers.current[index]) clearTimeout(saveTimers.current[index]);
     saveTimers.current[index] = setTimeout(async () => {
       try {
-        await updateOpportunity(updatedRow.id, updatedRow);
+        const isTempId = typeof updatedRow.id === 'number';
+        if (isTempId) {
+          if (!updatedRow.companyName) return;
+          const res = await addOpportunity(updatedRow);
+          setRows(prev => {
+            const copy = [...prev];
+            copy[index] = { ...updatedRow, id: res.data.id };
+            return copy;
+          });
+        } else {
+          await updateOpportunity(updatedRow.id, updatedRow);
+        }
       } catch {}
     }, 500);
   };
@@ -85,14 +90,24 @@ export default function OpportunitiesTable({ onConvertSuccess }) {
     }
     setModalSubmitting(true);
     try {
-      await updateOpportunity(row.id, { ...row });
-      await convertOpportunityToWon(row.id, signedDate);
-      setRemovingIds(prev => new Set([...prev, row.id]));
+      let realId = row.id;
+      const isTempId = typeof realId === 'number';
+      if (isTempId) {
+        const res = await addOpportunity(row);
+        realId = res.data.id;
+        setRows(prev => {
+          const copy = [...prev];
+          copy[modalIndex] = { ...row, id: realId };
+          return copy;
+        });
+      }
+      await convertOpportunityToWon(realId, signedDate);
+      setRemovingIds(prev => new Set([...prev, realId]));
       setTimeout(() => {
         setRows(prev => prev.filter((_, i) => i !== modalIndex));
         setRemovingIds(prev => {
           const next = new Set(prev);
-          next.delete(row.id);
+          next.delete(realId);
           return next;
         });
         if (onConvertSuccess) onConvertSuccess();

@@ -59,6 +59,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
   const [funnel, setFunnel] = useState([]);
   const [funnelMode, setFunnelMode] = useState('volume');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   const currentWeek = periodType === 'week' ? periodValue : '1';
   const [menuOpen, setMenuOpen] = useState(false);
@@ -82,6 +83,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
 
   const loadData = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const [kpiRes, funnelRes] = await Promise.all([
         getKpiCardsData(periodType, periodValue, year),
@@ -90,13 +92,14 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
       setKpiCards(kpiRes.data);
       setFunnel(funnelRes.data);
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      const msg = error?.response?.data?.message || error?.message || 'Không thể tải dữ liệu phân tích';
+      setLoadError(Array.isArray(msg) ? msg.join('; ') : msg);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
+  if (loading && !kpiCards.length && !funnel.length && !loadError) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-on-surface-variant">Đang tải dữ liệu...</p>
@@ -133,6 +136,15 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
 
   return (
     <div className="space-y-6">
+      {loadError && (
+        <div className="bg-red-50 border-l-4 border-danger p-4 rounded flex items-start gap-3">
+          <span className="material-symbols-outlined text-danger mt-0.5">error</span>
+          <div className="flex-1">
+            <p className="text-body-sm text-red-800">{loadError}</p>
+            <button onClick={loadData} className="mt-2 text-body-xs text-red-700 underline hover:no-underline">Thử lại</button>
+          </div>
+        </div>
+      )}
       {/* Row 1: 7 KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {kpiCards.filter(k => k.label !== 'CAC / LTV').map((kpi) => (

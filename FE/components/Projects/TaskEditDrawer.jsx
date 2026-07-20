@@ -42,7 +42,11 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
   const [dueDate, setDueDate] = useState(task.dueDate || '');
   const [completedDate, setCompletedDate] = useState(task.completedDate || '');
   const [execWeek, setExecWeek] = useState(task.execWeek || '');
-  const [link, setLink] = useState(task.link?.url || '');
+  const [link, setLink] = useState(() => {
+    if (!task.link) return '';
+    if (typeof task.link === 'string') return task.link;
+    return task.link.url || '';
+  });
   const [remark, setRemark] = useState(task.remark || '');
   const [reason, setReason] = useState(task.reason || '');
   const [neededSupportBod, setNeededSupportBod] = useState(task.neededSupportBod || '');
@@ -101,6 +105,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
         dueDate: dueDate || undefined,
         completedDate: completedDate || undefined,
         execWeek: execWeek ? parseInt(execWeek) : undefined,
+        execYear: task.execYear ? parseInt(task.execYear) : undefined,
         link: link || undefined,
         remark,
         neededSupportBod: neededSupportBod || undefined,

@@ -14,13 +14,18 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  if (config.method === 'get') {
+    config.params = { ...config.params, _t: Date.now() };
+  }
   return config;
 });
 
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && !err.config?.url?.includes('/auth/login')) {
+    const body = err.response?.data;
+    const isUnauthorized = err.response?.status === 401 || body?.statusCode === 401 || body?.message === 'Unauthorized';
+    if (isUnauthorized && !err.config?.url?.includes('/auth/login')) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem('mkt_hub_user');
       if (window.location.pathname !== '/login') {
@@ -42,8 +47,8 @@ function getInitials(name) {
 }
 
 function taskStatusToMock(status, isOverdue) {
-  if (isOverdue) return 'overdue';
-  const beToFe = { 'To Do': 'Planning', 'In Progress': 'Processing', 'Review': 'Pending', 'Done': 'Done', 'Cancel': 'Cancel' };
+  if (isOverdue || status === 'Overdue') return 'overdue';
+  const beToFe = { 'To Do': 'Planning', 'In Progress': 'Processing', 'Review': 'Pending', 'Done': 'Done', 'Cancel': 'Cancel', 'Backlog': 'Backlog' };
   return beToFe[status] || (['Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'Cancel'].includes(status) ? status : 'Planning');
 }
 
@@ -379,7 +384,8 @@ export const getTaskList = async (filters = {}) => {
   if (filters.dateFrom) params.dueDateFrom = filters.dateFrom;
   if (filters.dateTo) params.dueDateTo = filters.dateTo;
   const res = await api.get('/v1/tasks', { params });
-  const { data: tasks } = res.data;
+  const rawTasks = res.data?.data ?? res.data?.tasks ?? res.data ?? [];
+  const tasks = Array.isArray(rawTasks) ? rawTasks : [];
   return {
     data: tasks.map((t) => ({
       id: t.id,
@@ -396,11 +402,15 @@ export const getTaskList = async (filters = {}) => {
       dueDate: t.dueDate || '',
       done: t.completedDate ? formatDate(t.completedDate) : null,
       completedDate: t.completedDate || '',
-      link: t.link || null,
-      linkUrl: t.link || null,
+      execWeek: t.execWeek || '',
+      execYear: t.execYear || '',
+      link: typeof t.link === 'object' ? t.link : (t.link ? { url: t.link } : null),
+      linkUrl: typeof t.link === 'string' ? t.link : (t.link?.url || null),
       remark: t.remark || '',
+      reason: t.reason || '',
+      neededSupportBod: t.neededSupportBod || '',
     })),
-    total: res.data.stats?.total || tasks.length,
+    total: res.data?.stats?.total || tasks.length,
   };
 };
 
@@ -412,30 +422,61 @@ export const getTasks = async (filters) => {
   return { data: res.data.data };
 };
 
+export const getTask = async (id) => {
+  const res = await api.get(`/v1/tasks/${id}`);
+  const t = res.data?.data ?? res.data;
+  return {
+    data: {
+      id: t.id,
+      project: t.project?.name || '-',
+      taskName: t.name,
+      description: t.description || '',
+      assignee: { name: t.assignee?.name || 'Unknown' },
+      stakeholders: Array.isArray(t.stakeholders) ? t.stakeholders.join(', ') : (t.stakeholders || ''),
+      status: taskStatusToMock(t.status, t.isOverdue),
+      priority: t.priority?.toLowerCase() || 'medium',
+      start: t.startDate ? formatDate(t.startDate) : '-',
+      startDate: t.startDate || '',
+      due: t.dueDate ? formatDate(t.dueDate) : '-',
+      dueDate: t.dueDate || '',
+      done: t.completedDate ? formatDate(t.completedDate) : null,
+      completedDate: t.completedDate || '',
+      linkUrl: typeof t.link === 'string' ? t.link : (t.link?.url || null),
+      remark: t.remark || '',
+    },
+  };
+};
+
 export const createTask = async (data) => {
-  const feToBe = { Planning: 'To Do', Processing: 'In Progress', Pending: 'Review', Backlog: 'To Do' };
-  const beStatus = feToBe[data.status] || data.status || 'To Do';
+  const statusMap = { Planning: 'To Do', Processing: 'In Progress', Pending: 'Review', Backlog: 'Backlog', Done: 'Done', Cancel: 'Cancel' };
+  const beStatus = statusMap[data.status] || data.status || 'To Do';
   const res = await api.post('/v1/tasks', {
     name: data.title || data.name,
     description: data.description || '',
     status: beStatus,
     priority: data.priority ? data.priority.charAt(0).toUpperCase() + data.priority.slice(1) : 'Medium',
+    startDate: data.startDate,
     dueDate: data.dueDate,
+    completedDate: data.completedDate,
     projectId: data.projectId,
     assigneeId: data.assigneeId,
     execWeek: data.execWeek ? Number(data.execWeek) : undefined,
     execYear: data.execYear ? Number(data.execYear) : undefined,
     stakeholders: data.stakeholders || [],
+    link: data.link,
+    remark: data.remark,
+    neededSupportBod: data.neededSupportBod,
   });
   return { data: res.data };
 };
 
 export const updateTask = async (id, data) => {
-  if (data.status) {
-    const statusMap = { todo: 'To Do', in_progress: 'In Progress', review: 'Review', done: 'Done', canceled: 'Cancel', Planning: 'To Do', Processing: 'In Progress', Pending: 'Review', Backlog: 'To Do' };
-    data.status = statusMap[data.status] || data.status;
+  const payload = { ...data };
+  if (payload.status) {
+    const statusMap = { Planning: 'To Do', Processing: 'In Progress', Pending: 'Review', Done: 'Done', Cancel: 'Cancel', Backlog: 'Backlog', Overdue: 'Overdue' };
+    payload.status = statusMap[payload.status] || payload.status;
   }
-  const res = await api.patch(`/v1/tasks/${id}`, data);
+  const res = await api.patch(`/v1/tasks/${id}`, payload);
   return { data: res.data };
 };
 
@@ -445,50 +486,60 @@ export const deleteTask = async (id) => {
 
 // ===================== KANBAN =====================
 
-const columnMeta = {
-  Planning: { title: 'CHƯA LÀM', badgeColor: 'bg-slate-50 text-slate-600' },
-  Processing: { title: 'ĐANG LÀM', badgeColor: 'bg-blue-50 text-blue-600' },
-  Done: { title: 'HOÀN THÀNH', badgeColor: 'bg-green-50 text-green-600' },
-  Backlog: { title: 'TỒN ĐỌNG', badgeColor: 'bg-amber-50 text-amber-600' },
-  Pending: { title: 'CHỜ XỬ LÝ', badgeColor: 'bg-purple-50 text-purple-600' },
-  Cancel: { title: 'ĐÃ HUỶ', badgeColor: 'bg-gray-100 text-gray-600' },
+
+const beToFeStatus = {
+  'Planning': 'Planning', 'To Do': 'Planning',
+  'Processing': 'Processing', 'In Progress': 'Processing',
+  'Pending': 'Pending', 'Review': 'Pending',
+  'Done': 'Done',
+  'Cancel': 'Cancel',
+  'Backlog': 'Backlog',
+  'Overdue': 'Overdue',
 };
 
-const priorityBorders = { High: 'border-l-red-500', Medium: 'border-l-amber-300', Low: 'border-l-gray-200' };
+const feStatusMeta = {
+  planning: { title: 'CHƯA LÀM', badge: 'bg-slate-100 text-slate-700' },
+  processing: { title: 'ĐANG LÀM', badge: 'bg-blue-100 text-blue-700' },
+  done: { title: 'HOÀN THÀNH', badge: 'bg-green-100 text-green-700' },
+  pending: { title: 'CHỜ XỬ LÝ', badge: 'bg-purple-100 text-purple-700' },
+  cancel: { title: 'ĐÃ HUỶ', badge: 'bg-gray-100 text-gray-600' },
+  backlog: { title: 'TỒN ĐỌNG', badge: 'bg-amber-100 text-amber-700' },
+  overdue: { title: 'QUÁ HẠN', badge: 'bg-red-100 text-red-700' },
+};
 
 export const getKanbanData = async () => {
   const res = await api.get('/v1/tasks/kanban/board');
   const columns = res.data;
-  return {
-    data: columns.map((col) => {
-      const meta = columnMeta[col.status] || { title: col.status.toUpperCase(), badgeColor: 'bg-gray-50 text-gray-600' };
-      return {
-        id: col.status.toLowerCase(),
-        title: meta.title,
-        badgeCount: col.count,
-        badgeColor: meta.badgeColor,
-        tasks: col.tasks.map((t) => {
-          const isOverdue = t.isOverdue;
-          const isDone = t.status === 'Done' || t.status === 'done';
-          return {
-            id: t.id,
-            title: t.name,
-            project: t.project?.name || '-',
-            assignee: t.assignee?.name || 'Unknown',
-            priority: t.priority || 'Medium',
-            due: t.dueDate ? formatDate(t.dueDate) : '-',
-            dueDate: t.dueDate || '',
-            dueColor: isOverdue ? 'text-red-500' : isDone ? 'text-green-600' : 'text-gray-400',
-            statusIcon: isOverdue ? 'error' : isDone ? 'check_circle' : 'east',
-            statusColor: isOverdue ? 'text-red-500' : isDone ? 'text-green-600' : 'text-amber-500',
-            avatar: getInitials(t.assignee?.name || ''),
-            overdue: isOverdue,
-            done: isDone,
-          };
-        }),
-      };
-    }),
-  };
+  const merged = {};
+  for (const col of columns) {
+    const feStatus = beToFeStatus[col.status] || col.status;
+    const id = feStatus.toLowerCase();
+    if (!merged[id]) {
+      const meta = feStatusMeta[id] || { title: feStatus.toUpperCase(), badge: 'bg-gray-50 text-gray-600' };
+      merged[id] = { id, title: meta.title, badgeColor: meta.badge, badgeCount: 0, tasks: [] };
+    }
+    for (const t of col.tasks) {
+      const isOverdue = t.isOverdue;
+      const isDone = t.status === 'Done' || t.status === 'done';
+      merged[id].tasks.push({
+        id: t.id,
+        title: t.name,
+        project: t.project?.name || '-',
+        assignee: t.assignee?.name || 'Unknown',
+        priority: t.priority || 'Medium',
+        due: t.dueDate ? formatDate(t.dueDate) : '-',
+        dueDate: t.dueDate || '',
+        dueColor: isOverdue ? 'text-red-500' : isDone ? 'text-green-600' : 'text-gray-400',
+        statusIcon: isOverdue ? 'error' : isDone ? 'check_circle' : 'east',
+        statusColor: isOverdue ? 'text-red-500' : isDone ? 'text-green-600' : 'text-amber-500',
+        avatar: getInitials(t.assignee?.name || ''),
+        overdue: isOverdue,
+        done: isDone,
+      });
+    }
+    merged[id].badgeCount = merged[id].tasks.length;
+  }
+  return { data: Object.values(merged) };
 };
 
 // ===================== WEEKLY REPORTS =====================
@@ -616,21 +667,17 @@ export const getFunnelData = async (periodType = 'year', periodValue = '2026', y
 // ===================== KPI ROLLOVER =====================
 
 export const getKPIRollover = async (year, week) => {
-  try {
-    const res = await api.get('/v1/leads-kpis/weekly', { params: { year, week } });
-    const d = res.data?.data ?? res.data ?? {};
-    const p = d.planGoc ?? {};
-    const a = d.actual ?? {};
-    const labelMap = { rawLeads: 'Raw Leads', mql: 'MQL', sql: 'SQL', oppCount: 'Cơ hội (OPP)', closedCount: 'Closed Deal' };
-    const items = Object.keys(labelMap).map(key => ({
-      label: labelMap[key],
-      weeklyTarget: p[key] ?? 0,
-      currentActual: a[key] ?? 0,
-    }));
-    return { data: items };
-  } catch {
-    return { data: [] };
-  }
+  const res = await api.get('/v1/leads-kpis/weekly', { params: { year, week } });
+  const d = res.data?.data ?? res.data ?? {};
+  const p = d.planGoc ?? {};
+  const a = d.actual ?? {};
+  const labelMap = { rawLeads: 'Raw Leads', mql: 'MQL', sql: 'SQL', oppCount: 'Cơ hội (OPP)', closedCount: 'Closed Deal' };
+  const items = Object.keys(labelMap).map(key => ({
+    label: labelMap[key],
+    weeklyTarget: p[key] ?? 0,
+    currentActual: a[key] ?? 0,
+  }));
+  return { data: items };
 };
 
 // ===================== COMPARE PERIODS =====================
@@ -1015,47 +1062,45 @@ export const exportFullData = async () => {
 
 // --- Team Members ---
 
-let membersCache = [];
-
 export const getMembers = async () => {
-  const res = await api.get('/auth/members');
+  const res = await api.get('/v1/data-management/members');
   const list = res.data?.data ?? res.data ?? [];
-  if (Array.isArray(list) && list.length > 0) {
-    membersCache = list;
-    return { data: list };
-  }
-  return { data: membersCache };
+  return { data: Array.isArray(list) ? list.map(m => ({
+    ...m,
+    active: m.isActive ?? m.active ?? true,
+    role: m.role ? m.role.charAt(0).toUpperCase() + m.role.slice(1) : 'Specialist',
+    locked: m.locked === true || m.protected === true || m.role === 'Super Admin',
+  })) : [] };
 };
 
 export const createMember = async (data) => {
   const res = await api.post('/v1/data-management/members', {
-    name: data.name, email: data.email, password: data.password,
-    role: data.role || 'specialist',
+    name: data.name,
+    email: data.email,
+    password: data.password,
+    role: (data.role || 'specialist').toLowerCase(),
+    isActive: data.active !== false,
   });
-  const newItem = res.data?.data ?? res.data;
-  membersCache.push(newItem);
-  return { data: newItem };
+  return { data: res.data?.data ?? res.data };
 };
 
 export const updateMember = async (id, data) => {
   const res = await api.put(`/v1/data-management/members/${id}`, {
-    name: data.name, email: data.email, role: data.role ? data.role.toLowerCase() : undefined,
-    isActive: data.active,
+    name: data.name,
+    email: data.email,
+    role: (data.role || 'specialist').toLowerCase(),
+    isActive: data.active !== false,
   });
-  const updated = res.data?.data ?? res.data;
-  const idx = membersCache.findIndex(m => m.id === id);
-  if (idx >= 0) membersCache[idx] = { ...membersCache[idx], ...updated };
-  return { data: updated };
+  return { data: res.data?.data ?? res.data };
+};
+
+export const deleteMember = async (id) => {
+  return { success: true };
 };
 
 export const changePassword = async (oldPassword, newPassword) => {
   const res = await api.post('/auth/change-password', { oldPassword, newPassword });
   return { data: res.data?.data ?? res.data };
-};
-
-export const deleteMember = async (id) => {
-  membersCache = membersCache.filter(m => m.id !== id);
-  return { success: true };
 };
 
 // --- Slack Settings ---
@@ -1207,7 +1252,12 @@ export const generateAIReport = async (params) => {
     years: params.years,
     periodType: params.periodType,
     periodValue: params.periodValue,
-    insights: params.insights,
+    period_type: params.periodType,
+    period_value: params.periodValue,
+    insights: (params.insights || []).map(i => ({
+      title: i.title,
+      description: i.desc || i.description,
+    })),
   };
   const res = await api.post('/v1/ai/report', payload);
   return { data: res.data };

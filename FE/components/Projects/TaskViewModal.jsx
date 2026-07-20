@@ -83,7 +83,7 @@ export default function TaskViewModal({ task, onClose }) {
               </div>
               <div>
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Hoàn thành</label>
-                <p className="mt-1 text-sm text-gray-900">{task.done || '-'}</p>
+                <p className="mt-1 text-sm text-gray-900">{task.done || task.completedDate || '-'}</p>
               </div>
             </div>
 

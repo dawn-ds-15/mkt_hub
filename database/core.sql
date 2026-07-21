@@ -121,6 +121,8 @@ CREATE TABLE "core"."projects" (
     "updated_at" timestamp DEFAULT CURRENT_TIMESTAMP,
     "budget_plan" numeric(15,2) DEFAULT '0',
     "actual_cost" numeric(15,2) DEFAULT '0',
+    "archived_at" timestamp,
+    "archived_by" bigint,
     CONSTRAINT "projects_pkey" PRIMARY KEY ("id")
 )
 WITH (oids = false);
@@ -453,6 +455,8 @@ CREATE TABLE "core"."tasks" (
     "remark" text,
     "created_at" timestamp DEFAULT CURRENT_TIMESTAMP,
     "updated_at" timestamp DEFAULT CURRENT_TIMESTAMP,
+    "archived_at" timestamp,
+    "archived_by" bigint,
     CONSTRAINT "tasks_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "tasks_exec_week_check" CHECK ((((exec_week >= 1) AND (exec_week <= 53))))
 )
@@ -682,5 +686,15 @@ ALTER TABLE ONLY "core"."tasks" ADD CONSTRAINT "tasks_assignee_id_fkey" FOREIGN 
 ALTER TABLE ONLY "core"."tasks" ADD CONSTRAINT "tasks_priority_id_fkey" FOREIGN KEY (priority_id) REFERENCES dropdowns(id);
 ALTER TABLE ONLY "core"."tasks" ADD CONSTRAINT "tasks_project_id_fkey" FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
 ALTER TABLE ONLY "core"."tasks" ADD CONSTRAINT "tasks_status_id_fkey" FOREIGN KEY (status_id) REFERENCES dropdowns(id);
+
+-- Soft-delete support for DELETE-enabled business tables
+CREATE INDEX IF NOT EXISTS idx_projects_archived_at ON core.projects (archived_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_archived_at ON core.tasks (archived_at);
+
+ALTER TABLE ONLY core.projects DROP CONSTRAINT IF EXISTS projects_archived_by_fkey;
+ALTER TABLE ONLY core.projects ADD CONSTRAINT projects_archived_by_fkey FOREIGN KEY (archived_by) REFERENCES core.members(id);
+
+ALTER TABLE ONLY core.tasks DROP CONSTRAINT IF EXISTS tasks_archived_by_fkey;
+ALTER TABLE ONLY core.tasks ADD CONSTRAINT tasks_archived_by_fkey FOREIGN KEY (archived_by) REFERENCES core.members(id);
 
 -- 2026-07-17 08:26:54 UTC

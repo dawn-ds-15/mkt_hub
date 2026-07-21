@@ -233,7 +233,18 @@ export default function KanbanBoard() {
     });
     const payload = reason ? { status: apiStatus, reason } : { status: apiStatus };
     console.log(`[Kanban] doMoveTask -> PATCH /v1/tasks/${taskId}`, payload);
-    updateTask(taskId, payload).catch((err) => {
+    updateTask(taskId, payload).then((res) => {
+      console.log(`[Kanban] PATCH response for task ${taskId}:`, res.data);
+      return getTask(taskId);
+    }).then((taskRes) => {
+      console.log(`[Kanban] Refetched task ${taskId} status:`, taskRes.data?.status);
+      if (taskRes.data?.status !== apiStatus) {
+        console.warn(`[Kanban] STATUS MISMATCH: PATCH sent "${apiStatus}" but GET returned "${taskRes.data?.status}"`);
+        showToast(`Status vẫn là "${taskRes.data?.status}", không phải "${apiStatus}"`, 'error');
+      } else {
+        console.log(`[Kanban] Status confirmed: "${apiStatus}" — PATCH persisted OK`);
+      }
+    }).catch((err) => {
       console.error(`[Kanban] PATCH failed for task ${taskId}:`, err?.response?.status, err?.response?.data || err);
       setColumns(prevColsCopy);
       const msg = err?.response?.data?.message || err?.message || 'Không thể cập nhật trạng thái';
@@ -241,7 +252,7 @@ export default function KanbanBoard() {
     });
     setDraggedTaskId(null);
     setDraggedFromCol(null);
-  }, [draggedTaskId, draggedFromCol, columns]);
+  }, [draggedTaskId, draggedFromCol, columns, getTask]);
 
   const handleCardClick = useCallback(async (taskId) => {
     setViewTask(taskId);

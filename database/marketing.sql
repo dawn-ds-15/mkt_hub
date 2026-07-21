@@ -1,3 +1,7 @@
+SET search_path TO marketing, core, public;
+
+SET search_path TO marketing, core, public;
+
 -- Adminer 5.4.2 PostgreSQL 16.14 dump
 
 DROP TABLE IF EXISTS "closed_deals";
@@ -458,3 +462,68 @@ ALTER TABLE ONLY "marketing"."opportunities" ADD CONSTRAINT "opportunities_proje
 ALTER TABLE ONLY "marketing"."opportunities" ADD CONSTRAINT "opportunities_status_id_fkey" FOREIGN KEY (status_id) REFERENCES core.dropdowns(id);
 
 -- 2026-07-17 08:30:02 UTC
+
+
+-- Data integrity hardening
+ALTER TABLE marketing.closed_deals ADD COLUMN IF NOT EXISTS currency_id bigint NOT NULL DEFAULT 46;
+ALTER TABLE marketing.opportunities ADD COLUMN IF NOT EXISTS currency_id bigint NOT NULL DEFAULT 46;
+
+ALTER TABLE marketing.closed_deals DROP CONSTRAINT IF EXISTS closed_deals_currency_id_fkey;
+ALTER TABLE marketing.closed_deals ADD CONSTRAINT closed_deals_currency_id_fkey
+    FOREIGN KEY (currency_id) REFERENCES core.dropdowns(id);
+
+ALTER TABLE marketing.opportunities DROP CONSTRAINT IF EXISTS opportunities_currency_id_fkey;
+ALTER TABLE marketing.opportunities ADD CONSTRAINT opportunities_currency_id_fkey
+    FOREIGN KEY (currency_id) REFERENCES core.dropdowns(id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS closed_deals_opportunity_id_unique
+    ON marketing.closed_deals (opportunity_id)
+    WHERE opportunity_id IS NOT NULL;
+
+ALTER TABLE marketing.closed_deals DROP CONSTRAINT IF EXISTS closed_deals_setup_fee_nonnegative;
+ALTER TABLE marketing.closed_deals ADD CONSTRAINT closed_deals_setup_fee_nonnegative CHECK (setup_fee >= 0);
+
+ALTER TABLE marketing.closed_deals DROP CONSTRAINT IF EXISTS closed_deals_monthly_fee_nonnegative;
+ALTER TABLE marketing.closed_deals ADD CONSTRAINT closed_deals_monthly_fee_nonnegative CHECK (monthly_fee >= 0);
+
+ALTER TABLE marketing.opportunities DROP CONSTRAINT IF EXISTS opportunities_pipeline_value_nonnegative;
+ALTER TABLE marketing.opportunities ADD CONSTRAINT opportunities_pipeline_value_nonnegative CHECK (pipeline_value >= 0);
+
+UPDATE marketing.opportunities o
+SET expected_close_date = d.closed_date
+FROM marketing.closed_deals d
+WHERE d.opportunity_id = o.id
+  AND o.expected_close_date IS NULL;
+
+UPDATE marketing.opportunities
+SET expected_close_date = (created_at::date + 30)
+WHERE expected_close_date IS NULL;
+
+ALTER TABLE marketing.closed_deals
+    ALTER COLUMN created_at TYPE timestamp with time zone
+    USING created_at AT TIME ZONE 'Asia/Ho_Chi_Minh',
+    ALTER COLUMN updated_at TYPE timestamp with time zone
+    USING updated_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+ALTER TABLE marketing.kpi_actuals
+    ALTER COLUMN created_at TYPE timestamp with time zone
+    USING created_at AT TIME ZONE 'Asia/Ho_Chi_Minh',
+    ALTER COLUMN updated_at TYPE timestamp with time zone
+    USING updated_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+ALTER TABLE marketing.kpi_plans
+    ALTER COLUMN created_at TYPE timestamp with time zone
+    USING created_at AT TIME ZONE 'Asia/Ho_Chi_Minh',
+    ALTER COLUMN updated_at TYPE timestamp with time zone
+    USING updated_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+ALTER TABLE marketing.opportunities
+    ALTER COLUMN created_at TYPE timestamp with time zone
+    USING created_at AT TIME ZONE 'Asia/Ho_Chi_Minh',
+    ALTER COLUMN updated_at TYPE timestamp with time zone
+    USING updated_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+SELECT setval('marketing.closed_deals_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM marketing.closed_deals;
+SELECT setval('marketing.kpi_actuals_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM marketing.kpi_actuals;
+SELECT setval('marketing.kpi_plans_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM marketing.kpi_plans;
+SELECT setval('marketing.opportunities_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM marketing.opportunities;

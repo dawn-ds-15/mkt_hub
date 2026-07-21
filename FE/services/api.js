@@ -1,5 +1,4 @@
 import { filterDeleted, markDeleted, getDeletedIds } from '../utils/softDelete';
-import { mockOpportunities, mockClosedDeals } from '../mocks/data';
 import axios from 'axios';
 
 const TOKEN_KEY = 'mkt_hub_token';
@@ -815,101 +814,52 @@ export const saveActuals = async (data) => {
 
 // ===================== OPPORTUNITIES =====================
 
-const OPP_STORE_KEY = 'mkt_hub_opportunities';
-
-function getLocalOpps() {
-  try {
-    const raw = localStorage.getItem(OPP_STORE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  const seeded = mockOpportunities.map((o, i) => ({ ...o, id: i + 1 }));
-  localStorage.setItem(OPP_STORE_KEY, JSON.stringify(seeded));
-  return seeded;
-}
-
-function saveLocalOpps(list) {
-  localStorage.setItem(OPP_STORE_KEY, JSON.stringify(list));
-}
-
 function mapOppFromBE(o) {
   const sizeMap = { 'Enterprise': 'S', 'Medium': 'M' };
   return {
     id: o.id,
-    companyName: o.companyName || o.company_name || '',
+    companyName: o.companyName || '',
     size: sizeMap[o.size] || o.size || 'S',
-    project: o.project?.name || o.project || '',
-    projectId: o.projectId || o.project_id || '',
-    fees: o.setupFee ?? o.fees ?? 0,
-    expectedCloseDate: o.expectedCloseDate || o.expected_close_date || '',
+    project: o.project?.name || '',
+    projectId: o.projectId || '',
+    fees: o.setupFee ?? 0,
+    expectedCloseDate: o.expectedCloseDate || '',
     status: o.status || 'active',
   };
 }
 
 export const getOpportunities = async (year) => {
-  try {
-    const res = await api.get('/v1/leads-kpis/opportunities', { params: { year } });
-    const list = res.data?.data ?? res.data ?? [];
-    return { data: Array.isArray(list) ? filterDeleted('opportunities', list).map(mapOppFromBE) : [] };
-  } catch (err) {
-    if (err?.response?.status === 404) {
-      const local = filterDeleted('opportunities', getLocalOpps());
-      return { data: local };
-    }
-    throw err;
-  }
+  const res = await api.get('/v1/leads-kpis/opportunities', { params: { year } });
+  const list = res.data?.data ?? res.data ?? [];
+  return { data: Array.isArray(list) ? list.map(mapOppFromBE) : [] };
 };
 
 export const addOpportunity = async (data) => {
   const feToBeSize = { 'S': 'Enterprise', 'M': 'Medium', 'L': 'Enterprise' };
-  try {
-    const res = await api.post('/v1/leads-kpis/opportunities', {
-      companyName: data.companyName,
-      size: feToBeSize[data.size] || 'Enterprise',
-      projectId: data.projectId || undefined,
-      setupFee: Number(data.fees) || 0,
-      expectedCloseDate: data.expectedCloseDate || undefined,
-    });
-    return { data: res.data?.data ?? { id: Date.now(), ...data } };
-  } catch (err) {
-    if (err?.response?.status === 404) {
-      const local = getLocalOpps();
-      const created = { id: Date.now(), ...data, status: 'active' };
-      local.push(created);
-      saveLocalOpps(local);
-      return { data: created };
-    }
-    throw err;
-  }
+  const res = await api.post('/v1/leads-kpis/opportunities', {
+    companyName: data.companyName,
+    size: feToBeSize[data.size] || 'Enterprise',
+    projectId: data.projectId || undefined,
+    setupFee: Number(data.fees) || 0,
+    expectedCloseDate: data.expectedCloseDate || undefined,
+  });
+  return { data: mapOppFromBE(res.data?.data ?? res.data) };
 };
 
 export const updateOpportunity = async (id, data) => {
   const feToBeSize = { 'S': 'Enterprise', 'M': 'Medium', 'L': 'Enterprise' };
-  try {
-    const res = await api.patch(`/v1/leads-kpis/opportunities/${id}`, {
-      companyName: data.companyName,
-      size: feToBeSize[data.size] || 'Enterprise',
-      setupFee: Number(data.fees) || 0,
-      expectedCloseDate: data.expectedCloseDate || undefined,
-    });
-    return { data: res.data?.data ?? data };
-  } catch (err) {
-    if (err?.response?.status === 404) {
-      const local = getLocalOpps();
-      const idx = local.findIndex(o => o.id === id);
-      if (idx !== -1) {
-        local[idx] = { ...local[idx], ...data };
-        saveLocalOpps(local);
-        return { data: local[idx] };
-      }
-      return { data };
-    }
-    throw err;
-  }
+  const res = await api.patch(`/v1/leads-kpis/opportunities/${id}`, {
+    companyName: data.companyName,
+    size: feToBeSize[data.size] || 'Enterprise',
+    setupFee: Number(data.fees) || 0,
+    expectedCloseDate: data.expectedCloseDate || undefined,
+  });
+  return { data: res.data?.data ?? data };
 };
 
 export const deleteOpportunity = async (id) => {
-  markDeleted('opportunities', id);
-  return { success: true };
+  const res = await api.delete(`/v1/leads-kpis/opportunities/${id}`);
+  return { data: res.data };
 };
 
 export const convertToWon = async (id) => {
@@ -917,44 +867,23 @@ export const convertToWon = async (id) => {
 };
 
 export const convertOpportunityToWon = async (id, signedDate) => {
-  try {
-    const res = await api.post(`/v1/leads-kpis/opportunities/${id}/won`, { signedDate });
-    return { data: res.data?.data ?? { id, status: 'won', signedDate } };
-  } catch (err) {
-    if (err?.response?.status === 404) {
-      const local = getLocalOpps();
-      const idx = local.findIndex(o => o.id === id);
-      if (idx !== -1) {
-        local[idx] = { ...local[idx], status: 'won', signedDate };
-        saveLocalOpps(local);
-      }
-      return { data: { id, status: 'won', signedDate } };
-    }
-    throw err;
-  }
+  const res = await api.post(`/v1/leads-kpis/opportunities/${id}/won`, { signedDate });
+  return { data: res.data?.data ?? { id, status: 'won', signedDate } };
 };
 
 // ===================== CLOSED DEALS =====================
 
 export const getClosedDeals = async () => {
-  try {
-    const res = await api.get('/v1/leads-kpis/closed-deals');
-    const list = res.data?.data ?? res.data ?? [];
-    return { data: Array.isArray(list) ? filterDeleted('deals', list).map(d => ({
-      id: d.id,
-      customer: d.companyName || d.company_name || d.customer || '',
-      contract: d.project?.name || d.contract || '',
-      finalFees: d.setupFee ?? d.finalFees ?? 0,
-      signedDate: d.closedDate || d.signedDate || d.closed_date || '',
-      status: 'completed',
-    })) : [] };
-  } catch (err) {
-    if (err?.response?.status === 404) {
-      const local = filterDeleted('deals', mockClosedDeals.map((d, i) => ({ ...d, id: i + 1 })));
-      return { data: local };
-    }
-    throw err;
-  }
+  const res = await api.get('/v1/leads-kpis/closed-deals');
+  const list = res.data?.data ?? res.data ?? [];
+  return { data: Array.isArray(list) ? list.map(d => ({
+    id: d.id,
+    customer: d.companyName || d.customer || '',
+    contract: d.project?.name || d.contract || '',
+    finalFees: d.setupFee ?? d.finalFees ?? 0,
+    signedDate: d.closedDate || d.signedDate || '',
+    status: 'completed',
+  })) : [] };
 };
 
 export const updateClosedDeal = async (id, data) => {
@@ -969,8 +898,8 @@ export const updateClosedDeal = async (id, data) => {
 };
 
 export const deleteClosedDeal = async (id) => {
-  markDeleted('deals', id);
-  return { success: true };
+  const res = await api.delete(`/v1/leads-kpis/closed-deals/${id}/delete`);
+  return { data: res.data };
 };
 
 // ===================== EXPENSES =====================

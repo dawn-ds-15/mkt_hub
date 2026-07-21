@@ -7,15 +7,6 @@ DROP TABLE IF EXISTS core.projects;
 DROP TABLE IF EXISTS core.members;
 DROP TABLE IF EXISTS core.dropdowns;
 
-SET search_path TO core, public;
-
--- Drop dependent tables first so this seed can be rerun safely.
-DROP TABLE IF EXISTS core.task_stakeholders;
-DROP TABLE IF EXISTS core.tasks;
-DROP TABLE IF EXISTS core.projects;
-DROP TABLE IF EXISTS core.members;
-DROP TABLE IF EXISTS core.dropdowns;
-
 -- Adminer 5.4.2 PostgreSQL 16.14 dump
 
 DROP TABLE IF EXISTS "dropdowns";
@@ -787,3 +778,4 @@ SELECT setval('core.dropdowns_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL
 SELECT setval('core.members_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM core.members;
 SELECT setval('core.projects_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM core.projects;
 SELECT setval('core.tasks_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM core.tasks;
+

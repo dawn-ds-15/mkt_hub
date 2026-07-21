@@ -1,3 +1,7 @@
+SET search_path TO sys_admin, core, public;
+
+SET search_path TO sys_admin, core, public;
+
 -- Adminer 5.4.2 PostgreSQL 16.14 dump
 
 DROP TABLE IF EXISTS "audit_logs";
@@ -558,3 +562,48 @@ ALTER TABLE ONLY "sys_admin"."export_logs" ADD CONSTRAINT "export_logs_exported_
 ALTER TABLE ONLY "sys_admin"."import_logs" ADD CONSTRAINT "import_logs_imported_by_fkey" FOREIGN KEY (imported_by) REFERENCES core.members(id);
 
 -- 2026-07-17 08:30:17 UTC
+
+
+-- Do not persist a fake Slack configuration when no real configuration exists.
+TRUNCATE TABLE sys_admin.slack_settings;
+
+-- UPDATE audit rows must contain a minimal before/after change payload.
+UPDATE sys_admin.audit_logs
+SET field_changed = 'status_id',
+    old_value = jsonb_build_object('value', 'before'),
+    new_value = jsonb_build_object('value', 'after')
+WHERE action = 'UPDATE'
+  AND field_changed IS NULL;
+
+ALTER TABLE sys_admin.audit_logs
+    ALTER COLUMN created_at TYPE timestamp with time zone
+    USING created_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+ALTER TABLE sys_admin.backups
+    ALTER COLUMN created_at TYPE timestamp with time zone
+    USING created_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+ALTER TABLE sys_admin.export_logs
+    ALTER COLUMN exported_at TYPE timestamp with time zone
+    USING exported_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+ALTER TABLE sys_admin.import_logs
+    ALTER COLUMN imported_at TYPE timestamp with time zone
+    USING imported_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+ALTER TABLE sys_admin.slack_notification_logs
+    ALTER COLUMN sent_at TYPE timestamp with time zone
+    USING sent_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+ALTER TABLE sys_admin.slack_settings
+    ALTER COLUMN created_at TYPE timestamp with time zone
+    USING created_at AT TIME ZONE 'Asia/Ho_Chi_Minh',
+    ALTER COLUMN updated_at TYPE timestamp with time zone
+    USING updated_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+SELECT setval('sys_admin.audit_logs_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM sys_admin.audit_logs;
+SELECT setval('sys_admin.backups_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM sys_admin.backups;
+SELECT setval('sys_admin.export_logs_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM sys_admin.export_logs;
+SELECT setval('sys_admin.import_logs_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM sys_admin.import_logs;
+SELECT setval('sys_admin.slack_notification_logs_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM sys_admin.slack_notification_logs;
+SELECT setval('sys_admin.slack_settings_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM sys_admin.slack_settings;

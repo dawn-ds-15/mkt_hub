@@ -111,13 +111,13 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-label-sm font-bold text-on-surface-variant uppercase">Loại</label>
-            <select className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none" value={type} onChange={(e) => setType(e.target.value)}>
+            <select className="w-full px-3 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none" value={type} onChange={(e) => setType(e.target.value)}>
               {Object.keys(typeMap).map((k) => <option key={k}>{k}</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-label-sm font-bold text-on-surface-variant uppercase">Trạng thái</label>
-            <select className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <select className="w-full px-3 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none" value={status} onChange={(e) => setStatus(e.target.value)}>
               {Object.keys(statusMap).map((k) => <option key={k}>{k}</option>)}
             </select>
           </div>
@@ -127,7 +127,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
           <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">person</span>
             <select
-              className="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
+              className="w-full pl-10 pr-4 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
               value={ownerId}
               onChange={(e) => setOwnerId(e.target.value)}
             >

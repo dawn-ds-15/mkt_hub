@@ -12,7 +12,7 @@ export default function LeadsKPIsFooter() {
     try {
       await exportDashboardExcel({ period: 'year', year: String(new Date().getFullYear()) });
     } catch {
-      alert('Không thể xuất dữ liệu. Vui lòng thử lại.');
+      alert('Unable to export data. Please try again.');
     } finally {
       setExporting(false);
     }
@@ -36,15 +36,15 @@ export default function LeadsKPIsFooter() {
       const res = await importKPIHistory(fd);
       const result = res.data;
       if (result.imported > 0) {
-        alert(`Import thành công ${result.imported} dòng!`);
+        alert(`Successfully imported ${result.imported} rows!`);
         window.location.reload();
       } else if (result.errors > 0) {
-        alert(`Import có ${result.errors} lỗi. Vui lòng kiểm tra lại file.`);
+        alert(`Import completed with ${result.errors} errors. Please check the file.`);
       } else {
-        alert('Không có dữ liệu được import.');
+        alert('No data was imported.');
       }
     } catch {
-      alert('Lỗi khi import dữ liệu. Vui lòng thử lại.');
+      alert('Error importing data. Please try again.');
     } finally {
       setImporting(false);
     }
@@ -59,11 +59,11 @@ export default function LeadsKPIsFooter() {
           <span className="material-symbols-outlined text-on-surface-variant">help_center</span>
         </div>
         <div>
-          <h5 className="text-label-md font-semibold text-on-surface">Hướng dẫn nhập liệu</h5>
+          <h5 className="text-label-md font-semibold text-on-surface">Import Guide</h5>
           <p className="text-body-sm text-on-surface-variant">
-            Mọi thắc mắc về phân bổ Plan hoặc chuyển đổi trạng thái Opportunities, vui lòng xem{' '}
+            For questions about Plan allocation or Opportunities status transitions, please refer to the{' '}
             <a className="text-primary hover:underline" href="#">
-              Tài liệu HDSD
+              User Manual
             </a>.
           </p>
         </div>
@@ -75,14 +75,14 @@ export default function LeadsKPIsFooter() {
           disabled={exporting}
           className="px-4 py-2 border border-border-light rounded text-body-sm font-medium text-on-surface-variant hover:bg-surface-container transition-all disabled:opacity-50"
         >
-          {exporting ? 'Đang xuất...' : 'Xuất File Excel'}
+          {exporting ? 'Exporting...' : 'Export Excel'}
         </button>
         <button
           onClick={handleImportCSV}
           disabled={importing}
           className="px-4 py-2 border border-border-light rounded text-body-sm font-medium text-on-surface-variant hover:bg-surface-container transition-all disabled:opacity-50"
         >
-          {importing ? 'Đang import...' : 'Nhập từ CSV'}
+          {importing ? 'Importing...' : 'Import from CSV'}
         </button>
       </div>
     </footer>

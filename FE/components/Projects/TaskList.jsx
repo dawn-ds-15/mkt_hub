@@ -328,7 +328,7 @@ export default function TaskList() {
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Tên task</label>
               <input
-                className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                 placeholder="Tên task mới..."
                 type="text"
                 value={quickTask.name}
@@ -376,7 +376,7 @@ export default function TaskList() {
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Hạn chót</label>
                 <input
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                  className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                   type="date"
                   value={quickTask.due}
                   onChange={(e) => setQuickTask(prev => ({ ...prev, due: e.target.value }))}
@@ -385,7 +385,7 @@ export default function TaskList() {
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Tuần thực hiện</label>
                 <input
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                  className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                   type="number" min="1" max="53"
                   value={quickTask.execWeek}
                   onChange={(e) => setQuickTask(prev => ({ ...prev, execWeek: +e.target.value }))}
@@ -394,7 +394,7 @@ export default function TaskList() {
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Năm thực hiện</label>
                 <input
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                  className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                   type="number" min="2024" max="2030"
                   value={quickTask.execYear}
                   onChange={(e) => setQuickTask(prev => ({ ...prev, execYear: +e.target.value }))}

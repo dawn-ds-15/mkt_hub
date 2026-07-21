@@ -2,16 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getCompareData, getQuarterlyCompareData, deleteCompareData, generateAIReport } from '../../services/api';
 
 function formatNum(n) {
-  if (n == null) return '—';
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'Tr';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'N';
+  if (n == null) return '\u2014';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
   return n.toLocaleString();
 }
 
 function formatCurrency(n) {
-  if (n == null) return '—';
-  if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'Tr';
-  if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'N';
+  if (n == null) return '\u2014';
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
   return '$' + n.toLocaleString();
 }
 
@@ -19,12 +19,12 @@ const metricsConfig = [
   { key: 'Raw Leads', label: 'Raw Leads', format: formatNum },
   { key: 'MQL', label: 'MQL', format: formatNum },
   { key: 'SQL', label: 'SQL', format: formatNum },
-  { key: 'Won Value', label: 'Giá trị thắng ($)', format: formatCurrency },
-  { key: 'CAC / LTV', label: 'CAC ($)', format: (v) => v != null ? '$' + v.toFixed(1) : '—', subField: 'cac' },
-  { key: 'CAC / LTV', label: 'LTV ($)', format: (v) => v != null ? '$' + v.toLocaleString() : '—', subField: 'ltv' },
+  { key: 'Won Value', label: 'Won Value ($)', format: formatCurrency },
+  { key: 'CAC / LTV', label: 'CAC ($)', format: (v) => v != null ? '$' + v.toFixed(1) : '\u2014', subField: 'cac' },
+  { key: 'CAC / LTV', label: 'LTV ($)', format: (v) => v != null ? '$' + v.toLocaleString() : '\u2014', subField: 'ltv' },
 ];
 
-const quarterLabels = ['Quý 1', 'Quý 2', 'Quý 3', 'Quý 4'];
+const quarterLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
 
 const CURRENT_YEAR = String(new Date().getFullYear());
 const YEAR_OPTIONS = [CURRENT_YEAR, String(Number(CURRENT_YEAR) - 1), String(Number(CURRENT_YEAR) - 2)];
@@ -35,38 +35,38 @@ function buildInsights(compareData) {
   const mql = base['MQL'];
   const sql = base['SQL'];
   const growthInsight = rl?.percentVsPlan != null && rl?.percentVsPlan > 100
-    ? `Raw Leads năm ${YEAR_OPTIONS[0]} đang vượt kế hoạch ${Math.round(rl.percentVsPlan - 100)}%. Tập trung chuyển đổi ở phễu giữa (MQL → SQL) để tối ưu hóa ROI.`
-    : `Raw Leads năm ${YEAR_OPTIONS[0]} đạt ${Math.round(rl?.percentVsPlan || 0)}% kế hoạch. Tăng cường chiến dịch tạo Lead để đảm bảo chỉ tiêu.`;
+    ? `Raw Leads in ${YEAR_OPTIONS[0]} exceeds plan by ${Math.round(rl.percentVsPlan - 100)}%. Focus on mid-funnel conversion (MQL \u2192 SQL) to optimize ROI.`
+    : `Raw Leads in ${YEAR_OPTIONS[0]} reached ${Math.round(rl?.percentVsPlan || 0)}% of plan. Boost lead generation campaigns to meet targets.`;
   const sqlWarn = sql?.percentVsPlan != null && sql?.percentVsPlan < 100
-    ? `Tỷ lệ SQL đang giảm so với kế hoạch. Cần rà soát lại tiêu chuẩn đánh giá chất lượng Lead của bộ phận Bán hàng.`
-    : `Tỷ lệ SQL đang duy trì tốt so với kế hoạch.`;
+    ? `SQL rate is declining vs plan. Review lead qualification criteria with the Sales team.`
+    : `SQL rate is on track vs plan.`;
   return [
     {
-      title: 'Cơ hội Tăng trưởng',
+      title: 'Growth Opportunity',
       color: 'border-l-primary bg-primary/5',
       textColor: 'text-primary',
       desc: growthInsight,
     },
     {
-      title: 'Cảnh báo Hiệu suất',
+      title: 'Performance Alert',
       color: 'border-l-warning bg-warning/5',
       textColor: 'text-warning',
       desc: sqlWarn,
     },
     {
-      title: 'Điểm sáng Tài chính',
+      title: 'Financial Highlight',
       color: 'border-l-success bg-success/5',
       textColor: 'text-success',
-      desc: `Phân tích dựa trên dữ liệu năm ${YEAR_OPTIONS[0]}. Cập nhật số liệu Plan, Actuals, Opportunities và Closed Deal để có đánh giá chính xác.`,
+      desc: `Analysis based on ${YEAR_OPTIONS[0]} data. Update Plan, Actuals, Opportunities and Closed Deals for accurate assessment.`,
     },
   ];
 }
 
 const periodOptions = [
-  { key: 'week', label: 'Tuần' },
-  { key: 'month', label: 'Tháng' },
-  { key: 'quarter', label: 'Quý' },
-  { key: 'year', label: 'Năm' },
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
+  { key: 'quarter', label: 'Quarter' },
+  { key: 'year', label: 'Year' },
 ];
 
 export default function ComparePeriods({ year: currentYear }) {
@@ -106,11 +106,11 @@ export default function ComparePeriods({ year: currentYear }) {
       setCompareData(compareRes.data || {});
       setQuarterlyData(quarterlyRes.data || null);
       if (!compareRes.data || Object.keys(compareRes.data).length === 0) {
-        setLoadError('API chưa trả dữ liệu so sánh cho kỳ này');
+        setLoadError('API returned no comparison data for this period');
       }
     } catch (error) {
       console.error('Error loading compare data:', error);
-      setLoadError('Không thể tải dữ liệu so sánh. Vui lòng thử lại.');
+      setLoadError('Unable to load comparison data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -127,7 +127,7 @@ export default function ComparePeriods({ year: currentYear }) {
   };
 
   const handleExportCSV = () => {
-    const headers = ['Chỉ số', ...selectedYears.flatMap(yr => [`Thực tế ${yr}`, `KH ${yr}`, `% KH`]), ...(selectedYears.length >= 2 ? ['Tăng trưởng YoY'] : [])];
+    const headers = ['Metric', ...selectedYears.flatMap(yr => [`Actual ${yr}`, `Plan ${yr}`, `% Plan`]), ...(selectedYears.length >= 2 ? ['YoY Growth'] : [])];
     const rows = metricsConfig.map(metric => {
       const baseYear = selectedYears[0];
       const compareYear = selectedYears[1];
@@ -147,14 +147,14 @@ export default function ComparePeriods({ year: currentYear }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `so-sanh-da-chi-so-${selectedYears.join('-')}.csv`;
+    a.download = `multi-metric-comparison-${selectedYears.join('-')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     setMenuOpen(false);
   };
 
   const handleDeleteData = async () => {
-    if (!window.confirm('Xóa dữ liệu so sánh đã chọn?')) return;
+    if (!window.confirm('Delete selected comparison data?')) return;
     await deleteCompareData(selectedYears);
     setCompareData({});
     setQuarterlyData(null);
@@ -172,10 +172,10 @@ export default function ComparePeriods({ year: currentYear }) {
         periodValue,
         insights: computedInsights,
       });
-      setAiReport(res.data?.report || 'Không thể tạo báo cáo.');
+      setAiReport(res.data?.report || 'Unable to generate report.');
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể tạo báo cáo AI. Vui lòng thử lại sau.';
-      setAiReport(Array.isArray(msg) ? '• ' + msg.join('\n• ') : String(msg));
+      const msg = err?.response?.data?.message || err?.message || 'Unable to generate AI report. Please try again later.';
+      setAiReport(Array.isArray(msg) ? '\u2022 ' + msg.join('\n\u2022 ') : String(msg));
     } finally {
       setAiLoading(false);
     }
@@ -197,7 +197,7 @@ export default function ComparePeriods({ year: currentYear }) {
       {/* Section Filter */}
       <section className="bg-white border border-border-light rounded p-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-6">
-          <span className="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider">Hiển thị theo:</span>
+          <span className="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider">Show by:</span>
           <div className="flex bg-surface-container rounded p-1">
             {periodOptions.map((opt) => (
               <button
@@ -214,7 +214,7 @@ export default function ComparePeriods({ year: currentYear }) {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-[12px] font-semibold text-on-surface-variant">Năm so sánh:</span>
+            <span className="text-[12px] font-semibold text-on-surface-variant">Compare years:</span>
             <div className="flex gap-2">
               {YEAR_OPTIONS.map((yr) => (
                 <label
@@ -242,7 +242,7 @@ export default function ComparePeriods({ year: currentYear }) {
             className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded text-body-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             <span className={`material-symbols-outlined text-sm ${loading ? 'animate-spin' : ''}`}>{loading ? 'sync' : 'refresh'}</span>
-            {loading ? 'Đang tải...' : 'Cập nhật'}
+            {loading ? 'Loading...' : 'Refresh'}
           </button>
         </div>
       </section>
@@ -254,15 +254,15 @@ export default function ComparePeriods({ year: currentYear }) {
         </div>
       )}
 
-      {/* Bảng so sánh đa chỉ số */}
+      {/* Multi-metric comparison table */}
       <section className="bg-white border border-border-light rounded overflow-hidden">
         <div className="px-4 py-4 border-b border-border-light flex justify-between items-center bg-surface-container-lowest">
           <h3 className="text-headline-sm font-semibold text-on-surface flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">analytics</span>
-            Bảng so sánh đa chỉ số
+            Multi-Metric Comparison
           </h3>
           <div className="flex gap-2">
-            <button onClick={handleExportCSV} className="p-2 hover:bg-surface-container rounded transition-colors" title="Xuất CSV">
+            <button onClick={handleExportCSV} className="p-2 hover:bg-surface-container rounded transition-colors" title="Export CSV">
               <span className="material-symbols-outlined text-on-surface-variant">download</span>
             </button>
             <div className="relative" ref={menuRef}>
@@ -273,11 +273,11 @@ export default function ComparePeriods({ year: currentYear }) {
                 <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-border-light rounded-lg shadow-lg z-50 py-1">
                   <button onClick={handleExportCSV} className="w-full flex items-center gap-3 px-4 py-2.5 text-body-sm hover:bg-surface-container transition-colors">
                     <span className="material-symbols-outlined text-[18px] text-on-surface-variant">file_download</span>
-                    Xuất CSV
+                    Export CSV
                   </button>
                   <button onClick={handleDeleteData} className="w-full flex items-center gap-3 px-4 py-2.5 text-body-sm hover:bg-surface-container transition-colors text-danger">
                     <span className="material-symbols-outlined text-[18px]">delete</span>
-                    Xóa dữ liệu
+                    Delete data
                   </button>
                 </div>
               )}
@@ -288,20 +288,20 @@ export default function ComparePeriods({ year: currentYear }) {
           <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="bg-surface-container-low border-b border-border-light">
-                <th className="px-6 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider sticky left-0 bg-surface-container-low z-10 min-w-[200px]">Chỉ số</th>
+                <th className="px-6 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider sticky left-0 bg-surface-container-low z-10 min-w-[200px]">Metric</th>
                 {selectedYears.map((yr, yi) => (
                   <React.Fragment key={yr}>
-                    <th className="px-6 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">Thực tế {yr}</th>
+                    <th className="px-6 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">Actual {yr}</th>
                     {yi === 0 && (
                       <>
-                        <th className="px-6 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">KH {yr}</th>
-                        <th className="px-6 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">% KH</th>
+                        <th className="px-6 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">Plan {yr}</th>
+                        <th className="px-6 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">% Plan</th>
                       </>
                     )}
                   </React.Fragment>
                 ))}
                 {selectedYears.length >= 2 && (
-                  <th className="px-6 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">Tăng trưởng YoY</th>
+                  <th className="px-6 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">YoY Growth</th>
                 )}
               </tr>
             </thead>
@@ -349,22 +349,22 @@ export default function ComparePeriods({ year: currentYear }) {
         </div>
       </section>
 
-      {/* Biểu đồ & Analytics */}
+      {/* Chart & Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Grouped Bar Chart */}
         <div className="lg:col-span-2 bg-white border border-border-light rounded p-4 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <div className="flex flex-col">
-              <h3 className="text-headline-sm font-semibold text-on-surface">So sánh theo {periodOptions.find(o => o.key === periodType)?.label || 'Quý'}</h3>
-              <p className="text-body-sm text-on-surface-variant">Phân tích xu hướng đa năm</p>
+              <h3 className="text-headline-sm font-semibold text-on-surface">Comparison by {periodOptions.find(o => o.key === periodType)?.label || 'Quarter'}</h3>
+              <p className="text-body-sm text-on-surface-variant">Multi-year trend analysis</p>
             </div>
             <select
               value={selectedMetric}
               onChange={(e) => setSelectedMetric(e.target.value)}
-              className="bg-surface-container border-none text-body-sm font-semibold rounded px-4 py-2 focus:ring-1 focus:ring-primary outline-none cursor-pointer"
+              className="bg-surface-container text-body-sm font-semibold rounded px-4 py-2 focus:ring-1 focus:ring-primary outline-none cursor-pointer"
             >
               {['Raw Leads', 'MQL', 'SQL', 'OPP', 'Closed Deal', 'Won Value'].map(m => (
-                <option key={m} value={m}>Chỉ số: {m}</option>
+                <option key={m} value={m}>Metric: {m}</option>
               ))}
             </select>
           </div>
@@ -410,7 +410,7 @@ export default function ComparePeriods({ year: currentYear }) {
 
         {/* Insights Column */}
         <div className="bg-white border border-border-light rounded p-4 space-y-4">
-          <h3 className="text-headline-sm font-semibold text-on-surface">Phân tích Nhanh</h3>
+          <h3 className="text-headline-sm font-semibold text-on-surface">Quick Insights</h3>
           <div className="space-y-4">
             {computedInsights.map((item) => (
               <div key={item.title} className={`p-4 ${item.color} border-l-4 rounded-r`}>
@@ -422,7 +422,7 @@ export default function ComparePeriods({ year: currentYear }) {
           {aiReport ? (
             <div className="bg-surface-container rounded p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="text-[12px] font-bold text-on-surface">Báo cáo AI</h4>
+                <h4 className="text-[12px] font-bold text-on-surface">AI Report</h4>
                 <button onClick={() => setAiReport(null)} className="text-on-surface-variant hover:text-on-surface">
                   <span className="material-symbols-outlined text-sm">close</span>
                 </button>
@@ -432,7 +432,7 @@ export default function ComparePeriods({ year: currentYear }) {
           ) : (
             <button onClick={handleGenerateAIReport} disabled={aiLoading} className="w-full py-2.5 bg-surface-container hover:bg-secondary-container transition-colors rounded font-semibold text-secondary flex items-center justify-center gap-2 disabled:opacity-50">
               <span className="material-symbols-outlined text-sm">{aiLoading ? 'sync' : 'smart_toy'}</span>
-              {aiLoading ? 'Đang tạo...' : 'Trình tạo Báo cáo AI'}
+              {aiLoading ? 'Generating...' : 'AI Report Generator'}
             </button>
           )}
         </div>

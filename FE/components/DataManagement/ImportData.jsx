@@ -64,7 +64,7 @@ export default function ImportData() {
         <div className="flex-1 min-w-[240px]">
           <label className="block text-xs text-on-surface-variant font-semibold uppercase tracking-wider mb-2">LOẠI DỮ LIỆU</label>
           <div className="relative">
-            <select value={dataType} onChange={(e) => { setDataType(e.target.value); setResult(null); }} className="w-full bg-surface-container-high border border-outline-variant text-on-surface rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all">
+            <select value={dataType} onChange={(e) => { setDataType(e.target.value); setResult(null); }} className="w-full bg-surface-container-high text-on-surface border border-outline-variant rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all">
               <option value="tasks">Lịch sử Task</option>
               <option value="kpi">Lịch sử KPI</option>
               <option value="deals">Lịch sử Deal đã đóng</option>
@@ -75,7 +75,7 @@ export default function ImportData() {
         <div className="w-40">
           <label className="block text-xs text-on-surface-variant font-semibold uppercase tracking-wider mb-2">NĂM DỮ LIỆU</label>
           <div className="relative">
-            <select value={year} onChange={(e) => setYear(e.target.value)} className="w-full bg-surface-container-high border border-outline-variant text-on-surface rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all">
+            <select value={year} onChange={(e) => setYear(e.target.value)} className="w-full bg-surface-container-high text-on-surface border border-outline-variant rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all">
               {[2026, 2025, 2024, 2023, 2022].map(y => <option key={y}>{y}</option>)}
             </select>
             <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">calendar_month</span>

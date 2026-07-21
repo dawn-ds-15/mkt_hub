@@ -151,7 +151,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Tên task *</label>
             <input
-              className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+              className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Tên task..."
@@ -257,26 +257,26 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Ngày bắt đầu</label>
-              <input type="date" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={readOnly} />
+              <input type="date" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={readOnly} />
             </div>
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Hạn chót</label>
-              <input type="date" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={readOnly} />
+              <input type="date" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={readOnly} />
             </div>
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Ngày hoàn thành</label>
-              <input type="date" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={completedDate} onChange={(e) => setCompletedDate(e.target.value)} disabled={readOnly} />
+              <input type="date" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={completedDate} onChange={(e) => setCompletedDate(e.target.value)} disabled={readOnly} />
             </div>
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Tuần thực hiện</label>
-              <input type="number" min="1" max="53" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={execWeek} onChange={(e) => setExecWeek(e.target.value)} placeholder="VD: 24" disabled={readOnly} />
+              <input type="number" min="1" max="53" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={execWeek} onChange={(e) => setExecWeek(e.target.value)} placeholder="VD: 24" disabled={readOnly} />
               <div className="text-[10px] text-gray-400 mt-0.5">→ Dùng để lọc trong báo cáo tuần</div>
             </div>
           </div>
 
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Link (Drive / Công cụ)</label>
-            <input className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..." disabled={readOnly} />
+            <input className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..." disabled={readOnly} />
           </div>
 
           <div className="space-y-1">

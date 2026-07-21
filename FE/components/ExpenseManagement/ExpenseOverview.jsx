@@ -1,6 +1,51 @@
 import { useState, useEffect } from 'react';
 import { getExpenseOverview } from '../../services/api';
 
+const periodTabs = [
+  { key: 'week', label: 'Tuần' },
+  { key: 'month', label: 'Tháng' },
+  { key: 'quarter', label: 'Quý' },
+  { key: 'year', label: 'Năm' },
+];
+
+function getPeriodOptions(type) {
+  if (type === 'week') return Array.from({ length: 53 }, (_, i) => String(i + 1));
+  if (type === 'month') return Array.from({ length: 12 }, (_, i) => String(i + 1));
+  if (type === 'quarter') return Array.from({ length: 4 }, (_, i) => String(i + 1));
+  return [];
+}
+
+const CURRENT_YEAR = String(new Date().getFullYear());
+const CURRENT_MONTH = String(new Date().getMonth() + 1);
+const CURRENT_QUARTER = String(Math.ceil((new Date().getMonth() + 1) / 3));
+const CURRENT_WEEK = getISOWeek(new Date());
+
+function getISOWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+}
+
+function getDefaultPeriodValue(type) {
+  switch (type) {
+    case 'week': return CURRENT_WEEK;
+    case 'month': return CURRENT_MONTH;
+    case 'quarter': return CURRENT_QUARTER;
+    case 'year': return CURRENT_YEAR;
+    default: return CURRENT_YEAR;
+  }
+}
+
+function buildPeriodParam(type, value, year) {
+  if (type === 'year') return year;
+  if (type === 'week') return `${year}-W${value}`;
+  if (type === 'month') return `${year}-${String(value).padStart(2, '0')}`;
+  if (type === 'quarter') return `${year}-Q${value}`;
+  return year;
+}
+
 function formatCurrency(n) {
   n = n ?? 0;
   if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'B';
@@ -22,11 +67,21 @@ export default function ExpenseOverview() {
   const [data, setData] = useState(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [periodType, setPeriodType] = useState('year');
+  const [periodValue, setPeriodValue] = useState(CURRENT_YEAR);
   const rowsPerPage = 4;
 
+  const periodOptions = getPeriodOptions(periodType);
+
+  const handlePeriodTypeChange = (type) => {
+    setPeriodType(type);
+    setPeriodValue(getDefaultPeriodValue(type));
+  };
+
   useEffect(() => {
-    getExpenseOverview().then((res) => setData(res.data));
-  }, []);
+    const period = buildPeriodParam(periodType, periodValue, CURRENT_YEAR);
+    getExpenseOverview(period).then((res) => setData(res.data));
+  }, [periodType, periodValue]);
 
   if (!data) {
     return (
@@ -43,10 +98,44 @@ export default function ExpenseOverview() {
 
   if (!hasData) {
     return (
-      <div className="flex flex-col items-center justify-center h-80 gap-4 text-on-surface-variant">
-        <span className="material-symbols-outlined text-[64px] text-outline-variant">finance_chart</span>
-        <p className="font-headline-sm">Chưa có dữ liệu tổng quan</p>
-        <p className="text-body-md text-outline">Nhập chi phí ở tab Nhập chi phí để xem dữ liệu tổng quan và báo cáo.</p>
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 bg-white rounded-lg border border-border-light p-1 w-fit">
+          {periodTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => handlePeriodTypeChange(tab.key)}
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                periodType === tab.key
+                  ? 'bg-primary text-on-primary'
+                  : 'text-on-surface-variant hover:text-primary'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+          {periodOptions.length > 0 && (
+            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border-light">
+              <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">
+                {periodType === 'week' ? 'Tuần' : periodType === 'month' ? 'Tháng' : 'Quý'}:
+              </span>
+              <select
+                value={periodValue}
+                onChange={(e) => setPeriodValue(e.target.value)}
+                className="border border-border-light rounded text-xs px-2 py-1 bg-white focus:ring-1 focus:ring-primary outline-none"
+              >
+                {periodOptions.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+              <span className="text-[11px] text-on-surface-variant font-medium ml-1">/ {CURRENT_YEAR}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-center justify-center h-80 gap-4 text-on-surface-variant">
+          <span className="material-symbols-outlined text-[64px] text-outline-variant">finance_chart</span>
+          <p className="font-headline-sm">Chưa có dữ liệu tổng quan</p>
+          <p className="text-body-md text-outline">Nhập chi phí ở tab Nhập chi phí để xem dữ liệu tổng quan và báo cáo.</p>
+        </div>
       </div>
     );
   }
@@ -68,6 +157,39 @@ export default function ExpenseOverview() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2 mb-4 bg-white rounded-lg border border-border-light p-1 w-fit">
+        {periodTabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setPeriodType(tab.key)}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${
+              periodType === tab.key
+                ? 'bg-primary text-on-primary'
+                : 'text-on-surface-variant hover:text-primary'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+        {periodOptions.length > 0 && (
+          <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border-light">
+            <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">
+              {periodType === 'week' ? 'Tuần' : periodType === 'month' ? 'Tháng' : 'Quý'}:
+            </span>
+            <select
+              value={periodValue}
+              onChange={(e) => setPeriodValue(e.target.value)}
+              className="border border-border-light rounded text-xs px-2 py-1 bg-white focus:ring-1 focus:ring-primary outline-none"
+            >
+              {periodOptions.map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+            <span className="text-[11px] text-on-surface-variant font-medium ml-1">/ {CURRENT_YEAR}</span>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {kpis.map((kpi) => (
           <div
@@ -119,13 +241,13 @@ export default function ExpenseOverview() {
                 <button
                   onClick={() => {
                     const rows = projects.map(r => [r.projectName, r.actualTotal, r.variance].join(',')).join('\n');
-                    const csv = 'Dự án,Thực tế,Chênh lệch\n' + rows;
+                    const csv = 'Project,Actual,Variance\n' + rows;
                     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'expense-overview.csv'; a.click();
                   }}
                   className="w-full py-2 bg-white text-primary font-bold rounded hover:bg-primary-fixed transition-colors text-label-md"
                 >
-                  XUẤT BÁO CÁO CHI TIẾT
+                  EXPORT DETAILED REPORT
                 </button>
               </div>
             </div>

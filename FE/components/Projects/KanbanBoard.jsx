@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getKanbanData, updateTask, getProjects, getMembers, getTask } from '../../services/api';
 import TaskViewModal from './TaskViewModal';
+import TaskEditDrawer from './TaskEditDrawer';
 
 const STATUS_TO_API = {
   planning: 'To Do',
@@ -139,6 +140,7 @@ export default function KanbanBoard() {
 
   const [viewTask, setViewTask] = useState(null);
   const [viewTaskData, setViewTaskData] = useState(null);
+  const [editingTask, setEditingTask] = useState(null);
 
   const [projectFilter, setProjectFilter] = useState('Tất cả dự án');
   const [assigneeFilter, setAssigneeFilter] = useState('Tất cả mọi người');
@@ -154,13 +156,15 @@ export default function KanbanBoard() {
     }).catch(() => {});
   }, []);
 
-  useEffect(() => {
+  const loadKanban = useCallback(() => {
     getKanbanData().then((res) => {
       setAllRawTasks([]);
       setColumns(res.data);
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => { loadKanban(); }, [loadKanban]);
 
   const filteredColumns = useMemo(() => {
     if (!columns.length) return [];
@@ -265,6 +269,24 @@ export default function KanbanBoard() {
     }
   }, []);
 
+  const handleEdit = useCallback((task) => {
+    setEditingTask(task);
+  }, []);
+
+  const handleEditSaved = useCallback(() => {
+    setEditingTask(null);
+    setViewTask(null);
+    setViewTaskData(null);
+    loadKanban();
+  }, [loadKanban]);
+
+  const handleEditDeleted = useCallback(() => {
+    setEditingTask(null);
+    setViewTask(null);
+    setViewTaskData(null);
+    loadKanban();
+  }, [loadKanban]);
+
   const handleDrop = useCallback((e, targetColId) => {
     e.preventDefault();
     setOverColId(null);
@@ -351,7 +373,16 @@ export default function KanbanBoard() {
       </div>
 
       {viewTask && viewTaskData && (
-        <TaskViewModal task={viewTaskData} onClose={() => { setViewTask(null); setViewTaskData(null); }} />
+        <TaskViewModal task={viewTaskData} onClose={() => { setViewTask(null); setViewTaskData(null); }} onEdit={handleEdit} />
+      )}
+
+      {editingTask && (
+        <TaskEditDrawer
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSaved={handleEditSaved}
+          onDeleted={handleEditDeleted}
+        />
       )}
 
       {toast && (

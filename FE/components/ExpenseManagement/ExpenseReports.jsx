@@ -5,19 +5,19 @@ function formatCurrency(n) {
   n = n ?? 0;
   if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'B';
   if (n >= 1000000) return (n / 1000000).toFixed(0) + 'M';
-  return n.toLocaleString('vi-VN');
+  return n.toLocaleString('en-US');
 }
 
 function formatFullCurrency(n) {
-  return (n ?? 0).toLocaleString('vi-VN') + ' ₫';
+  return '$' + (n ?? 0).toLocaleString('en-US');
 }
 
-const periodTabs = ['Tháng', 'Quý', 'Năm'];
+const periodTabs = ['Month', 'Quarter', 'Year'];
 const CHART_COLORS = ['bg-primary', 'bg-secondary', 'bg-tertiary'];
 
 export default function ExpenseReports() {
   const [data, setData] = useState(null);
-  const [period, setPeriod] = useState('Tháng');
+  const [period, setPeriod] = useState('Month');
   const [page, setPage] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
   const [filterText, setFilterText] = useState('');
@@ -26,8 +26,8 @@ export default function ExpenseReports() {
 
   function periodToParam(p) {
     const y = new Date().getFullYear();
-    if (p === 'Tháng') return `${y}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-    if (p === 'Quý') return `${y}-Q${Math.ceil((new Date().getMonth() + 1) / 3)}`;
+    if (p === 'Month') return `${y}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    if (p === 'Quarter') return `${y}-Q${Math.ceil((new Date().getMonth() + 1) / 3)}`;
     return String(y);
   }
 
@@ -39,7 +39,7 @@ export default function ExpenseReports() {
     return (
       <div className="flex items-center justify-center h-64 text-on-surface-variant">
         <span className="material-symbols-outlined text-[48px] text-outline-variant animate-spin">sync</span>
-        <p className="font-headline-sm ml-3">Đang tải báo cáo...</p>
+        <p className="font-headline-sm ml-3">Loading reports...</p>
       </div>
     );
   }
@@ -81,7 +81,7 @@ export default function ExpenseReports() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="text-body-md font-medium text-secondary">Thời gian:</span>
+            <span className="text-body-md font-medium text-secondary">Period:</span>
             <div className="flex bg-surface-container-high rounded-lg p-1">
               {periodTabs.map((t) => (
                 <button
@@ -101,8 +101,8 @@ export default function ExpenseReports() {
         </div>
         <div className="flex flex-col items-center justify-center h-80 gap-4 text-on-surface-variant">
           <span className="material-symbols-outlined text-[64px] text-outline-variant">bar_chart</span>
-          <p className="font-headline-sm">Chưa có dữ liệu báo cáo</p>
-          <p className="text-body-md text-outline">Nhập chi phí ở tab Nhập chi phí trước, sau đó quay lại đây để xem báo cáo.</p>
+          <p className="font-headline-sm">No report data yet</p>
+          <p className="text-body-md text-outline">Enter costs in the Cost Entry tab first, then return here to view reports.</p>
         </div>
       </div>
     );
@@ -112,7 +112,7 @@ export default function ExpenseReports() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="text-body-md font-medium text-secondary">Thời gian:</span>
+          <span className="text-body-md font-medium text-secondary">Period:</span>
           <div className="flex bg-surface-container-high rounded-lg p-1">
             {periodTabs.map((t) => (
               <button
@@ -131,7 +131,7 @@ export default function ExpenseReports() {
         </div>
         <button
           onClick={() => {
-            const csv = [['Kỳ', 'Dự án', 'Loại', 'Chi phí', 'Ngân sách', 'Chênh lệch'].join(',')];
+            const csv = [['Period', 'Project', 'Type', 'Cost', 'Budget', 'Variance'].join(',')];
             csv.push(...detailRows.map(r => [r.date, r.project, r.type, r.cost, r.budget, r.variance].join(',')));
             const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'expense-report.csv'; a.click();
@@ -139,50 +139,50 @@ export default function ExpenseReports() {
           className="flex items-center gap-2 bg-primary text-on-primary px-5 py-2 rounded-lg font-label-md text-label-md shadow-sm hover:brightness-110 transition-all active:scale-95"
         >
           <span className="material-symbols-outlined text-[18px]">file_download</span>
-          Xuất Dữ liệu
+          Export Data
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 border-t-primary shadow-sm">
-          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">Tổng Chi Phí</p>
+          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">Total Cost</p>
           <h3 className="font-display-lg text-display-lg text-on-surface">{formatCurrency(totalCost)}</h3>
-          <p className="text-body-sm font-body-sm text-outline mt-1 italic">Từ {trend.length} kỳ</p>
+          <p className="text-body-sm font-body-sm text-outline mt-1 italic">Across {trend.length} periods</p>
         </div>
         <div className="bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 border-t-primary shadow-sm">
-          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">Tổng Ngân Sách</p>
+          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">Total Budget</p>
           <h3 className="font-display-lg text-display-lg text-on-surface">{formatCurrency(totalBudget)}</h3>
-          <p className="text-body-sm font-body-sm text-outline mt-1 italic">Theo kế hoạch</p>
+          <p className="text-body-sm font-body-sm text-outline mt-1 italic">As planned</p>
         </div>
         <div className="bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 border-t-primary shadow-sm">
-          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">Thực Tế</p>
+          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">Actual</p>
           <h3 className="font-display-lg text-display-lg text-on-surface">{formatCurrency(totalActual)}</h3>
-          <p className="text-body-sm font-body-sm text-outline mt-1 italic">Đã giải ngân</p>
+          <p className="text-body-sm font-body-sm text-outline mt-1 italic">Disbursed</p>
         </div>
         <div className={`bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 shadow-sm ${
           parseFloat(variance) > 0 ? 'border-t-success' : 'border-t-danger'
         }`}>
           <div className="flex justify-between items-start mb-2">
-            <p className="text-outline font-label-md text-label-md uppercase tracking-wide">Chênh Lệch</p>
+            <p className="text-outline font-label-md text-label-md uppercase tracking-wide">Variance</p>
             <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
               parseFloat(variance) > 0
                 ? 'bg-success/10 text-success border-success/20'
                 : 'bg-danger/10 text-danger border-danger/20'
             }`}>
-              {parseFloat(variance) > 0 ? 'Tiết kiệm' : 'Vượt'}
+              {parseFloat(variance) > 0 ? 'Under' : 'Over'}
             </span>
           </div>
           <h3 className={`font-display-lg text-display-lg ${
             parseFloat(variance) > 0 ? 'text-success' : 'text-danger'
           }`}>{parseFloat(variance) > 0 ? '+' : ''}{variance}%</h3>
-          <p className="text-body-sm font-body-sm text-outline mt-1 italic">CAC TB: {formatFullCurrency(Math.round(avgCAC))}</p>
+          <p className="text-body-sm font-body-sm text-outline mt-1 italic">Avg CAC: {formatFullCurrency(Math.round(avgCAC))}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-surface-container-lowest border border-border-subtle p-6 rounded-xl flex flex-col">
           <div className="flex justify-between items-start mb-6">
-            <h3 className="font-title-lg text-title-lg text-on-surface">Phân tích % Chi phí theo Loại Dự án</h3>
+            <h3 className="font-title-lg text-title-lg text-on-surface">Cost % by Project Type</h3>
           </div>
           <div className="flex flex-1 items-center justify-around flex-wrap gap-6">
             <div
@@ -196,7 +196,7 @@ export default function ExpenseReports() {
               }}
             >
               <div className="w-32 h-32 bg-surface-container-lowest rounded-full flex flex-col items-center justify-center shadow-inner">
-                <span className="text-label-md text-secondary">Tổng cộng</span>
+                <span className="text-label-md text-secondary">Total</span>
                 <span className="font-headline-sm text-headline-sm text-primary">{formatCurrency(totalCost)}</span>
               </div>
             </div>
@@ -215,11 +215,11 @@ export default function ExpenseReports() {
 
         <div className="bg-surface-container-lowest border border-border-subtle p-6 rounded-xl flex flex-col">
           <div className="flex justify-between items-start mb-6">
-            <h3 className="font-title-lg text-title-lg text-on-surface">Xu hướng Chi Phí & CAC Theo Thời Gian</h3>
+            <h3 className="font-title-lg text-title-lg text-on-surface">Cost & CAC Trend Over Time</h3>
             <div className="flex gap-3">
               <div className="flex items-center gap-1">
                 <div className="w-2.5 h-2.5 bg-primary rounded-sm" />
-                <span className="text-[10px] text-secondary uppercase">Chi Phí</span>
+                <span className="text-[10px] text-secondary uppercase">Cost</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-2.5 h-2.5 bg-warning rounded-full" />
@@ -241,7 +241,7 @@ export default function ExpenseReports() {
                     />
                   </div>
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-md z-10 pointer-events-none">
-                    {formatCurrency(d.totalExpense)} | CAC: {(d.cac ?? 0).toLocaleString('vi-VN')}₫
+                    {formatCurrency(d.totalExpense)} | CAC: ${(d.cac ?? 0).toLocaleString('en-US')}
                   </div>
                 </div>
               );
@@ -256,15 +256,15 @@ export default function ExpenseReports() {
 
         <div className="bg-surface-container-lowest border border-border-subtle p-6 rounded-xl flex flex-col lg:col-span-2">
           <div className="flex justify-between items-start mb-6">
-            <h3 className="font-title-lg text-title-lg text-on-surface">So Sánh Ngân Sách vs Thực Tế Theo Dự Án</h3>
+            <h3 className="font-title-lg text-title-lg text-on-surface">Budget vs Actual by Project</h3>
             <div className="flex gap-4">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 bg-primary rounded-sm" />
-                <span className="text-body-sm text-secondary">Ngân Sách</span>
+                <span className="text-body-sm text-secondary">Budget</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 bg-secondary rounded-sm" />
-                <span className="text-body-sm text-secondary">Thực Tế</span>
+                <span className="text-body-sm text-secondary">Actual</span>
               </div>
             </div>
           </div>
@@ -282,24 +282,24 @@ export default function ExpenseReports() {
                   <div className="flex justify-between text-label-md text-secondary mb-1">
                     <span>{item.projectName}</span>
                     <span className={status === 'over' ? 'text-danger font-bold' : ''}>
-                      {budgetUsed}% {status === 'over' ? 'Vượt ngân sách' : 'Đã dùng'}
+                      {budgetUsed}% {status === 'over' ? 'Over budget' : 'Used'}
                     </span>
                   </div>
                   <div className="flex h-5 gap-1 rounded-sm overflow-hidden">
                     <div
                       className="bg-primary rounded-sm transition-all duration-500 shadow-sm"
                       style={{ width: `${budgetPct}%` }}
-                      title={`Ngân sách: ${formatFullCurrency(budget)}`}
+                      title={`Budget: ${formatFullCurrency(budget)}`}
                     />
                     <div
                       className="bg-secondary rounded-sm transition-all duration-500"
                       style={{ width: `${actualPct}%` }}
-                      title={`Thực tế: ${formatFullCurrency(actual)}`}
+                      title={`Actual: ${formatFullCurrency(actual)}`}
                     />
                   </div>
                   <div className="flex justify-between text-[10px] text-outline">
-                    <span>Ngân sách: {formatCurrency(budget)}</span>
-                    <span>Thực tế: {formatCurrency(actual)}</span>
+                    <span>Budget: {formatCurrency(budget)}</span>
+                    <span>Actual: {formatCurrency(actual)}</span>
                   </div>
                 </div>
               );
@@ -310,13 +310,13 @@ export default function ExpenseReports() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-title-lg text-title-lg text-on-surface">Chi Tiết Theo Kỳ</h3>
+          <h3 className="font-title-lg text-title-lg text-on-surface">Period Details</h3>
           <div className="flex gap-2 items-center">
             {showFilter && (
               <input
                 autoFocus
                 className="px-3 py-1.5 border border-border-subtle rounded text-sm w-44 outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Tìm dự án hoặc loại..."
+                placeholder="Search project or type..."
                 value={filterText}
                 onChange={(e) => { setFilterText(e.target.value); setPage(1); }}
               />
@@ -332,11 +332,11 @@ export default function ExpenseReports() {
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead className="bg-surface-muted border-b border-border-subtle sticky top-0">
                 <tr>
-                  {['Mã CT', 'Dự án', 'Loại', 'Kỳ', 'Chi phí (VNĐ)', 'Ngân sách (VNĐ)', 'Chênh lệch', 'Sức khỏe'].map((h) => (
+                  {['ID', 'Project', 'Type', 'Period', 'Cost (USD)', 'Budget (USD)', 'Variance', 'Health'].map((h) => (
                     <th
                       key={h}
                       className={`px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline ${
-                        h === 'Chi phí (VNĐ)' || h === 'Ngân sách (VNĐ)' || h === 'Chênh lệch' ? 'text-right' : ''
+                        h === 'Cost (USD)' || h === 'Budget (USD)' || h === 'Variance' ? 'text-right' : ''
                       }`}
                     >
                       {h}
@@ -367,7 +367,7 @@ export default function ExpenseReports() {
                         <span className={`w-2 h-2 rounded-full ${
                           row.health === 'good' ? 'bg-success' : row.health === 'over' ? 'bg-danger' : 'bg-warning'
                         }`} />
-                        {row.health === 'good' ? 'Tốt' : row.health === 'over' ? 'Vượt ngân sách' : 'Trung bình'}
+                        {row.health === 'good' ? 'Good' : row.health === 'over' ? 'Over Budget' : 'Average'}
                       </div>
                     </td>
                   </tr>
@@ -378,7 +378,7 @@ export default function ExpenseReports() {
 
           <div className="px-cell-padding-x py-cell-padding-y bg-surface-muted border-t border-border-subtle flex justify-between items-center">
             <span className="text-body-sm text-outline">
-              Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong {projects.length} dự án
+              Showing {Math.min(page * rowsPerPage, totalRows)} of {projects.length} projects
             </span>
             <div className="flex gap-2">
               <button
@@ -417,29 +417,29 @@ export default function ExpenseReports() {
           <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md pointer-events-auto mx-4 p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold">Chi tiết chi phí</h3>
+                <h3 className="text-base font-bold">Cost Details</h3>
                 <button onClick={() => setShowDetail(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
               </div>
               <div className="space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Mã CT</label><p className="font-mono text-primary">{showDetail.id}</p></div>
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Dự án</label><p className="font-semibold">{showDetail.project}</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">ID</label><p className="font-mono text-primary">{showDetail.id}</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Project</label><p className="font-semibold">{showDetail.project}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Loại</label><p>{showDetail.type}</p></div>
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Kỳ</label><p>{showDetail.date}</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Type</label><p>{showDetail.type}</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Period</label><p>{showDetail.date}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Chi phí</label><p className="font-bold">{formatFullCurrency(showDetail.cost)}</p></div>
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Ngân sách</label><p className="font-bold">{formatFullCurrency(showDetail.budget)}</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Cost</label><p className="font-bold">{formatFullCurrency(showDetail.cost)}</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Budget</label><p className="font-bold">{formatFullCurrency(showDetail.budget)}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Chênh lệch</label><p className={`font-bold ${parseFloat(showDetail.variance) > 0 ? 'text-green-600' : parseFloat(showDetail.variance) < 0 ? 'text-red-600' : ''}`}>{parseFloat(showDetail.variance) > 0 ? '+' : ''}{showDetail.variance}%</p></div>
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Sức khỏe</label><p className={`font-bold ${showDetail.health === 'good' ? 'text-green-600' : showDetail.health === 'over' ? 'text-red-600' : 'text-amber-600'}`}>{showDetail.health === 'good' ? 'Tốt' : showDetail.health === 'over' ? 'Vượt ngân sách' : 'Trung bình'}</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Variance</label><p className={`font-bold ${parseFloat(showDetail.variance) > 0 ? 'text-green-600' : parseFloat(showDetail.variance) < 0 ? 'text-red-600' : ''}`}>{parseFloat(showDetail.variance) > 0 ? '+' : ''}{showDetail.variance}%</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Health</label><p className={`font-bold ${showDetail.health === 'good' ? 'text-green-600' : showDetail.health === 'over' ? 'text-red-600' : 'text-amber-600'}`}>{showDetail.health === 'good' ? 'Good' : showDetail.health === 'over' ? 'Over Budget' : 'Average'}</p></div>
                 </div>
               </div>
               <div className="flex justify-end pt-2">
-                <button onClick={() => setShowDetail(null)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded text-xs font-bold hover:bg-gray-200 transition-all">Đóng</button>
+                <button onClick={() => setShowDetail(null)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded text-xs font-bold hover:bg-gray-200 transition-all">Close</button>
               </div>
             </div>
           </div>

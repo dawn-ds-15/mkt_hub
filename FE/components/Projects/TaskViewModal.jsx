@@ -10,7 +10,7 @@ const statusBadge = {
 
 const priorityLabel = { high: 'Cao', medium: 'Trung bình', low: 'Thấp' };
 
-export default function TaskViewModal({ task, onClose }) {
+export default function TaskViewModal({ task, onClose, onEdit }) {
   if (!task) return null;
   const st = statusBadge[task.status] || statusBadge.Planning;
 
@@ -102,8 +102,13 @@ export default function TaskViewModal({ task, onClose }) {
             )}
           </div>
 
-          <div className="border-t border-gray-200 px-6 py-4 flex justify-end">
-            <button onClick={onClose} className="px-6 py-2 bg-gray-100 text-gray-700 rounded text-xs font-bold hover:bg-gray-200 transition-all">
+          <div className="border-t border-gray-200 px-6 py-4 flex items-center gap-2 justify-end">
+            {onEdit && (
+              <button onClick={() => onEdit(task)} className="px-4 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:opacity-90 transition-all">
+                Chỉnh sửa
+              </button>
+            )}
+            <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-xs font-bold hover:bg-gray-200 transition-all">
               Đóng
             </button>
           </div>

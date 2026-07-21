@@ -69,7 +69,7 @@ export default function ExpenseEntryForm({ onSaved }) {
           <h2 className="font-headline-sm text-headline-sm text-on-surface">Nhập chi phí dự án</h2>
           <div className="flex items-center gap-3">
             <label className="font-label-md text-on-surface-variant">Chọn dự án:</label>
-            <select className="border border-border-light rounded-lg px-4 py-1.5 text-body-md bg-background-subtle font-medium focus:ring-1 focus:ring-primary focus:border-primary outline-none min-w-[200px]" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+            <select className="bg-background-subtle border border-border-light rounded-lg px-4 py-1.5 text-body-md font-medium focus:ring-1 focus:ring-primary focus:border-primary outline-none min-w-[200px]" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}

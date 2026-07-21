@@ -71,7 +71,7 @@ export default function PlanKPIsForm() {
           Kế hoạch KPIs
         </h3>
         <select
-          className="border-border-light rounded text-body-sm bg-surface-container-low px-2 py-1 focus:ring-primary focus:border-primary"
+          className="bg-surface-container-low text-body-sm border border-border-light rounded px-2 py-1 focus:ring-primary focus:border-primary"
           value={selectedYear}
           onChange={(e) => setSelectedYear(Number(e.target.value))}
         >

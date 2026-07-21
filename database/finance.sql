@@ -1,3 +1,7 @@
+SET search_path TO finance, core, public;
+
+SET search_path TO finance, core, public;
+
 -- Adminer 5.4.2 PostgreSQL 16.14 dump
 
 DROP TABLE IF EXISTS "expense_settings";
@@ -204,3 +208,74 @@ ALTER TABLE ONLY "finance"."project_expenses" ADD CONSTRAINT "project_expenses_c
 ALTER TABLE ONLY "finance"."project_expenses" ADD CONSTRAINT "project_expenses_project_id_fkey" FOREIGN KEY (project_id) REFERENCES core.projects(id) ON DELETE CASCADE;
 
 -- 2026-07-17 08:29:43 UTC
+
+
+-- Data integrity hardening
+CREATE UNIQUE INDEX IF NOT EXISTS expense_settings_period_unique
+    ON finance.expense_settings (period_type, period_value);
+
+ALTER TABLE finance.expense_settings DROP CONSTRAINT IF EXISTS expense_settings_churn_rate_range;
+ALTER TABLE finance.expense_settings ADD CONSTRAINT expense_settings_churn_rate_range
+    CHECK (churn_rate >= 0 AND churn_rate <= 100);
+
+ALTER TABLE finance.expense_settings DROP CONSTRAINT IF EXISTS expense_settings_gross_margin_range;
+ALTER TABLE finance.expense_settings ADD CONSTRAINT expense_settings_gross_margin_range
+    CHECK (gross_margin >= 0 AND gross_margin <= 100);
+
+ALTER TABLE finance.project_expenses ADD COLUMN IF NOT EXISTS currency_id bigint NOT NULL DEFAULT 46;
+
+ALTER TABLE finance.project_expenses DROP CONSTRAINT IF EXISTS project_expenses_currency_id_fkey;
+ALTER TABLE finance.project_expenses ADD CONSTRAINT project_expenses_currency_id_fkey
+    FOREIGN KEY (currency_id) REFERENCES core.dropdowns(id);
+
+ALTER TABLE finance.project_expenses DROP CONSTRAINT IF EXISTS project_expenses_direct_cost_nonnegative;
+ALTER TABLE finance.project_expenses ADD CONSTRAINT project_expenses_direct_cost_nonnegative
+    CHECK (direct_cost >= 0);
+
+ALTER TABLE finance.project_expenses DROP CONSTRAINT IF EXISTS project_expenses_overhead_cost_nonnegative;
+ALTER TABLE finance.project_expenses ADD CONSTRAINT project_expenses_overhead_cost_nonnegative
+    CHECK (overhead_cost >= 0);
+
+-- Keep projects 1-3 as full monthly scenarios and add one annual sample row
+-- for every remaining project so project-level CAC never lacks expense data.
+SELECT setval(
+    'finance.project_expenses_id_seq',
+    COALESCE(MAX(id), 1),
+    MAX(id) IS NOT NULL
+) FROM finance.project_expenses;
+
+INSERT INTO finance.project_expenses (
+    project_id, expense_month, expense_year, direct_cost, direct_note,
+    overhead_cost, overhead_note, created_by
+)
+SELECT
+    p.id,
+    1,
+    y.expense_year,
+    (1000000 + p.id * 10000 + (y.expense_year - 2024) * 50000)::numeric(15,2),
+    'Annual CAC test coverage',
+    (300000 + p.id * 5000)::numeric(15,2),
+    'Annual overhead test coverage',
+    p.owner_id
+FROM core.projects p
+CROSS JOIN (VALUES (2024), (2025), (2026)) AS y(expense_year)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM finance.project_expenses pe
+    WHERE pe.project_id = p.id
+      AND pe.expense_year = y.expense_year
+)
+ON CONFLICT (project_id, expense_month, expense_year) DO NOTHING;
+
+ALTER TABLE finance.expense_settings
+    ALTER COLUMN created_at TYPE timestamp with time zone
+    USING created_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+ALTER TABLE finance.project_expenses
+    ALTER COLUMN created_at TYPE timestamp with time zone
+    USING created_at AT TIME ZONE 'Asia/Ho_Chi_Minh',
+    ALTER COLUMN updated_at TYPE timestamp with time zone
+    USING updated_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+SELECT setval('finance.expense_settings_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM finance.expense_settings;
+SELECT setval('finance.project_expenses_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM finance.project_expenses;

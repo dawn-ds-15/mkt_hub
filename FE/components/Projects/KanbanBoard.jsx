@@ -233,14 +233,7 @@ export default function KanbanBoard() {
     });
     const payload = reason ? { status: apiStatus, reason } : { status: apiStatus };
     console.log(`[Kanban] doMoveTask -> PATCH /v1/tasks/${taskId}`, payload);
-    updateTask(taskId, payload).then((res) => {
-      console.log(`[Kanban] PATCH success for task ${taskId}:`, res.data);
-      return getKanbanData();
-    }).then((res) => {
-      console.log(`[Kanban] Refreshed kanban data, ${res.data.length} columns`);
-      setAllRawTasks([]);
-      setColumns(res.data);
-    }).catch((err) => {
+    updateTask(taskId, payload).catch((err) => {
       console.error(`[Kanban] PATCH failed for task ${taskId}:`, err?.response?.status, err?.response?.data || err);
       setColumns(prevColsCopy);
       const msg = err?.response?.data?.message || err?.message || 'Không thể cập nhật trạng thái';
@@ -248,7 +241,7 @@ export default function KanbanBoard() {
     });
     setDraggedTaskId(null);
     setDraggedFromCol(null);
-  }, [draggedTaskId, draggedFromCol, columns, getKanbanData]);
+  }, [draggedTaskId, draggedFromCol, columns]);
 
   const handleCardClick = useCallback(async (taskId) => {
     setViewTask(taskId);

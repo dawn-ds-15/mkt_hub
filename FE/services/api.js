@@ -1069,14 +1069,30 @@ export const downloadTemplate = async (type) => {
   try {
     const endpoint = type === 'tasks' ? '/v1/tasks/import/template' : '/v1/data-management/import/template';
     const res = await api.get(endpoint, { responseType: 'blob' });
-    const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+    const contentType = res.headers?.['content-type'] || '';
+    const ext = contentType.includes('spreadsheetml') || contentType.includes('officedocument') ? 'xlsx' : 'csv';
+    const filename = `${type}_template.${ext}`;
+    const blob = new Blob([res.data], { type: contentType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `${type}_template.csv`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(a.href);
     return { success: true };
   } catch {
+    const fallbackUrl = `/templates/${type}_template.xlsx`;
+    try {
+      const res = await fetch(fallbackUrl);
+      if (res.ok) {
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${type}_template.xlsx`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        return { success: true };
+      }
+    } catch {}
     const templates = {
       tasks: { filename: 'task_template.csv', headers: 'task_name,project_id,assignee,status,priority,start_date,due_date,exec_week,remark\n', sample: 'Example task,1,Nguyen Van A,Planning,High,2026-06-15,2026-06-30,26,\n' },
       kpi: { filename: 'kpi_template.csv', headers: 'year,week,raw_leads,mql,sql,opp_count,closed_deal_count\n', sample: '2026,20,280,112,49,10,4\n' },

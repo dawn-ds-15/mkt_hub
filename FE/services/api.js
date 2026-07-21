@@ -815,17 +815,15 @@ export const saveActuals = async (data) => {
 // ===================== OPPORTUNITIES =====================
 
 export const getOpportunities = async (year) => {
-  const y = year || new Date().getFullYear();
-  const res = await api.get('/v1/leads-kpis/weekly', { params: { year: y, week: 1 } });
-  const d = res.data?.data ?? res.data ?? {};
-  const list = d.opportunities ?? [];
+  const res = await api.get('/v1/leads-kpis/opportunities', { params: { year } });
+  const list = res.data?.data ?? res.data ?? [];
   const beToFeSize = { 'Enterprise': 'S', 'Medium': 'M' };
   return { data: Array.isArray(list) ? filterDeleted('opportunities', list).map(o => ({
     id: o.id,
     companyName: o.companyName || o.company_name || '',
     size: beToFeSize[o.size] || 'S',
     project: o.project?.name || o.project || '',
-    projectId: o.projectId || '',
+    projectId: o.projectId || o.project_id || '',
     fees: o.setupFee ?? o.fees ?? 0,
     expectedCloseDate: o.expectedCloseDate || o.expected_close_date || '',
     status: o.status || 'active',
@@ -845,9 +843,10 @@ export const addOpportunity = async (data) => {
 };
 
 export const updateOpportunity = async (id, data) => {
+  const feToBeSize = { 'S': 'Enterprise', 'M': 'Medium', 'L': 'Enterprise' };
   const res = await api.patch(`/v1/leads-kpis/opportunities/${id}`, {
     companyName: data.companyName,
-    size: data.size,
+    size: feToBeSize[data.size] || 'Enterprise',
     setupFee: Number(data.fees) || 0,
     expectedCloseDate: data.expectedCloseDate || undefined,
   });

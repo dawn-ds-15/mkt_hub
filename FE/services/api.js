@@ -832,7 +832,7 @@ export const getOpportunities = async (year) => {
   try {
     const res = await api.get('/v1/leads-kpis/opportunities', { params: { year } });
     const list = res.data?.data ?? res.data ?? [];
-    return { data: Array.isArray(list) ? filterDeleted('opportunities', list).map(mapOppFromBE) : [] };
+    return { data: Array.isArray(list) ? list.map(mapOppFromBE) : [] };
   } catch {
     return { data: [] };
   }
@@ -862,8 +862,8 @@ export const updateOpportunity = async (id, data) => {
 };
 
 export const deleteOpportunity = async (id) => {
-  markDeleted('opportunities', id);
-  return { success: true };
+  const res = await api.delete(`/v1/leads-kpis/opportunities/${id}`);
+  return { data: res.data };
 };
 
 export const convertToWon = async (id) => {
@@ -872,7 +872,6 @@ export const convertToWon = async (id) => {
 
 export const convertOpportunityToWon = async (id, signedDate) => {
   const res = await api.post(`/v1/leads-kpis/opportunities/${id}/won`, { signedDate });
-  markDeleted('opportunities', id);
   return { data: res.data?.data ?? { id, status: 'won', signedDate } };
 };
 
@@ -882,7 +881,7 @@ export const getClosedDeals = async () => {
   try {
     const res = await api.get('/v1/leads-kpis/closed-deals');
     const list = res.data?.data ?? res.data ?? [];
-    return { data: Array.isArray(list) ? filterDeleted('deals', list).map(d => ({
+    return { data: Array.isArray(list) ? list.map(d => ({
       id: d.id,
       customer: d.companyName || d.customer || '',
       contract: d.project?.name || d.contract || '',
@@ -907,8 +906,8 @@ export const updateClosedDeal = async (id, data) => {
 };
 
 export const deleteClosedDeal = async (id) => {
-  markDeleted('deals', id);
-  return { success: true };
+  const res = await api.delete(`/v1/leads-kpis/closed-deals/${id}/delete`);
+  return { data: res.data };
 };
 
 // ===================== EXPENSES =====================

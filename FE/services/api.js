@@ -1216,8 +1216,8 @@ export const saveSlackSettings = async (data) => {
   return { data: res.data?.data ?? res.data };
 };
 
-export const testSlackWebhook = async (url) => {
-  const res = await api.post('/v1/data-management/slack/test', { webhookUrl: url });
+export const testSlackWebhook = async () => {
+  const res = await api.post('/v1/data-management/slack/test');
   return { data: res.data?.data ?? { success: true } };
 };
 

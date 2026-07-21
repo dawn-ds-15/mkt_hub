@@ -19,6 +19,16 @@ export default function SlackSettings() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  function parseSendDays(sendDays) {
+    const dayMap = { 'T2,T3,T4,T5,T6': 'monFri', 'T7': 'sat', 'CN': 'sun' };
+    const result = { monFri: false, sat: false, sun: false };
+    if (!sendDays) return result;
+    Object.entries(dayMap).forEach(([key, field]) => {
+      if (sendDays.includes(key.split(',')[0])) result[field] = true;
+    });
+    return result;
+  }
+
   const load = useCallback(async () => {
     try {
       const [sRes, hRes] = await Promise.all([getSlackSettings(), getSlackNotificationHistory()]);
@@ -26,11 +36,18 @@ export default function SlackSettings() {
       setSettings(s);
       setWebhookUrl(s.webhookUrl || '');
       setChannel(s.channel || 'mkt-alerts');
-      setScheduleEnabled(s.enabled !== false);
+      setScheduleEnabled(s.notificationsEnabled ?? s.enabled ?? true);
       setSendTime(s.sendTime || '08:00');
-      setNotifyDays(s.notifyDays || 3);
-      if (s.days) setDays(s.days);
-      setHistory(Array.isArray(hRes.data) ? hRes.data : []);
+      setNotifyDays(s.alertDaysBefore ?? s.notifyDays ?? 3);
+      setDays(parseSendDays(s.sendDays));
+      setHistory(Array.isArray(hRes.data) ? hRes.data.map(log => ({
+        date: log.sentAt ? new Date(log.sentAt).toLocaleDateString('vi-VN') : '',
+        time: log.sentAt ? new Date(log.sentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '',
+        recipient: channel,
+        overdue: log.overdueCount ?? log.overdue,
+        upcoming: log.upcomingCount ?? log.upcoming,
+        success: log.status === 'SUCCESS',
+      })) : []);
     } catch {
       setSettings({});
     }
@@ -38,10 +55,25 @@ export default function SlackSettings() {
 
   useEffect(() => { load(); }, [load]);
 
+  function buildSlackPayload() {
+    const dayNames = { monFri: 'T2,T3,T4,T5,T6', sat: 'T7', sun: 'CN' };
+    const activeDays = Object.entries(days)
+      .filter(([, v]) => v)
+      .map(([k]) => dayNames[k])
+      .join(',');
+    return {
+      webhookUrl,
+      channel,
+      notificationsEnabled: scheduleEnabled,
+      sendTime,
+      sendDays: activeDays || 'T2,T3,T4,T5,T6',
+      alertDaysBefore: notifyDays,
+    };
+  }
+
   const handleSave = async () => {
-    const payload = { webhookUrl, channel, enabled: scheduleEnabled, sendTime, notifyDays, days };
     try {
-      await saveSlackSettings(payload);
+      await saveSlackSettings(buildSlackPayload());
       showToast('Đã lưu cấu hình Slack');
     } catch {
       showToast('Lỗi khi lưu cấu hình', 'error');
@@ -53,7 +85,8 @@ export default function SlackSettings() {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await testSlackWebhook(webhookUrl);
+      await saveSlackSettings(buildSlackPayload());
+      const res = await testSlackWebhook();
       setTestResult(res.data);
       showToast(res.data.success ? 'Kết nối thành công!' : 'Kết nối thất bại', res.data.success ? 'success' : 'error');
     } catch {

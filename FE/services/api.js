@@ -829,9 +829,13 @@ function mapOppFromBE(o) {
 }
 
 export const getOpportunities = async (year) => {
-  const res = await api.get('/v1/leads-kpis/opportunities', { params: { year } });
-  const list = res.data?.data ?? res.data ?? [];
-  return { data: Array.isArray(list) ? list.map(mapOppFromBE) : [] };
+  try {
+    const res = await api.get('/v1/leads-kpis/opportunities', { params: { year } });
+    const list = res.data?.data ?? res.data ?? [];
+    return { data: Array.isArray(list) ? filterDeleted('opportunities', list).map(mapOppFromBE) : [] };
+  } catch {
+    return { data: [] };
+  }
 };
 
 export const addOpportunity = async (data) => {
@@ -858,8 +862,8 @@ export const updateOpportunity = async (id, data) => {
 };
 
 export const deleteOpportunity = async (id) => {
-  const res = await api.delete(`/v1/leads-kpis/opportunities/${id}`);
-  return { data: res.data };
+  markDeleted('opportunities', id);
+  return { success: true };
 };
 
 export const convertToWon = async (id) => {
@@ -868,22 +872,27 @@ export const convertToWon = async (id) => {
 
 export const convertOpportunityToWon = async (id, signedDate) => {
   const res = await api.post(`/v1/leads-kpis/opportunities/${id}/won`, { signedDate });
+  markDeleted('opportunities', id);
   return { data: res.data?.data ?? { id, status: 'won', signedDate } };
 };
 
 // ===================== CLOSED DEALS =====================
 
 export const getClosedDeals = async () => {
-  const res = await api.get('/v1/leads-kpis/closed-deals');
-  const list = res.data?.data ?? res.data ?? [];
-  return { data: Array.isArray(list) ? list.map(d => ({
-    id: d.id,
-    customer: d.companyName || d.customer || '',
-    contract: d.project?.name || d.contract || '',
-    finalFees: d.setupFee ?? d.finalFees ?? 0,
-    signedDate: d.closedDate || d.signedDate || '',
-    status: 'completed',
-  })) : [] };
+  try {
+    const res = await api.get('/v1/leads-kpis/closed-deals');
+    const list = res.data?.data ?? res.data ?? [];
+    return { data: Array.isArray(list) ? filterDeleted('deals', list).map(d => ({
+      id: d.id,
+      customer: d.companyName || d.customer || '',
+      contract: d.project?.name || d.contract || '',
+      finalFees: d.setupFee ?? d.finalFees ?? 0,
+      signedDate: d.closedDate || d.signedDate || '',
+      status: 'completed',
+    })) : [] };
+  } catch {
+    return { data: [] };
+  }
 };
 
 export const updateClosedDeal = async (id, data) => {
@@ -898,8 +907,8 @@ export const updateClosedDeal = async (id, data) => {
 };
 
 export const deleteClosedDeal = async (id) => {
-  const res = await api.delete(`/v1/leads-kpis/closed-deals/${id}/delete`);
-  return { data: res.data };
+  markDeleted('deals', id);
+  return { success: true };
 };
 
 // ===================== EXPENSES =====================

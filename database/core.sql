@@ -1,6 +1,15 @@
 SET search_path TO core, public;
 
 -- Drop dependent tables first so this seed can be rerun safely.
+DROP TABLE IF EXISTS marketing.closed_deals;
+DROP TABLE IF EXISTS marketing.opportunities;
+DROP TABLE IF EXISTS finance.project_expenses;
+DROP TABLE IF EXISTS finance.expense_settings;
+DROP TABLE IF EXISTS sys_admin.audit_logs;
+DROP TABLE IF EXISTS sys_admin.backups;
+DROP TABLE IF EXISTS sys_admin.export_logs;
+DROP TABLE IF EXISTS sys_admin.import_logs;
+
 DROP TABLE IF EXISTS core.task_stakeholders;
 DROP TABLE IF EXISTS core.tasks;
 DROP TABLE IF EXISTS core.projects;
@@ -778,4 +787,3 @@ SELECT setval('core.dropdowns_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL
 SELECT setval('core.members_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM core.members;
 SELECT setval('core.projects_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM core.projects;
 SELECT setval('core.tasks_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM core.tasks;
-

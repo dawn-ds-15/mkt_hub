@@ -695,3 +695,30 @@ ALTER TABLE ONLY core.tasks DROP CONSTRAINT IF EXISTS tasks_archived_by_fkey;
 ALTER TABLE ONLY core.tasks ADD CONSTRAINT tasks_archived_by_fkey FOREIGN KEY (archived_by) REFERENCES core.members(id);
 
 -- 2026-07-17 08:26:54 UTC
+
+
+-- Synchronize sequences after explicit-ID seed data.
+-- The third setval argument keeps an empty table's next generated ID at 1.
+SELECT setval(
+    'core.dropdowns_id_seq',
+    COALESCE(MAX(id), 1),
+    MAX(id) IS NOT NULL
+) FROM core.dropdowns;
+
+SELECT setval(
+    'core.members_id_seq',
+    COALESCE(MAX(id), 1),
+    MAX(id) IS NOT NULL
+) FROM core.members;
+
+SELECT setval(
+    'core.projects_id_seq',
+    COALESCE(MAX(id), 1),
+    MAX(id) IS NOT NULL
+) FROM core.projects;
+
+SELECT setval(
+    'core.tasks_id_seq',
+    COALESCE(MAX(id), 1),
+    MAX(id) IS NOT NULL
+) FROM core.tasks;

@@ -46,6 +46,7 @@ const statsMeta = [
   { key: 'Done', label: 'Hoàn thành', color: 'text-green-700' },
   { key: 'Backlog', label: 'Tồn đọng', color: 'text-amber-600' },
   { key: 'Pending', label: 'Đang chờ', color: 'text-purple-600' },
+  { key: 'Cancel', label: 'Đã huỷ', color: 'text-gray-500' },
   { key: 'overdue', label: 'Quá hạn', color: 'text-red-700' },
 ];
 
@@ -60,7 +61,7 @@ export default function TaskList() {
   const [viewTask, setViewTask] = useState(null);
   const [projects, setProjects] = useState([]);
   const [members, setMembers] = useState([]);
-  const [filters, setFilters] = useState({
+  const [draftFilters, setDraftFilters] = useState({
     project: 'Tất cả',
     status: 'Tất cả',
     priority: 'Tất cả',
@@ -68,6 +69,7 @@ export default function TaskList() {
     dateFrom: '',
     dateTo: '',
   });
+  const [filters, setFilters] = useState({ ...draftFilters });
   const perPage = 10;
 
   const [showQuickAddPopup, setShowQuickAddPopup] = useState(false);
@@ -134,7 +136,7 @@ export default function TaskList() {
 
   const stats = useCallback(() => {
     const total = tasks.length;
-    const st = { total, Planning: 0, Processing: 0, Done: 0, Backlog: 0, Pending: 0, overdue: 0 };
+    const st = { total, Planning: 0, Processing: 0, Done: 0, Backlog: 0, Pending: 0, Cancel: 0, overdue: 0 };
     tasks.forEach(t => {
       if (t.status === 'overdue') st.overdue++;
       else if (st[t.status] !== undefined) st[t.status]++;
@@ -142,8 +144,14 @@ export default function TaskList() {
     return st;
   }, [tasks]);
 
+  const applyFilters = () => {
+    setFilters({ ...draftFilters });
+  };
+
   const clearFilters = () => {
-    setFilters({ project: 'Tất cả', status: 'Tất cả', priority: 'Tất cả', assignee: 'Tất cả', dateFrom: '', dateTo: '' });
+    const cleared = { project: 'Tất cả', status: 'Tất cả', priority: 'Tất cả', assignee: 'Tất cả', dateFrom: '', dateTo: '' };
+    setDraftFilters(cleared);
+    setFilters(cleared);
   };
 
   const totalPages = Math.ceil(filteredTasks.length / perPage);
@@ -215,7 +223,7 @@ export default function TaskList() {
     <>
     <div className="space-y-6">
       {/* Stats Bar */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-3">
+      <div className="flex flex-nowrap gap-2">
           {statsMeta.map((meta) => {
             const val = s[meta.key] ?? 0;
             const isActive = meta.key === 'total'
@@ -229,11 +237,15 @@ export default function TaskList() {
             return (
               <div
                 key={meta.key}
-                onClick={() => setFilters(prev => ({ ...prev, status: meta.key === 'total' ? 'Tất cả' : meta.key }))}
-                className={`${bgClass} border ${isActive ? 'border-primary' : 'border-outline-variant'} p-4 rounded-lg flex flex-col items-center justify-center transition-all hover:border-primary cursor-pointer`}
+                onClick={() => {
+                  const status = meta.key === 'total' ? 'Tất cả' : meta.key;
+                  setDraftFilters(prev => ({ ...prev, status }));
+                  setFilters(prev => ({ ...prev, status }));
+                }}
+                className={`${bgClass} border ${isActive ? 'border-primary' : 'border-outline-variant'} p-2.5 rounded-lg flex flex-col items-center justify-center transition-all hover:border-primary cursor-pointer flex-1 min-w-0`}
               >
-                <span className="text-label-sm text-outline uppercase tracking-wider mb-1">{meta.label}</span>
-                <span className={`text-headline-md font-bold ${meta.color}`}>{val}</span>
+                <span className="text-[10px] text-outline uppercase tracking-wider mb-0.5 whitespace-nowrap">{meta.label}</span>
+                <span className={`text-headline-sm font-bold ${meta.color}`}>{val}</span>
               </div>
             );
           })}
@@ -246,8 +258,8 @@ export default function TaskList() {
             <span className="text-outline">{def.label}</span>
             <select
               className="font-semibold bg-transparent border-none focus:ring-0 outline-none pr-6 appearance-none cursor-pointer"
-              value={filters[def.key]}
-              onChange={(e) => setFilters(prev => ({ ...prev, [def.key]: e.target.value }))}
+              value={draftFilters[def.key]}
+              onChange={(e) => setDraftFilters(prev => ({ ...prev, [def.key]: e.target.value }))}
             >
               {def.options.map((opt) => {
                 const statusLabels = { 'Tất cả': 'Tất cả', Planning: 'Chưa làm', Processing: 'Đang làm', Done: 'Hoàn thành', Backlog: 'Tồn đọng', Pending: 'Chờ xử lý', overdue: 'Quá hạn' };
@@ -267,20 +279,27 @@ export default function TaskList() {
           <span className="material-symbols-outlined text-sm text-outline">calendar_today</span>
           <input
             type="date"
-            value={filters.dateFrom || ''}
-            onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+            value={draftFilters.dateFrom || ''}
+            onChange={(e) => setDraftFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
             className="border-none bg-transparent focus:ring-0 outline-none text-xs w-[130px]"
             placeholder="Từ ngày"
           />
           <span className="text-outline">-</span>
           <input
             type="date"
-            value={filters.dateTo || ''}
-            onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+            value={draftFilters.dateTo || ''}
+            onChange={(e) => setDraftFilters(prev => ({ ...prev, dateTo: e.target.value }))}
             className="border-none bg-transparent focus:ring-0 outline-none text-xs w-[130px]"
             placeholder="Đến ngày"
           />
         </div>
+        <button
+          onClick={applyFilters}
+          className="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md flex items-center gap-2 hover:bg-primary/90 transition-transform active:scale-95"
+        >
+          <span className="material-symbols-outlined text-sm">filter_alt</span>
+          Lọc
+        </button>
         <button
           onClick={clearFilters}
           className="text-error font-semibold text-sm flex items-center gap-1 hover:underline whitespace-nowrap"

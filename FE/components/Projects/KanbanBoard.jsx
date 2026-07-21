@@ -12,77 +12,112 @@ const STATUS_TO_API = {
   overdue: 'Overdue',
 };
 
-const priorityBorders = {
-  High: 'border-l-red-500',
-  Medium: 'border-l-amber-300',
-  Low: 'border-l-gray-200',
+const priorityColors = {
+  High: { bar: 'bg-red-500', dot: 'text-red-500', bg: 'bg-red-50' },
+  Medium: { bar: 'bg-amber-400', dot: 'text-amber-500', bg: 'bg-amber-50' },
+  Low: { bar: 'bg-gray-300', dot: 'text-gray-400', bg: 'bg-gray-50' },
 };
 
+const columnBg = {
+  planning: 'bg-slate-50',
+  processing: 'bg-blue-50/40',
+  done: 'bg-emerald-50/40',
+  pending: 'bg-purple-50/40',
+  backlog: 'bg-amber-50/40',
+  cancel: 'bg-gray-50',
+  overdue: 'bg-red-50/40',
+};
+
+const columnHeaderAccent = {
+  planning: 'bg-slate-200 text-slate-700',
+  processing: 'bg-blue-200 text-blue-700',
+  done: 'bg-emerald-200 text-emerald-700',
+  pending: 'bg-purple-200 text-purple-700',
+  backlog: 'bg-amber-200 text-amber-700',
+  cancel: 'bg-gray-200 text-gray-600',
+  overdue: 'bg-red-200 text-red-700',
+};
+
+function getTaskId(task) {
+  const id = String(task.id || '');
+  if (id.includes('-')) return id.split('-').pop();
+  return id.length > 7 ? '#' + id.slice(0, 7) : '#' + id;
+}
+
+function PriorityDot({ priority }) {
+  const c = priorityColors[priority] || priorityColors.Medium;
+  return <span className={`inline-block w-2 h-2 rounded-full ${c.bar}`} />;
+}
+
 function KanbanCard({ task, onDragStart, onCardClick }) {
-  const handleClick = () => {
-    if (onCardClick) onCardClick(task.id);
-  };
+  const pColor = priorityColors[task.priority] || priorityColors.Medium;
 
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, task.id)}
-      onClick={handleClick}
-      className={`bg-white rounded-lg border border-gray-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all space-y-2 border-l-4 ${priorityBorders[task.priority]}`}
+      onClick={() => onCardClick(task.id)}
+      className="bg-white rounded-lg border border-gray-200/80 p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all space-y-1.5"
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className={`text-sm font-medium leading-snug ${task.done ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-          {task.title}
-        </p>
-        <button className="text-gray-400 hover:text-gray-600 flex-shrink-0">
-          <span className="material-symbols-outlined text-lg">more_vert</span>
-        </button>
+      <div className="flex items-center gap-1.5">
+        <PriorityDot priority={task.priority} />
+        <span className="text-[10px] font-mono text-gray-400 font-medium">{getTaskId(task)}</span>
       </div>
-      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-        <span className="material-symbols-outlined text-[15px]">folder</span>
-        <span>{task.project}</span>
-      </div>
-      <div className="flex items-center justify-between pt-1.5 border-t border-gray-100">
-        <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center text-[10px] font-bold text-white">
-          {task.avatar}
+      <p className={`text-xs font-medium leading-snug text-gray-800 line-clamp-2 ${task.done ? 'line-through text-gray-400' : ''}`}>
+        {task.title}
+      </p>
+      <div className="flex items-center justify-between pt-1">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {task.avatar ? (
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-primary-fixed flex items-center justify-center text-[8px] font-bold text-white shrink-0">
+              {task.avatar}
+            </div>
+          ) : (
+            <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[8px] font-bold text-gray-500 shrink-0">
+              ?
+            </div>
+          )}
+          <span className="text-[10px] text-gray-500 truncate">{task.assignee}</span>
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className={`material-symbols-outlined text-[16px] ${task.statusColor}`}>
-            {task.statusIcon}
-          </span>
-          <span className={`font-medium ${task.dueColor}`}>{task.due}</span>
-        </div>
+        <span className={`text-[10px] font-medium shrink-0 ${task.dueColor || 'text-gray-400'}`}>
+          {task.due}
+        </span>
       </div>
     </div>
   );
 }
 
 function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, onDragLeave, isOver, onCardClick }) {
+  const bg = columnBg[column.id] || 'bg-gray-50';
+  const accent = columnHeaderAccent[column.id] || 'bg-gray-200 text-gray-700';
+
   return (
     <div
-      className="flex flex-col flex-shrink-0 w-64"
+      className={`flex flex-col flex-1 min-w-[160px] w-0 rounded-xl ${bg}`}
       onDragOver={onDragOver}
       onDragEnter={(e) => onDragEnter(e, column.id)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, column.id)}
     >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-bold text-gray-900 tracking-wider">{column.title}</h3>
-        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${column.badgeColor}`}>
-          {column.badgeCount}
-        </span>
+      <div className="flex items-center justify-between px-3 pt-3 pb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h3 className="text-[11px] font-bold text-gray-700 uppercase tracking-wider truncate">{column.title}</h3>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${accent}`}>
+            {column.badgeCount}
+          </span>
+        </div>
       </div>
       <div
-        className={`flex-1 space-y-3 p-3 rounded-xl min-h-[450px] transition-colors ${
-          isOver ? 'bg-blue-50 ring-2 ring-blue-200' : 'bg-transparent'
+        className={`flex-1 space-y-1.5 p-2 rounded-b-xl min-h-[400px] transition-colors ${
+          isOver ? 'ring-2 ring-primary/40 bg-primary/5' : ''
         }`}
       >
         {column.tasks.map((task) => (
           <KanbanCard key={task.id} task={task} onDragStart={onDragStart} onCardClick={onCardClick} />
         ))}
         {column.tasks.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-gray-400 text-sm italic">
-            Kéo thả task vào đây
+          <div className="flex items-center justify-center h-24 text-gray-400 text-[11px] italic">
+            Không có task
           </div>
         )}
       </div>
@@ -109,6 +144,7 @@ export default function KanbanBoard() {
   const [assigneeFilter, setAssigneeFilter] = useState('Tất cả mọi người');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     getProjects().then(r => setProjects(Array.isArray(r.data) ? r.data : [])).catch(() => {});
@@ -145,6 +181,11 @@ export default function KanbanBoard() {
       return { ...col, tasks, badgeCount: tasks.length };
     });
   }, [columns, projectFilter, assigneeFilter, dateFrom, dateTo]);
+
+  const showToast = (msg, type = 'error') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const handleDragStart = useCallback((e, taskId) => {
     setDraggedTaskId(taskId);
@@ -191,12 +232,23 @@ export default function KanbanBoard() {
       return next.map(c => ({ ...c, badgeCount: c.tasks.length }));
     });
     const payload = reason ? { status: apiStatus, reason } : { status: apiStatus };
-    updateTask(taskId, payload).catch(() => {
+    console.log(`[Kanban] doMoveTask -> PATCH /v1/tasks/${taskId}`, payload);
+    updateTask(taskId, payload).then((res) => {
+      console.log(`[Kanban] PATCH success for task ${taskId}:`, res.data);
+      return getKanbanData();
+    }).then((res) => {
+      console.log(`[Kanban] Refreshed kanban data, ${res.data.length} columns`);
+      setAllRawTasks([]);
+      setColumns(res.data);
+    }).catch((err) => {
+      console.error(`[Kanban] PATCH failed for task ${taskId}:`, err?.response?.status, err?.response?.data || err);
       setColumns(prevColsCopy);
+      const msg = err?.response?.data?.message || err?.message || 'Không thể cập nhật trạng thái';
+      showToast(msg);
     });
     setDraggedTaskId(null);
     setDraggedFromCol(null);
-  }, [draggedTaskId, draggedFromCol, columns]);
+  }, [draggedTaskId, draggedFromCol, columns, getKanbanData]);
 
   const handleCardClick = useCallback(async (taskId) => {
     setViewTask(taskId);
@@ -236,53 +288,48 @@ export default function KanbanBoard() {
   return (
     <>
       <div className="space-y-5">
-        <div className="flex flex-wrap items-end gap-5 bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Dự án</label>
-            <select
-              className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm font-medium outline-none cursor-pointer"
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-            >
-              <option>Tất cả dự án</option>
-              {projects.map(p => <option key={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Người phụ trách</label>
-            <select
-              className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm font-medium outline-none cursor-pointer"
-              value={assigneeFilter}
-              onChange={(e) => setAssigneeFilter(e.target.value)}
-            >
-              <option>Tất cả mọi người</option>
-              {members.map(m => <option key={m.id}>{m.name}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Khoảng thời gian</label>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded text-sm">
-              <span className="material-symbols-outlined text-lg text-gray-400">calendar_today</span>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="border-none bg-transparent focus:ring-0 outline-none text-xs w-[130px]"
-                placeholder="Từ ngày"
-              />
-              <span className="text-gray-400">-</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="border-none bg-transparent focus:ring-0 outline-none text-xs w-[130px]"
-                placeholder="Đến ngày"
-              />
-            </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none cursor-pointer hover:border-gray-300 transition-colors"
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+          >
+            <option>Tất cả dự án</option>
+            {projects.map(p => <option key={p.id}>{p.name}</option>)}
+          </select>
+          <select
+            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none cursor-pointer hover:border-gray-300 transition-colors"
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+          >
+            <option>Tất cả mọi người</option>
+            {members.map(m => <option key={m.id}>{m.name}</option>)}
+          </select>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg">
+            <span className="material-symbols-outlined text-sm text-gray-400">calendar_today</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="border-none bg-transparent focus:ring-0 outline-none text-[11px] w-[110px]"
+              placeholder="Từ ngày"
+            />
+            <span className="text-gray-300">—</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="border-none bg-transparent focus:ring-0 outline-none text-[11px] w-[110px]"
+              placeholder="Đến ngày"
+            />
           </div>
         </div>
 
-        <div className="flex flex-row flex-nowrap gap-3 overflow-x-auto pb-4" style={{ minHeight: 'calc(100vh - 280px)' }}>
+        <div className="text-[11px] text-gray-400 font-medium flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-sm">dashboard</span>
+          {filteredColumns.reduce((s, c) => s + c.tasks.length, 0)} task • {filteredColumns.length} cột
+        </div>
+        <div className="flex flex-row flex-nowrap gap-3 pb-4" style={{ minHeight: 'calc(100vh - 280px)' }}>
           {filteredColumns.map((column) => (
             <KanbanColumn
               key={column.id}
@@ -301,6 +348,12 @@ export default function KanbanBoard() {
 
       {viewTask && viewTaskData && (
         <TaskViewModal task={viewTaskData} onClose={() => { setViewTask(null); setViewTaskData(null); }} />
+      )}
+
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-semibold ${
+          toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+        }`}>{toast.msg}</div>
       )}
 
       {reasonPopup && (

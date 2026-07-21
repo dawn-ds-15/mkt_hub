@@ -1,18 +1,33 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { BackupReset, DropdownConfig, ExportData, ImportData, SlackSettings, TeamMembers } from '../components/DataManagement';
 
-const tabs = [
-  { label: 'Import', key: 'import' },
-  { label: 'Export', key: 'export' },
-  { label: 'Thành viên', key: 'members' },
-  { label: 'Cấu hình Dropdown', key: 'dropdown' },
-  { label: 'Cấu hình Slack', key: 'slack' },
-  { label: 'Sao lưu & Đặt lại', key: 'backup' },
+function getUserRole() {
+  try {
+    const u = JSON.parse(localStorage.getItem('mkt_hub_user'));
+    return u?.role || 'specialist';
+  } catch { return 'specialist'; }
+}
+
+const allTabs = [
+  { label: 'Import', key: 'import', roles: ['specialist', 'manager'] },
+  { label: 'Export', key: 'export', roles: ['manager'] },
+  { label: 'Thành viên', key: 'members', roles: ['manager'] },
+  { label: 'Cấu hình Dropdown', key: 'dropdown', roles: ['manager'] },
+  { label: 'Cấu hình Slack', key: 'slack', roles: ['manager'] },
+  { label: 'Sao lưu & Đặt lại', key: 'backup', roles: ['manager'] },
 ];
 
 export default function DataManagementPage() {
-  const [activeTab, setActiveTab] = useState('import');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const role = getUserRole();
+  const tabs = useMemo(() => allTabs.filter(t => t.roles.includes(role)), [role]);
+  const activeTab = searchParams.get('tab') || tabs[0]?.key || 'import';
+
+  const setActiveTab = (key) => {
+    setSearchParams({ tab: key }, { replace: true });
+  };
 
   const renderContent = () => {
     switch (activeTab) {

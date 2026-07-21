@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 function getISOWeek(date) {
   const d = new Date(date);
@@ -14,12 +14,34 @@ const currentMonth = String(now.getMonth() + 1);
 const currentQuarter = String(Math.floor(now.getMonth() / 3) + 1);
 const currentWeek = String(getISOWeek(now));
 
+const DASHBOARD_STORAGE_KEY = 'mkt_hub_dashboard';
+
+function loadFromStorage() {
+  try {
+    const saved = sessionStorage.getItem(DASHBOARD_STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return null;
+}
+
+function saveToStorage(state) {
+  try {
+    sessionStorage.setItem(DASHBOARD_STORAGE_KEY, JSON.stringify(state));
+  } catch {}
+}
+
 const DashboardContext = createContext(null);
 
 export function DashboardProvider({ children }) {
-  const [year, setYear] = useState(currentYear);
-  const [periodType, setPeriodType] = useState('week');
-  const [periodValue, setPeriodValue] = useState(currentWeek);
+  const saved = loadFromStorage();
+  const [year, setYear] = useState(saved?.year || currentYear);
+  const [periodType, setPeriodType] = useState(saved?.periodType || 'week');
+  const [periodValue, setPeriodValue] = useState(saved?.periodValue || currentWeek);
+
+  useEffect(() => {
+    saveToStorage({ year, periodType, periodValue });
+  }, [year, periodType, periodValue]);
+
   const updatePeriod = useCallback((type) => {
     setPeriodType(type);
     switch (type) {

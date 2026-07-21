@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getOpportunities, addOpportunity, updateOpportunity, convertOpportunityToWon } from '../../services/api';
+import { getOpportunities, addOpportunity, updateOpportunity, convertOpportunityToWon, getProjects } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
+
+const feSize = { 'S': 'Enterprise', 'M': 'Medium', 'L': 'Enterprise' };
+const beSize = { 'Enterprise': 'S', 'Medium': 'M' };
 
 const emptyRow = {
   companyName: '',
   size: 'S',
   project: '',
+  projectId: '',
   fees: '',
   expectedCloseDate: '',
 };
@@ -15,13 +19,26 @@ function getTodayISO() {
   return d.toISOString().split('T')[0];
 }
 
-export default function OpportunitiesTable({ onConvertSuccess }) {
+const noop = () => {};
+
+const sizeOptions = [
+  { value: 'S', label: 'S (Enterprise)' },
+  { value: 'M', label: 'M (Medium)' },
+  { value: 'L', label: 'L (Enterprise)' },
+];
+
+export default function OpportunitiesTable({ onConvertSuccess = noop }) {
   const addToast = useToast();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [convertingIndex, setConvertingIndex] = useState(null);
   const [removingIds, setRemovingIds] = useState(new Set());
   const saveTimers = useRef({});
+  const [projects, setProjects] = useState([]);
+
+  useEffect(() => {
+    getProjects().then(r => setProjects(Array.isArray(r.data) ? r.data : [])).catch(noop);
+  }, []);
 
   const [showModal, setShowModal] = useState(false);
   const [modalIndex, setModalIndex] = useState(null);
@@ -175,23 +192,27 @@ export default function OpportunitiesTable({ onConvertSuccess }) {
                   </td>
                   <td className="p-3">
                     <select
-                      className="w-full border-0 focus:ring-0 p-0 text-body-md outline-none"
+                      className="w-full border-0 focus:ring-0 p-0 text-body-md outline-none bg-transparent"
                       value={row.size}
                       onChange={(e) => handleRowChange(index, 'size', e.target.value)}
                     >
-                      <option>S</option>
-                      <option>M</option>
-                      <option>L</option>
+                      {sizeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   </td>
                   <td className="p-3">
-                    <input
-                      className="w-full border-0 focus:ring-0 p-0 text-body-md outline-none"
-                      placeholder="Marketing Audit"
-                      type="text"
-                      value={row.project}
-                      onChange={(e) => handleRowChange(index, 'project', e.target.value)}
-                    />
+                    <select
+                      className="w-full border-0 focus:ring-0 p-0 text-body-md outline-none bg-transparent"
+                      value={row.projectId}
+                      onChange={(e) => {
+                        const pid = e.target.value;
+                        const pName = projects.find(p => p.id === pid)?.name || '';
+                        handleRowChange(index, 'projectId', pid);
+                        handleRowChange(index, 'project', pName);
+                      }}
+                    >
+                      <option value="">Chọn dự án</option>
+                      {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
                   </td>
                   <td className="p-3">
                     <input

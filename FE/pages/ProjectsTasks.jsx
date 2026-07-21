@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ProjectsPage from '../components/Projects';
 import KanbanBoard from '../components/Projects/KanbanBoard';
@@ -13,8 +14,13 @@ const tabs = [
 ];
 
 export default function ProjectsTasks() {
-  const [activeTab, setActiveTab] = useState('tasks');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'tasks';
   const [projectsKey, setProjectsKey] = useState(0);
+
+  const setActiveTab = (key) => {
+    setSearchParams({ tab: key }, { replace: true });
+  };
 
   const renderContent = () => {
     switch (activeTab) {

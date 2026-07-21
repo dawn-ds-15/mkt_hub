@@ -20,16 +20,20 @@ export default function SlackSettings() {
   };
 
   const load = useCallback(async () => {
-    const [sRes, hRes] = await Promise.all([getSlackSettings(), getSlackNotificationHistory()]);
-    const s = sRes.data;
-    setSettings(s);
-    setWebhookUrl(s.webhookUrl || '');
-    setChannel(s.channel || 'mkt-alerts');
-    setScheduleEnabled(s.enabled !== false);
-    setSendTime(s.sendTime || '08:00');
-    setNotifyDays(s.notifyDays || 3);
-    if (s.days) setDays(s.days);
-    setHistory(Array.isArray(hRes.data) ? hRes.data : []);
+    try {
+      const [sRes, hRes] = await Promise.all([getSlackSettings(), getSlackNotificationHistory()]);
+      const s = sRes.data;
+      setSettings(s);
+      setWebhookUrl(s.webhookUrl || '');
+      setChannel(s.channel || 'mkt-alerts');
+      setScheduleEnabled(s.enabled !== false);
+      setSendTime(s.sendTime || '08:00');
+      setNotifyDays(s.notifyDays || 3);
+      if (s.days) setDays(s.days);
+      setHistory(Array.isArray(hRes.data) ? hRes.data : []);
+    } catch {
+      setSettings({});
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);

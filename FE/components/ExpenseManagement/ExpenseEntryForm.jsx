@@ -51,14 +51,14 @@ export default function ExpenseEntryForm({ onSaved }) {
       } else {
         showToast('Lưu chi phí thành công (dữ liệu đã lưu local)', 'success');
       }
+      setDirectCost('');
+      setOverhead('');
+      setDirectNote('');
+      setOverheadNote('');
+      if (onSaved) onSaved();
     } catch {
       showToast('Lỗi khi lưu chi phí. Kiểm tra kết nối và thử lại.', 'error');
     }
-    setDirectCost('');
-    setOverhead('');
-    setDirectNote('');
-    setOverheadNote('');
-    if (onSaved) onSaved();
   };
 
   return (

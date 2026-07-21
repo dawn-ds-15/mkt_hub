@@ -80,6 +80,7 @@ export default function ComparePeriods({ year: currentYear }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiReport, setAiReport] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -96,15 +97,20 @@ export default function ComparePeriods({ year: currentYear }) {
 
   const loadData = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const [compareRes, quarterlyRes] = await Promise.all([
         getCompareData(selectedYears.length ? selectedYears : [currentYear], periodType, periodValue),
         getQuarterlyCompareData(selectedYears.length ? selectedYears : [currentYear], selectedMetric),
       ]);
-      setCompareData(compareRes.data);
-      setQuarterlyData(quarterlyRes.data);
+      setCompareData(compareRes.data || {});
+      setQuarterlyData(quarterlyRes.data || null);
+      if (!compareRes.data || Object.keys(compareRes.data).length === 0) {
+        setLoadError('API chưa trả dữ liệu so sánh cho kỳ này');
+      }
     } catch (error) {
       console.error('Error loading compare data:', error);
+      setLoadError('Không thể tải dữ liệu so sánh. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -240,6 +246,13 @@ export default function ComparePeriods({ year: currentYear }) {
           </button>
         </div>
       </section>
+
+      {loadError && (
+        <div className="bg-error/5 border border-error/20 rounded-xl p-4 text-error text-sm flex items-center gap-2">
+          <span className="material-symbols-outlined text-[18px]">info</span>
+          {loadError}
+        </div>
+      )}
 
       {/* Bảng so sánh đa chỉ số */}
       <section className="bg-white border border-border-light rounded overflow-hidden">

@@ -35,8 +35,9 @@ export default function ExportData() {
       }
       setExported(true);
       setTimeout(() => setExported(false), 3000);
-    } catch {
-      showToast('Lỗi khi xuất dữ liệu', 'error');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Không rõ nguyên nhân';
+      showToast(`Lỗi khi xuất dữ liệu: ${msg}`, 'error');
     }
     setExporting(false);
   };
@@ -67,7 +68,7 @@ export default function ExportData() {
               <label className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">CHỌN TUẦN & NĂM</label>
               <div className="flex gap-2">
                 <select value={week} onChange={(e) => setWeek(Number(e.target.value))} className="flex-1 bg-surface-container-low border border-outline-variant rounded-lg text-body-md py-2 px-3 focus:ring-primary focus:border-primary transition-all">
-                  {Array.from({ length: 53 }, (_, i) => i + 1).map(w => <option key={w}>Tuần {w}</option>)}
+                  {Array.from({ length: 53 }, (_, i) => i + 1).map(w => <option key={w} value={w}>Tuần {w}</option>)}
                 </select>
                 <select value={year} onChange={(e) => setYear(e.target.value)} className="w-24 bg-surface-container-low border border-outline-variant rounded-lg text-body-md py-2 px-3 focus:ring-primary focus:border-primary transition-all">
                   {[2026, 2025, 2024, 2023].map(y => <option key={y}>{y}</option>)}
@@ -181,13 +182,20 @@ export default function ExportData() {
           </div>
         </section>
 
-        <div className="md:col-span-12 bg-surface-container-low border border-dashed border-outline-variant rounded-xl p-4 flex items-center justify-center gap-6">
-          <div className="flex -space-x-2">
-            <div className="w-8 h-8 rounded-full border-2 border-surface bg-primary-fixed/30 flex items-center justify-center text-[10px] font-bold">PDF</div>
-            <div className="w-8 h-8 rounded-full border-2 border-surface bg-success/20 flex items-center justify-center text-[10px] font-bold">XLS</div>
-            <div className="w-8 h-8 rounded-full border-2 border-surface bg-[#ffb59c]/20 flex items-center justify-center text-[10px] font-bold">JSON</div>
-          </div>
-          <p className="text-sm text-on-surface-variant">Chọn một module ở trên để khởi tạo luồng dữ liệu xuất.</p>
+        <div className="md:col-span-12 bg-surface-container-low border border-dashed border-outline-variant rounded-xl p-4 flex items-center justify-center gap-4 flex-wrap">
+          <button onClick={() => handleExport('pdf')} disabled={exporting} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-error/20 bg-error/5 hover:bg-error/10 text-error font-bold text-sm transition-all active:scale-95 disabled:opacity-50">
+            <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+            PDF
+          </button>
+          <button onClick={() => handleExport('excel')} disabled={exporting} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-success/20 bg-success/5 hover:bg-success/10 text-success font-bold text-sm transition-all active:scale-95 disabled:opacity-50">
+            <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>table_chart</span>
+            XLSX
+          </button>
+          <button onClick={() => handleExport('full')} disabled={exporting} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-warning/20 bg-warning/5 hover:bg-warning/10 text-warning font-bold text-sm transition-all active:scale-95 disabled:opacity-50">
+            <span className="material-symbols-outlined text-lg">inventory_2</span>
+            JSON
+          </button>
+          <span className="text-xs text-on-surface-variant ml-2">{exporting ? 'Đang xuất...' : exported ? 'Đã xuất thành công!' : 'Chọn định dạng để xuất dữ liệu'}</span>
         </div>
       </div>
     </div>

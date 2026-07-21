@@ -5,7 +5,6 @@ const typeMap = {
   'Nội bộ': 'Internal', 'Khách hàng': 'Client', 'Nghiên cứu': 'Research',
 };
 const statusMap = { 'Lên kế hoạch': 'Planning', 'Đang thực hiện': 'Active', 'Tạm dừng': 'On Hold', 'Hoàn thành': 'Completed', 'Đã huỷ': 'Cancelled' };
-const isUUID = (s) => s && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 
 const reverseTypeMap = Object.fromEntries(Object.entries(typeMap).map(([k, v]) => [v, k]));
 const reverseStatusMap = Object.fromEntries(Object.entries(statusMap).map(([k, v]) => [v, k]));
@@ -25,9 +24,16 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [initialized, setInitialized] = useState(false);
+  const [membersLoading, setMembersLoading] = useState(true);
 
   useEffect(() => {
-    getMembers().then(res => setMembers(res.data)).catch(() => {});
+    getMembers().then(res => {
+      setMembers(res.data || []);
+      setMembersLoading(false);
+    }).catch(() => {
+      setMembersLoading(false);
+      setMembers([]);
+    });
   }, []);
 
   useEffect(() => {
@@ -125,8 +131,8 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
               value={ownerId}
               onChange={(e) => setOwnerId(e.target.value)}
             >
-              <option value="">Chọn chủ sở hữu...</option>
-              {members.filter((m) => isUUID(m.id)).map((m) => (
+              <option value="">{membersLoading ? 'Đang tải...' : 'Chọn chủ sở hữu...'}</option>
+              {members.map((m) => (
                 <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
               ))}
             </select>

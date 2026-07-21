@@ -13,16 +13,15 @@ function formatFullCurrency(n) {
 }
 
 const periodTabs = ['Tháng', 'Quý', 'Năm'];
-
 const CHART_COLORS = ['bg-primary', 'bg-secondary', 'bg-tertiary'];
 
 export default function ExpenseReports() {
   const [data, setData] = useState(null);
   const [period, setPeriod] = useState('Tháng');
   const [page, setPage] = useState(1);
-  const [showDetail, setShowDetail] = useState(null);
   const [showFilter, setShowFilter] = useState(false);
   const [filterText, setFilterText] = useState('');
+  const [showDetail, setShowDetail] = useState(null);
   const rowsPerPage = 4;
 
   function periodToParam(p) {
@@ -45,15 +44,30 @@ export default function ExpenseReports() {
     );
   }
 
-  const totalCost = data.costByProjectType?.reduce((s, i) => s + i.value, 0) || 0;
-  const totalBudget = data.budgetVsActual?.reduce((s, i) => s + i.budget, 0) || 0;
-  const totalActual = data.budgetVsActual?.reduce((s, i) => s + i.actual, 0) || 0;
+  const overview = data.overview || {};
+  const metrics = overview.metrics || {};
+  const projects = overview.projects || [];
+  const trend = data.trend || [];
+  const distribution = data.distribution || [];
+
+  const totalCost = metrics.totalExpense || 0;
+  const totalBudget = projects.reduce((s, p) => s + (p.budgetTotal || 0), 0);
+  const totalActual = projects.reduce((s, p) => s + (p.actualTotal || 0), 0);
   const variance = totalBudget > 0 ? ((totalActual - totalBudget) / totalBudget * 100).toFixed(1) : '0.0';
-  const trendData = data.trendData || [];
-  const avgCAC = trendData.length > 0 ? trendData.reduce((s, d) => s + d.cac, 0) / trendData.length : 0;
-  const maxExpense = trendData.length > 0 ? Math.max(...trendData.map((d) => d.expense)) : 1;
-  const detailRows = data.detailRows || [];
-  const hasChartData = (data.costByProjectType?.length || trendData.length || data.budgetVsActual?.length) > 0;
+  const avgCAC = trend.length > 0 ? trend.reduce((s, d) => s + (d.cac || 0), 0) / trend.length : 0;
+  const maxExpense = trend.length > 0 ? Math.max(...trend.map((d) => d.totalExpense || 0)) : 1;
+  const hasData = projects.length > 0 || trend.length > 0 || distribution.length > 0;
+
+  const detailRows = projects.map(p => ({
+    id: p.projectId,
+    project: p.projectName,
+    type: p.projectType || 'N/A',
+    date: overview.period || '',
+    cost: p.actualTotal || 0,
+    budget: p.budgetTotal || 0,
+    variance: p.budgetTotal > 0 ? (((p.actualTotal || 0) - p.budgetTotal) / p.budgetTotal * 100).toFixed(1) : '0.0',
+    health: (p.variance || 0) >= 0 ? 'good' : 'over',
+  }));
 
   const filteredDetailRows = filterText
     ? detailRows.filter(r => (r.project || '').toLowerCase().includes(filterText.toLowerCase()) || (r.type || '').toLowerCase().includes(filterText.toLowerCase()))
@@ -62,7 +76,7 @@ export default function ExpenseReports() {
   const totalPages = Math.ceil(totalRows / rowsPerPage);
   const paginatedRows = filteredDetailRows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
-  if (!hasChartData && detailRows.length === 0) {
+  if (!hasData) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -89,7 +103,6 @@ export default function ExpenseReports() {
           <span className="material-symbols-outlined text-[64px] text-outline-variant">bar_chart</span>
           <p className="font-headline-sm">Chưa có dữ liệu báo cáo</p>
           <p className="text-body-md text-outline">Nhập chi phí ở tab Nhập chi phí trước, sau đó quay lại đây để xem báo cáo.</p>
-          <p className="text-body-sm text-outline italic">(API /v1/expenses/report hiện chưa trả về dữ liệu)</p>
         </div>
       </div>
     );
@@ -97,7 +110,6 @@ export default function ExpenseReports() {
 
   return (
     <div className="space-y-6">
-      {/* Header: Period filter + Export */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="text-body-md font-medium text-secondary">Thời gian:</span>
@@ -119,8 +131,8 @@ export default function ExpenseReports() {
         </div>
         <button
           onClick={() => {
-            const csv = [['Kỳ', 'Chi phí trực tiếp', 'Gián tiếp', 'Tổng', 'Ngân sách', 'Thực tế'].join(',')];
-            csv.push(...data.detailRows.map(r => [r.period, r.directCost, r.overhead, r.total, r.budget, r.actual].join(',')));
+            const csv = [['Kỳ', 'Dự án', 'Loại', 'Chi phí', 'Ngân sách', 'Chênh lệch'].join(',')];
+            csv.push(...detailRows.map(r => [r.date, r.project, r.type, r.cost, r.budget, r.variance].join(',')));
             const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'expense-report.csv'; a.click();
           }}
@@ -131,12 +143,11 @@ export default function ExpenseReports() {
         </button>
       </div>
 
-      {/* KPI Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 border-t-primary shadow-sm">
           <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">Tổng Chi Phí</p>
           <h3 className="font-display-lg text-display-lg text-on-surface">{formatCurrency(totalCost)}</h3>
-          <p className="text-body-sm font-body-sm text-outline mt-1 italic">Từ {trendData.length} kỳ</p>
+          <p className="text-body-sm font-body-sm text-outline mt-1 italic">Từ {trend.length} kỳ</p>
         </div>
         <div className="bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 border-t-primary shadow-sm">
           <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">Tổng Ngân Sách</p>
@@ -168,22 +179,19 @@ export default function ExpenseReports() {
         </div>
       </div>
 
-      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Chart 1: Donut */}
         <div className="bg-surface-container-lowest border border-border-subtle p-6 rounded-xl flex flex-col">
           <div className="flex justify-between items-start mb-6">
             <h3 className="font-title-lg text-title-lg text-on-surface">Phân tích % Chi phí theo Loại Dự án</h3>
-            <span className="material-symbols-outlined text-outline cursor-pointer hover:text-primary transition-colors">more_vert</span>
           </div>
           <div className="flex flex-1 items-center justify-around flex-wrap gap-6">
             <div
               className="relative w-48 h-48 rounded-full flex items-center justify-center"
               style={{
                 background: `conic-gradient(
-                  #00236f 0% ${(data.costByProjectType?.[0]?.percentage || 0)}%,
-                  #0058be ${(data.costByProjectType?.[0]?.percentage || 0)}% ${((data.costByProjectType?.[0]?.percentage || 0) + (data.costByProjectType?.[1]?.percentage || 0))}%,
-                  #340081 ${((data.costByProjectType?.[0]?.percentage || 0) + (data.costByProjectType?.[1]?.percentage || 0))}% 100%
+                  #00236f 0% ${(distribution[0]?.percentage || 0)}%,
+                  #0058be ${(distribution[0]?.percentage || 0)}% ${((distribution[0]?.percentage || 0) + (distribution[1]?.percentage || 0))}%,
+                  #340081 ${((distribution[0]?.percentage || 0) + (distribution[1]?.percentage || 0))}% 100%
                 )`,
               }}
             >
@@ -193,11 +201,11 @@ export default function ExpenseReports() {
               </div>
             </div>
             <div className="space-y-3">
-              {(data.costByProjectType || []).map((item, i) => (
-                <div key={item.type} className="flex items-center gap-2">
+              {distribution.map((item, i) => (
+                <div key={item.projectType} className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${CHART_COLORS[i] || 'bg-primary'}`} />
                   <span className="text-body-sm text-secondary">
-                    {item.type} ({item.percentage}%)
+                    {item.projectType} ({item.percentage}%)
                   </span>
                 </div>
               ))}
@@ -205,7 +213,6 @@ export default function ExpenseReports() {
           </div>
         </div>
 
-        {/* Chart 2: Trend */}
         <div className="bg-surface-container-lowest border border-border-subtle p-6 rounded-xl flex flex-col">
           <div className="flex justify-between items-start mb-6">
             <h3 className="font-title-lg text-title-lg text-on-surface">Xu hướng Chi Phí & CAC Theo Thời Gian</h3>
@@ -221,12 +228,12 @@ export default function ExpenseReports() {
             </div>
           </div>
           <div className="flex-1 flex items-end justify-between gap-2 pt-4 border-l border-b border-border-subtle relative h-48">
-            {trendData.map((d) => {
-              const heightPct = Math.max((d.expense / maxExpense) * 100, 8);
+            {trend.map((d) => {
+              const heightPct = Math.max((d.totalExpense / maxExpense) * 100, 8);
               return (
-                <div key={d.month} className="flex-1 flex flex-col items-center justify-end relative group">
+                <div key={d.period} className="flex-1 flex flex-col items-center justify-end relative group">
                   <div
-                    className="w-full bg-primary/20 rounded-t-sm transition-all duration-300 group-hover:bg-primary/30 cursor-pointer relative max-w-[40px]"
+                    className="w-full bg-primary/20 rounded-t-sm transition-all duration-300 hover:bg-primary/30 cursor-pointer relative max-w-[40px]"
                     style={{ height: `${heightPct}%` }}
                   >
                     <div
@@ -234,20 +241,19 @@ export default function ExpenseReports() {
                     />
                   </div>
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-md z-10 pointer-events-none">
-                    {formatCurrency(d.expense)} | CAC: {(d.cac ?? 0).toLocaleString('vi-VN')}₫
+                    {formatCurrency(d.totalExpense)} | CAC: {(d.cac ?? 0).toLocaleString('vi-VN')}₫
                   </div>
                 </div>
               );
             })}
           </div>
           <div className="flex justify-between mt-2 px-1 text-[10px] text-outline">
-            {trendData.map((d) => (
-              <span key={d.month}>{d.month}</span>
+            {trend.map((d) => (
+              <span key={d.period}>{d.period}</span>
             ))}
           </div>
         </div>
 
-        {/* Chart 3: Budget vs Actual - full width */}
         <div className="bg-surface-container-lowest border border-border-subtle p-6 rounded-xl flex flex-col lg:col-span-2">
           <div className="flex justify-between items-start mb-6">
             <h3 className="font-title-lg text-title-lg text-on-surface">So Sánh Ngân Sách vs Thực Tế Theo Dự Án</h3>
@@ -263,40 +269,48 @@ export default function ExpenseReports() {
             </div>
           </div>
           <div className="space-y-6">
-            {(data.budgetVsActual || []).map((item) => (
-              <div key={item.project} className="space-y-1.5">
-                <div className="flex justify-between text-label-md text-secondary mb-1">
-                  <span>{item.project}</span>
-                  <span className={item.status === 'over' ? 'text-danger font-bold' : ''}>
-                    {item.budgetUsed}% {item.status === 'over' ? 'Vượt ngân sách' : 'Đã dùng'}
-                  </span>
+            {projects.map((item) => {
+              const budget = item.budgetTotal || 0;
+              const actual = item.actualTotal || 0;
+              const maxVal = Math.max(budget, actual, 1);
+              const budgetPct = (budget / maxVal) * 100;
+              const actualPct = (actual / maxVal) * 100;
+              const budgetUsed = budget > 0 ? Math.round((actual / budget) * 100) : 0;
+              const status = actual > budget ? 'over' : 'ok';
+              return (
+                <div key={item.projectId} className="space-y-1.5">
+                  <div className="flex justify-between text-label-md text-secondary mb-1">
+                    <span>{item.projectName}</span>
+                    <span className={status === 'over' ? 'text-danger font-bold' : ''}>
+                      {budgetUsed}% {status === 'over' ? 'Vượt ngân sách' : 'Đã dùng'}
+                    </span>
+                  </div>
+                  <div className="flex h-5 gap-1 rounded-sm overflow-hidden">
+                    <div
+                      className="bg-primary rounded-sm transition-all duration-500 shadow-sm"
+                      style={{ width: `${budgetPct}%` }}
+                      title={`Ngân sách: ${formatFullCurrency(budget)}`}
+                    />
+                    <div
+                      className="bg-secondary rounded-sm transition-all duration-500"
+                      style={{ width: `${actualPct}%` }}
+                      title={`Thực tế: ${formatFullCurrency(actual)}`}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-outline">
+                    <span>Ngân sách: {formatCurrency(budget)}</span>
+                    <span>Thực tế: {formatCurrency(actual)}</span>
+                  </div>
                 </div>
-                <div className="flex h-5 gap-1 rounded-sm overflow-hidden">
-                  <div
-                    className="bg-primary rounded-sm transition-all duration-500 shadow-sm"
-                    style={{ width: `${item.budgetPct || 0}%` }}
-                    title={`Ngân sách: ${formatFullCurrency(item.budget)}`}
-                  />
-                  <div
-                    className="bg-secondary rounded-sm transition-all duration-500"
-                    style={{ width: `${item.actualPct || 0}%` }}
-                    title={`Thực tế: ${formatFullCurrency(item.actual)}`}
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] text-outline">
-                  <span>Ngân sách: {formatCurrency(item.budget)}</span>
-                  <span>Thực tế: {formatCurrency(item.actual)}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Detail Table */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-            <h3 className="font-title-lg text-title-lg text-on-surface">Chi Tiết Theo Kỳ</h3>
+          <h3 className="font-title-lg text-title-lg text-on-surface">Chi Tiết Theo Kỳ</h3>
           <div className="flex gap-2 items-center">
             {showFilter && (
               <input
@@ -310,9 +324,6 @@ export default function ExpenseReports() {
             <button onClick={() => { setShowFilter(!showFilter); setFilterText(''); setPage(1); }} className="p-2 border border-border-subtle rounded-lg hover:bg-surface-container-high transition-colors">
               <span className="material-symbols-outlined text-[20px] text-on-surface-variant">filter_list</span>
             </button>
-            <button onClick={() => window.open('/admin/settings', '_self')} className="p-2 border border-border-subtle rounded-lg hover:bg-surface-container-high transition-colors">
-              <span className="material-symbols-outlined text-[20px] text-on-surface-variant">settings</span>
-            </button>
           </div>
         </div>
 
@@ -321,11 +332,11 @@ export default function ExpenseReports() {
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead className="bg-surface-muted border-b border-border-subtle sticky top-0">
                 <tr>
-                  {['Mã CT', 'Dự án', 'Loại', 'Ngày', 'Chi phí (VNĐ)', 'Ngân sách (VNĐ)', 'Chênh lệch', 'Sức khỏe', 'Thao tác'].map((h) => (
+                  {['Mã CT', 'Dự án', 'Loại', 'Kỳ', 'Chi phí (VNĐ)', 'Ngân sách (VNĐ)', 'Chênh lệch', 'Sức khỏe'].map((h) => (
                     <th
                       key={h}
                       className={`px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline ${
-                        h === 'Chi phí (VNĐ)' || h === 'Ngân sách (VNĐ)' || h === 'Chênh lệch' ? 'text-right' : h === 'Thao tác' ? 'text-center' : ''
+                        h === 'Chi phí (VNĐ)' || h === 'Ngân sách (VNĐ)' || h === 'Chênh lệch' ? 'text-right' : ''
                       }`}
                     >
                       {h}
@@ -342,12 +353,12 @@ export default function ExpenseReports() {
                       <span className="px-2.5 py-0.5 bg-surface-container-high text-secondary rounded-full text-[11px] font-medium">{row.type}</span>
                     </td>
                     <td className="px-cell-padding-x py-cell-padding-y font-body-sm text-body-sm text-on-surface-variant">{row.date}</td>
-                    <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">{formatFullCurrency(row.cost || 0)}</td>
-                    <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">{formatFullCurrency(row.budget || 0)}</td>
+                    <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">{formatFullCurrency(row.cost)}</td>
+                    <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">{formatFullCurrency(row.budget)}</td>
                     <td className={`px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right ${
-                      (row.variance || 0) > 0 ? 'text-success' : (row.variance || 0) < 0 ? 'text-danger' : 'text-secondary'
+                      parseFloat(row.variance) > 0 ? 'text-success' : parseFloat(row.variance) < 0 ? 'text-danger' : 'text-secondary'
                     }`}>
-                      {(row.variance || 0) > 0 ? '+' : ''}{row.variance || 0}%
+                      {parseFloat(row.variance) > 0 ? '+' : ''}{row.variance}%
                     </td>
                     <td className="px-cell-padding-x py-cell-padding-y">
                       <div className={`flex items-center gap-1.5 font-medium text-xs ${
@@ -359,22 +370,16 @@ export default function ExpenseReports() {
                         {row.health === 'good' ? 'Tốt' : row.health === 'over' ? 'Vượt ngân sách' : 'Trung bình'}
                       </div>
                     </td>
-                    <td className="px-cell-padding-x py-cell-padding-y text-center">
-                      <button onClick={() => setShowDetail(row)} className="text-outline hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined text-[20px]">visibility</span>
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Pagination */}
           <div className="px-cell-padding-x py-cell-padding-y bg-surface-muted border-t border-border-subtle flex justify-between items-center">
-              <span className="text-body-sm text-outline">
-                Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong {data.totalProjects || 0} dự án
-              </span>
+            <span className="text-body-sm text-outline">
+              Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong {projects.length} dự án
+            </span>
             <div className="flex gap-2">
               <button
                 disabled={page === 1}
@@ -405,6 +410,7 @@ export default function ExpenseReports() {
           </div>
         </div>
       </section>
+
       {showDetail && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowDetail(null)} />
@@ -421,14 +427,14 @@ export default function ExpenseReports() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Loại</label><p>{showDetail.type}</p></div>
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Ngày</label><p>{showDetail.date}</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Kỳ</label><p>{showDetail.date}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Chi phí</label><p className="font-bold">{formatFullCurrency(showDetail.cost || 0)}</p></div>
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Ngân sách</label><p className="font-bold">{formatFullCurrency(showDetail.budget || 0)}</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Chi phí</label><p className="font-bold">{formatFullCurrency(showDetail.cost)}</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Ngân sách</label><p className="font-bold">{formatFullCurrency(showDetail.budget)}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Chênh lệch</label><p className={`font-bold ${(showDetail.variance || 0) > 0 ? 'text-green-600' : (showDetail.variance || 0) < 0 ? 'text-red-600' : ''}`}>{(showDetail.variance || 0) > 0 ? '+' : ''}{showDetail.variance || 0}%</p></div>
+                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Chênh lệch</label><p className={`font-bold ${parseFloat(showDetail.variance) > 0 ? 'text-green-600' : parseFloat(showDetail.variance) < 0 ? 'text-red-600' : ''}`}>{parseFloat(showDetail.variance) > 0 ? '+' : ''}{showDetail.variance}%</p></div>
                   <div><label className="text-[11px] font-semibold text-gray-500 uppercase">Sức khỏe</label><p className={`font-bold ${showDetail.health === 'good' ? 'text-green-600' : showDetail.health === 'over' ? 'text-red-600' : 'text-amber-600'}`}>{showDetail.health === 'good' ? 'Tốt' : showDetail.health === 'over' ? 'Vượt ngân sách' : 'Trung bình'}</p></div>
                 </div>
               </div>

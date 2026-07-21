@@ -387,29 +387,35 @@ export const getTaskList = async (filters = {}) => {
   const rawTasks = res.data?.data ?? res.data?.tasks ?? res.data ?? [];
   const tasks = Array.isArray(rawTasks) ? rawTasks : [];
   return {
-    data: tasks.map((t) => ({
-      id: t.id,
-      project: t.project?.name || '-',
-      taskName: t.name,
-      description: t.description || '',
-      assignee: { initials: getInitials(t.assignee?.name || ''), name: t.assignee?.name || 'Unknown' },
-      stakeholders: (t.stakeholders || []).join(', '),
-      status: taskStatusToMock(t.status, t.isOverdue),
-      priority: t.priority?.toLowerCase() || 'medium',
-      start: t.startDate ? formatDate(t.startDate) : '-',
-      startDate: t.startDate || '',
-      due: t.dueDate ? formatDate(t.dueDate) : '-',
-      dueDate: t.dueDate || '',
-      done: t.completedDate ? formatDate(t.completedDate) : null,
-      completedDate: t.completedDate || '',
-      execWeek: t.execWeek || '',
-      execYear: t.execYear || '',
-      link: typeof t.link === 'object' ? t.link : (t.link ? { url: t.link } : null),
-      linkUrl: typeof t.link === 'string' ? t.link : (t.link?.url || null),
-      remark: t.remark || '',
-      reason: t.reason || '',
-      neededSupportBod: t.neededSupportBod || '',
-    })),
+    data: tasks.map((t) => {
+      const now = new Date();
+      const dueDate = t.dueDate ? new Date(t.dueDate) : null;
+      const completed = t.completedDate || t.status === 'Done' || t.status === 'Cancel';
+      const isOverdueLocal = dueDate && dueDate < now && !completed;
+      return {
+        id: t.id,
+        project: t.project?.name || '-',
+        taskName: t.name,
+        description: t.description || '',
+        assignee: { initials: getInitials(t.assignee?.name || ''), name: t.assignee?.name || 'Unknown' },
+        stakeholders: (t.stakeholders || []).join(', '),
+        status: taskStatusToMock(t.status, isOverdueLocal || t.isOverdue),
+        priority: t.priority?.toLowerCase() || 'medium',
+        start: t.startDate ? formatDate(t.startDate) : '-',
+        startDate: t.startDate || '',
+        due: t.dueDate ? formatDate(t.dueDate) : '-',
+        dueDate: t.dueDate || '',
+        done: t.completedDate ? formatDate(t.completedDate) : null,
+        completedDate: t.completedDate || '',
+        execWeek: t.execWeek || '',
+        execYear: t.execYear || '',
+        link: typeof t.link === 'object' ? t.link : (t.link ? { url: t.link } : null),
+        linkUrl: typeof t.link === 'string' ? t.link : (t.link?.url || null),
+        remark: t.remark || '',
+        reason: t.reason || '',
+        neededSupportBod: t.neededSupportBod || '',
+      };
+    }),
     total: res.data?.stats?.total || tasks.length,
   };
 };
@@ -471,12 +477,9 @@ export const createTask = async (data) => {
 };
 
 export const updateTask = async (id, data) => {
-  const payload = { ...data };
-  if (payload.status) {
-    const statusMap = { Planning: 'To Do', Processing: 'In Progress', Pending: 'Review', Done: 'Done', Cancel: 'Cancel', Backlog: 'Backlog', Overdue: 'Overdue' };
-    payload.status = statusMap[payload.status] || payload.status;
-  }
-  const res = await api.patch(`/v1/tasks/${id}`, payload);
+  console.log(`[API] updateTask(${id}) payload:`, data);
+  const res = await api.patch(`/v1/tasks/${id}`, data);
+  console.log(`[API] updateTask(${id}) response:`, res.status, res.data);
   return { data: res.data };
 };
 
@@ -511,6 +514,9 @@ export const getKanbanData = async () => {
   const res = await api.get('/v1/tasks/kanban/board');
   const columns = res.data;
   const merged = {};
+  if (!merged.overdue) {
+    merged.overdue = { id: 'overdue', title: 'QUÁ HẠN', badgeColor: 'bg-red-100 text-red-700', badgeCount: 0, tasks: [] };
+  }
   for (const col of columns) {
     const feStatus = beToFeStatus[col.status] || col.status;
     const id = feStatus.toLowerCase();
@@ -520,8 +526,9 @@ export const getKanbanData = async () => {
     }
     for (const t of col.tasks) {
       const isOverdue = t.isOverdue;
-      const isDone = t.status === 'Done' || t.status === 'done';
-      merged[id].tasks.push({
+      const isDone = t.status === 'Done' || t.status === 'done' || t.status === 'Cancel' || t.status === 'cancel';
+      const targetId = isOverdue && !isDone ? 'overdue' : id;
+      merged[targetId].tasks.push({
         id: t.id,
         title: t.name,
         project: t.project?.name || '-',
@@ -537,7 +544,9 @@ export const getKanbanData = async () => {
         done: isDone,
       });
     }
-    merged[id].badgeCount = merged[id].tasks.length;
+  }
+  for (const col of Object.values(merged)) {
+    col.badgeCount = col.tasks.length;
   }
   return { data: Object.values(merged) };
 };
@@ -686,7 +695,8 @@ export const getCompareData = async (years = ['2026', '2025'], periodType = 'yea
   const res = await api.get('/v1/leads-kpis/comparison', {
     params: { periodType, currentPeriodValue: periodValue, year1: years[0], year2: years[1], year3: years[2] }
   });
-  return { data: res.data?.data ?? res.data ?? {} };
+  const raw = res.data?.data ?? res.data ?? {};
+  return { data: (raw && typeof raw === 'object') ? raw : {} };
 };
 
 export const getQuarterlyCompareData = async (selectedYears, metric = 'Raw Leads') => {
@@ -798,11 +808,13 @@ export const getOpportunities = async (year) => {
   const res = await api.get('/v1/leads-kpis/weekly', { params: { year: y, week: 1 } });
   const d = res.data?.data ?? res.data ?? {};
   const list = d.opportunities ?? [];
+  const beToFeSize = { 'Enterprise': 'S', 'Medium': 'M' };
   return { data: Array.isArray(list) ? list.map(o => ({
     id: o.id,
     companyName: o.companyName || o.company_name || '',
-    size: o.size || 'S',
+    size: beToFeSize[o.size] || 'S',
     project: o.project?.name || o.project || '',
+    projectId: o.projectId || '',
     fees: o.setupFee ?? o.fees ?? 0,
     expectedCloseDate: o.expectedCloseDate || o.expected_close_date || '',
     status: o.status || 'active',
@@ -810,9 +822,10 @@ export const getOpportunities = async (year) => {
 };
 
 export const addOpportunity = async (data) => {
+  const feToBeSize = { 'S': 'Enterprise', 'M': 'Medium', 'L': 'Enterprise' };
   const res = await api.post('/v1/leads-kpis/opportunities', {
     companyName: data.companyName,
-    size: data.size || 'S',
+    size: feToBeSize[data.size] || 'Enterprise',
     projectId: data.projectId || undefined,
     setupFee: Number(data.fees) || 0,
     expectedCloseDate: data.expectedCloseDate || undefined,
@@ -872,35 +885,71 @@ export const deleteClosedDeal = async (id) => {
 // ===================== EXPENSES =====================
 
 export const getExpenseSystemParams = async () => {
-  const res = await api.get('/v1/expenses/system-configs', { params: { key: 'expense_params' } });
+  const res = await api.get('/v1/expenses/system-configs');
   const raw = res.data?.data ?? res.data ?? [];
   const list = Array.isArray(raw) ? raw : [];
+  const sorted = [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const grouped = {};
+  for (const item of sorted) {
+    const year = item.year;
+    const periodValue = item.periodValue != null ? item.periodValue : item.month;
+    if (year == null || periodValue == null) continue;
+    const key = `${year}-${String(periodValue).padStart(2, '0')}`;
+    if (!grouped[key]) grouped[key] = { period: key, id: item.id, churnRate: 0, grossMargin: 0, note: '' };
+    const val = parseFloat(item.value) || 0;
+    const noteVal = item.notes ?? item.note ?? '';
+    if (item.key === 'churn_rate' && !grouped[key]._churnSet) { grouped[key].churnRate = val; grouped[key]._churnSet = true; if (noteVal) grouped[key].note = noteVal; }
+    if (item.key === 'gross_margin' && !grouped[key]._marginSet) { grouped[key].grossMargin = val; grouped[key]._marginSet = true; if (noteVal && !grouped[key].note) grouped[key].note = noteVal; }
+  }
+  for (const g of Object.values(grouped)) { delete g._churnSet; delete g._marginSet; }
   return {
-    data: list.map(item => {
-      let parsed = { churnRate: 0, grossMargin: 0 };
-      try { parsed = typeof item.value === 'string' ? JSON.parse(item.value) : item.value; } catch {}
-      return {
-        id: item.id,
-        period: item.period || `${item.year || ''}-${String(item.periodValue || '').padStart(2, '0')}`,
-        churnRate: parsed.churnRate ?? item.churnRate ?? 0,
-        grossMargin: parsed.grossMargin ?? item.grossMargin ?? 0,
-        note: item.notes || item.note || '',
-      };
-    }),
+    data: Object.values(grouped).sort((a, b) => b.period.localeCompare(a.period)),
+    raw: list.map(item => ({
+      id: item.id,
+      key: item.key,
+      value: parseFloat(item.value) || 0,
+      year: item.year,
+      periodValue: item.periodValue != null ? item.periodValue : item.month,
+      period: `${item.year}-${String(item.periodValue ?? item.month ?? 1).padStart(2, '0')}`,
+      notes: item.notes ?? item.note ?? '',
+      effectiveFrom: item.effectiveFrom || item.createdAt || '',
+      createdAt: item.createdAt || '',
+    })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
   };
 };
 
 export const saveExpenseSystemParam = async (data) => {
-  const payload = {
-    key: 'expense_params',
-    periodType: 'month',
-    year: data.period ? parseInt(data.period.split('-')[0], 10) : new Date().getFullYear(),
-    periodValue: data.period ? parseInt(data.period.split('-')[1], 10) : null,
-    value: JSON.stringify({ churnRate: Number(data.churnRate) || 0, grossMargin: Number(data.grossMargin) || 0 }),
-    notes: data.note || '',
-  };
-  const res = await api.post('/v1/expenses/system-configs', payload);
-  return { data: res.data?.data ?? res.data };
+  const [year, month] = data.period.split('-').map(Number);
+  const effectiveFrom = `${data.period}-01T00:00:00.000Z`;
+  const notes = data.note || '';
+  const results = [];
+  if (data.churnRate != null) {
+    const churnPayload = {
+      key: 'churn_rate',
+      periodType: 'month',
+      year,
+      periodValue: month,
+      value: Number(data.churnRate),
+      effectiveFrom,
+      notes,
+    };
+    const res = await api.post('/v1/expenses/system-configs', churnPayload);
+    results.push(res.data?.data ?? res.data);
+  }
+  if (data.grossMargin != null) {
+    const grossPayload = {
+      key: 'gross_margin',
+      periodType: 'month',
+      year,
+      periodValue: month,
+      value: Number(data.grossMargin),
+      effectiveFrom,
+      notes,
+    };
+    const res = await api.post('/v1/expenses/system-configs', grossPayload);
+    results.push(res.data?.data ?? res.data);
+  }
+  return { data: results };
 };
 
 function normalizeExpenseItem(item) {

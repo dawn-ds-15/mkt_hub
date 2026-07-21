@@ -62,152 +62,151 @@ export default function ProjectsPage({ onProjectCreated }) {
   }
 
   return (
-    <div className="flex gap-gutter max-w-container_max_width mx-auto">
-      <section className="flex-1 space-y-gutter">
-        <header className="flex items-center justify-between mb-stack_lg">
-          <div>
-            <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Dự án</h3>
-            <p className="text-body-md text-on-surface-variant">Quản lý và theo dõi các sáng kiến marketing đang triển khai.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="px-4 py-2 bg-primary text-on-primary rounded-lg text-label-md font-bold hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              Tạo dự án
-            </button>
-            <button
-              onClick={() => setShowFilter(!showFilter)}
-              className="px-4 py-2 border border-outline-variant rounded-lg text-label-md font-semibold hover:bg-surface-container transition-all flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-[18px]">filter_list</span>
-              Bộ lọc
-            </button>
-          </div>
-        </header>
+    <div className="max-w-container_max_width mx-auto space-y-6">
+      <header className="flex items-center justify-between">
+        <div>
+          <h3 className="font-headline-md text-headline-md font-bold text-on-surface">Dự án</h3>
+          <p className="text-body-md text-on-surface-variant">Quản lý và theo dõi các sáng kiến marketing đang triển khai.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-4 py-2 bg-primary text-on-primary rounded-lg text-label-md font-bold hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            Tạo dự án
+          </button>
+          <button
+            onClick={() => setShowFilter(!showFilter)}
+            className="px-4 py-2 border border-outline-variant rounded-lg text-label-md font-semibold hover:bg-surface-container transition-all flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">filter_list</span>
+            Bộ lọc
+          </button>
+        </div>
+      </header>
 
-        {showFilter && (
-          <div className="flex flex-wrap items-center gap-3 bg-surface-container-low p-3 rounded-lg border border-outline-variant">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm">
-              <span className="text-outline">Trạng thái:</span>
-              <select
-                className="font-semibold bg-transparent border-none focus:ring-0 outline-none pr-6"
-                value={filters.status}
-                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              >
-                <option>Tất cả</option>
-                <option>Planning</option>
-                <option>Active</option>
-                <option>On Hold</option>
-                <option>Completed</option>
-                <option>Cancelled</option>
-              </select>
+      {/* Summary Panel */}
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-primary">dashboard</span>
+          </div>
+          <div>
+            <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">Tổng quan</h3>
+            <p className="text-body-xs text-on-surface-variant">Bảng tổng kết dự án</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <div className="bg-primary/5 rounded-lg p-3 text-center">
+            <p className="text-headline-lg font-bold text-primary">{summary.total}</p>
+            <p className="text-label-xs text-on-surface-variant mt-0.5">Tổng dự án</p>
+          </div>
+          <div className="bg-success/5 rounded-lg p-3 text-center">
+            <p className="text-headline-lg font-bold text-success">{summary.active}</p>
+            <p className="text-label-xs text-on-surface-variant mt-0.5">Đang thực hiện</p>
+          </div>
+          <div className="bg-amber-50 rounded-lg p-3 text-center">
+            <p className="text-headline-lg font-bold text-amber-600">{summary.planning}</p>
+            <p className="text-label-xs text-on-surface-variant mt-0.5">Lên kế hoạch</p>
+          </div>
+          <div className="bg-green-50 rounded-lg p-3 text-center">
+            <p className="text-headline-lg font-bold text-green-700">{summary.completed}</p>
+            <p className="text-label-xs text-on-surface-variant mt-0.5">Hoàn thành</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-body-sm">
+              <span className="text-on-surface-variant">Tiến độ trung bình</span>
+              <span className="font-bold text-on-surface">{summary.avgProgress}%</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm">
-              <span className="text-outline">Loại:</span>
-              <select
-                className="font-semibold bg-transparent border-none focus:ring-0 outline-none pr-6"
-                value={filters.type}
-                onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-              >
-                <option>Tất cả</option>
-                <option>Internal</option>
-                <option>Client</option>
-                <option>Research</option>
-              </select>
+            <div className="w-full h-2 bg-outline-variant/30 rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${summary.avgProgress}%` }} />
             </div>
-            <button
-              onClick={() => setFilters({ status: 'Tất cả', type: 'Tất cả' })}
-              className="text-error font-semibold text-sm flex items-center gap-1 hover:underline"
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-body-sm">
+              <span className="text-on-surface-variant">Task đã hoàn thành</span>
+              <span className="font-bold text-on-surface">{summary.tasksDone}/{summary.tasksTotal}</span>
+            </div>
+            <div className="w-full h-2 bg-outline-variant/30 rounded-full overflow-hidden">
+              <div className="h-full bg-success rounded-full transition-all" style={{ width: `${summary.tasksTotal ? (summary.tasksDone / summary.tasksTotal * 100) : 0}%` }} />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-4 mt-4 pt-4 border-t border-outline-variant">
+          <div className="flex items-center gap-1.5 text-body-sm">
+            <span className="material-symbols-outlined text-amber-600 text-sm">pause_circle</span>
+            <span className="text-on-surface-variant">Tạm dừng:</span>
+            <span className="font-semibold text-amber-600">{summary.onHold}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-body-sm">
+            <span className="material-symbols-outlined text-red-600 text-sm">schedule</span>
+            <span className="text-on-surface-variant">Sắp đến hạn:</span>
+            <span className="font-semibold text-red-600">{summary.nearDeadline}</span>
+          </div>
+        </div>
+      </div>
+
+      {showFilter && (
+        <div className="flex flex-wrap items-center gap-3 bg-surface-container-low p-3 rounded-lg border border-outline-variant">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm">
+            <span className="text-outline">Trạng thái:</span>
+            <select
+              className="font-semibold bg-transparent border-none focus:ring-0 outline-none pr-6"
+              value={filters.status}
+              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
             >
-              <span className="material-symbols-outlined text-sm">close</span>
-              Xóa lọc
-            </button>
+              <option>Tất cả</option>
+              <option>Planning</option>
+              <option>Active</option>
+              <option>On Hold</option>
+              <option>Completed</option>
+              <option>Cancelled</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm">
+            <span className="text-outline">Loại:</span>
+            <select
+              className="font-semibold bg-transparent border-none focus:ring-0 outline-none pr-6"
+              value={filters.type}
+              onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+            >
+              <option>Tất cả</option>
+              <option>Internal</option>
+              <option>Client</option>
+              <option>Research</option>
+            </select>
+          </div>
+          <button
+            onClick={() => setFilters({ status: 'Tất cả', type: 'Tất cả' })}
+            className="text-error font-semibold text-sm flex items-center gap-1 hover:underline"
+          >
+            <span className="material-symbols-outlined text-sm">close</span>
+            Xóa lọc
+          </button>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {filtered.map((project) => (
+          <ProjectCard
+            key={project.id}
+            project={project}
+            onEdit={setEditProject}
+            onViewOverview={setViewProject}
+          />
+        ))}
+        {filtered.length === 0 && (
+          <div className="flex items-center justify-center h-32 text-on-surface-variant italic">
+            Không tìm thấy dự án nào
           </div>
         )}
-
-        <div className="space-y-4">
-          {filtered.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onEdit={setEditProject}
-              onViewOverview={setViewProject}
-            />
-          ))}
-          {filtered.length === 0 && (
-            <div className="flex items-center justify-center h-32 text-on-surface-variant italic">
-              Không tìm thấy dự án nào
-            </div>
-          )}
-        </div>
-      </section>
-
-      <aside className="w-[360px] flex flex-col gap-gutter flex-shrink-0">
-        <div className="sticky top-4 space-y-4">
-          {/* Summary Panel */}
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary">dashboard</span>
-              </div>
-              <div>
-                <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">Tổng quan</h3>
-                <p className="text-body-xs text-on-surface-variant">Bảng tổng kết dự án</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="bg-primary/5 rounded-lg p-3 text-center">
-                <p className="text-headline-lg font-bold text-primary">{summary.total}</p>
-                <p className="text-label-xs text-on-surface-variant mt-0.5">Tổng dự án</p>
-              </div>
-              <div className="bg-success/5 rounded-lg p-3 text-center">
-                <p className="text-headline-lg font-bold text-success">{summary.active}</p>
-                <p className="text-label-xs text-on-surface-variant mt-0.5">Đang thực hiện</p>
-              </div>
-              <div className="bg-amber-50 rounded-lg p-3 text-center">
-                <p className="text-headline-lg font-bold text-amber-600">{summary.planning}</p>
-                <p className="text-label-xs text-on-surface-variant mt-0.5">Lên kế hoạch</p>
-              </div>
-              <div className="bg-green-50 rounded-lg p-3 text-center">
-                <p className="text-headline-lg font-bold text-green-700">{summary.completed}</p>
-                <p className="text-label-xs text-on-surface-variant mt-0.5">Hoàn thành</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-body-sm">
-                <span className="text-on-surface-variant">Tiến độ trung bình</span>
-                <span className="font-bold text-on-surface">{summary.avgProgress}%</span>
-              </div>
-              <div className="w-full h-2 bg-outline-variant/30 rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${summary.avgProgress}%` }} />
-              </div>
-
-              <div className="flex items-center justify-between text-body-sm pt-1">
-                <span className="text-on-surface-variant">Task đã hoàn thành</span>
-                <span className="font-bold text-on-surface">{summary.tasksDone}/{summary.tasksTotal}</span>
-              </div>
-              <div className="w-full h-2 bg-outline-variant/30 rounded-full overflow-hidden">
-                <div className="h-full bg-success rounded-full transition-all" style={{ width: `${summary.tasksTotal ? (summary.tasksDone / summary.tasksTotal * 100) : 0}%` }} />
-              </div>
-            </div>
-
-            <div className="border-t border-outline-variant mt-4 pt-4 space-y-2">
-              <div className="flex items-center justify-between text-body-sm">
-                <span className="text-on-surface-variant">Tạm dừng</span>
-                <span className="font-semibold text-amber-600">{summary.onHold}</span>
-              </div>
-              <div className="flex items-center justify-between text-body-sm">
-                <span className="text-on-surface-variant">Sắp đến hạn</span>
-                <span className="font-semibold text-red-600">{summary.nearDeadline}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
+      </div>
 
       {/* Create Project Popup */}
       {showCreateForm && (

@@ -37,10 +37,9 @@ export default function ExpenseOverview() {
     );
   }
 
-  const projectExpenses = data.projectExpenses || [];
-  const kpis = data.kpis || [];
-  const budgetAllocation = data.budgetAllocation || [];
-  const hasData = projectExpenses.length > 0 || kpis.length > 0 || budgetAllocation.length > 0;
+  const metrics = data.metrics || {};
+  const projects = data.projects || [];
+  const hasData = projects.length > 0;
 
   if (!hasData) {
     return (
@@ -48,13 +47,20 @@ export default function ExpenseOverview() {
         <span className="material-symbols-outlined text-[64px] text-outline-variant">finance_chart</span>
         <p className="font-headline-sm">Chưa có dữ liệu tổng quan</p>
         <p className="text-body-md text-outline">Nhập chi phí ở tab Nhập chi phí để xem dữ liệu tổng quan và báo cáo.</p>
-        <p className="text-body-sm text-outline italic">(API /v1/expenses/overview hiện chưa trả về dữ liệu)</p>
       </div>
     );
   }
 
-  const filteredRows = projectExpenses.filter((r) =>
-    r.project.toLowerCase().includes(search.toLowerCase())
+  const kpis = [
+    { label: 'Tổng Chi Phí', value: formatCurrency(metrics.totalExpense), suffix: 'Tổng chi phí', color: 'primary' },
+    { label: 'Khách Hàng Mới', value: metrics.newCustomers ?? 0, suffix: 'Khách hàng mới từ chi phí', color: 'primary' },
+    { label: 'CAC Trung Bình', value: formatFullCurrency(Math.round(metrics.cac || 0)), suffix: 'Chi phí thu hút / KH mới', color: 'primary' },
+    { label: 'LTV Trung Bình', value: formatFullCurrency(Math.round(metrics.ltv || 0)), suffix: 'Giá trị vòng đời KH', color: 'success' },
+    { label: 'Tỷ Lệ LTV/CAC', value: (metrics.ltvCacRatio ?? 0).toFixed(0) + 'x', suffix: 'Hiệu quả đầu tư', badge: metrics.health?.status || 'N/A', color: metrics.ltvCacRatio > 1000 ? 'success' : 'primary' },
+  ];
+
+  const filteredRows = projects.filter((r) =>
+    (r.projectName || '').toLowerCase().includes(search.toLowerCase())
   );
   const totalRows = filteredRows.length;
   const totalPages = Math.ceil(totalRows / rowsPerPage);
@@ -62,7 +68,6 @@ export default function ExpenseOverview() {
 
   return (
     <div className="space-y-6">
-      {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {kpis.map((kpi) => (
           <div
@@ -87,11 +92,8 @@ export default function ExpenseOverview() {
         ))}
       </div>
 
-      {/* Bottom Section */}
       <div className="grid grid-cols-12 gap-8">
-        {/* Logic Summary + Budget Allocation */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          {/* Logic Summary */}
           <div className="bg-primary-container p-6 rounded-lg text-white shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <span className="material-symbols-outlined text-[120px]">calculate</span>
@@ -116,8 +118,8 @@ export default function ExpenseOverview() {
               <div className="pt-2">
                 <button
                   onClick={() => {
-                    const rows = projectExpenses.map(r => [r.project, r.directCost, r.overhead, r.total].join(',')).join('\n');
-                    const csv = 'Dự án,Chi phí trực tiếp,Gián tiếp,Tổng\n' + rows;
+                    const rows = projects.map(r => [r.projectName, r.actualTotal, r.variance].join(',')).join('\n');
+                    const csv = 'Dự án,Thực tế,Chênh lệch\n' + rows;
                     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'expense-overview.csv'; a.click();
                   }}
@@ -128,30 +130,8 @@ export default function ExpenseOverview() {
               </div>
             </div>
           </div>
-
-          {/* Budget Allocation */}
-          <div className="bg-surface-container-lowest border border-border-subtle rounded-lg p-6 shadow-sm">
-            <h4 className="font-title-lg text-title-lg mb-4 text-on-surface">Phân bổ Ngân sách</h4>
-            <div className="space-y-4">
-              {budgetAllocation.map((item) => (
-                <div key={item.channel} className="space-y-2">
-                  <div className="flex justify-between font-label-md text-label-md">
-                    <span>{item.channel}</span>
-                    <span>{item.percent}%</span>
-                  </div>
-                  <div className="w-full bg-surface-container rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full"
-                      style={{ width: `${item.percent}%`, opacity: item.percent === 65 ? 1 : item.percent === 25 ? 0.6 : 0.3 }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Expense Table */}
         <div className="col-span-12 lg:col-span-8">
           <div className="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm overflow-hidden flex flex-col h-full">
             <div className="p-6 border-b border-border-subtle flex justify-between items-center bg-surface-muted">
@@ -167,15 +147,6 @@ export default function ExpenseOverview() {
                   />
                   <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
                 </div>
-                <button
-                  onClick={() => {
-                    const input = document.querySelector('#expense-overview-search');
-                    if (input) { input.focus(); input.select(); }
-                  }}
-                  className="p-2 border border-border-subtle rounded-lg hover:bg-surface-container transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[20px] text-on-surface-variant">filter_list</span>
-                </button>
               </div>
             </div>
             <div className="overflow-x-auto data-table-container flex-1">
@@ -193,19 +164,19 @@ export default function ExpenseOverview() {
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
                   {paginatedRows.map((row) => (
-                    <tr key={row.project} className="hover:bg-primary/5 transition-colors">
-                      <td className="px-cell-padding-x py-cell-padding-y font-body-md text-body-md text-on-surface font-semibold">{row.project}</td>
-                      <td className="px-cell-padding-x py-cell-padding-y font-body-sm text-body-sm text-on-surface-variant">{row.type}</td>
-                      <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">{formatFullCurrency(row.budgetPlan)}</td>
-                      <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">{formatFullCurrency(row.actualCost)}</td>
+                    <tr key={row.projectId} className="hover:bg-primary/5 transition-colors">
+                      <td className="px-cell-padding-x py-cell-padding-y font-body-md text-body-md text-on-surface font-semibold">{row.projectName}</td>
+                      <td className="px-cell-padding-x py-cell-padding-y font-body-sm text-body-sm text-on-surface-variant">{row.projectType}</td>
+                      <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">{formatFullCurrency(row.budgetTotal)}</td>
+                      <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">{formatFullCurrency(row.actualTotal)}</td>
                       <td className={`px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right font-bold ${
                         row.variance > 0 ? 'text-success' : row.variance < 0 ? 'text-danger' : 'text-secondary'
                       }`}>
                         {formatSignedCurrency(row.variance)}
                       </td>
-                      <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-center text-on-surface">{row.newCust}</td>
+                      <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-center text-on-surface">{row.newCustomers}</td>
                       <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">
-                        {row.cac > 0 ? formatFullCurrency(row.cac) : '—'}
+                        {row.cac > 0 ? formatFullCurrency(Math.round(row.cac)) : '—'}
                       </td>
                     </tr>
                   ))}
@@ -213,7 +184,7 @@ export default function ExpenseOverview() {
               </table>
             </div>
             <div className="p-4 border-t border-border-subtle bg-surface-muted flex justify-between items-center">
-              <span className="text-body-sm text-outline">Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong {(data.totalProjects || 0)} Dự án</span>
+              <span className="text-body-sm text-outline">Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong {projects.length} Dự án</span>
               <div className="flex gap-2">
                 <button
                   disabled={page === 1}

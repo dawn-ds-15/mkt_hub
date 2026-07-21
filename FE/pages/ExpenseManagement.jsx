@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import SystemParameters from '../components/ExpenseManagement/SystemParameters';
 import ExpenseEntryForm from '../components/ExpenseManagement/ExpenseEntryForm';
@@ -13,8 +14,13 @@ const tabs = [
 ];
 
 export default function ExpenseManagement() {
-  const [activeTab, setActiveTab] = useState('input');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'input';
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const setActiveTab = (key) => {
+    setSearchParams({ tab: key }, { replace: true });
+  };
 
   const handleSaved = () => {
     setRefreshKey((k) => k + 1);

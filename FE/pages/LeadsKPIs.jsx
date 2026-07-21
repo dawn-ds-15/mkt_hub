@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PlanKPIsForm from '../components/LeadsKPIs/PlanKPIsForm';
 import ActualsForm from '../components/LeadsKPIs/ActualsForm';
@@ -14,7 +15,13 @@ const tabs = [
 ];
 
 export default function LeadsKPIs() {
-  const [activeTab, setActiveTab] = useState('view');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'view';
+
+  const setActiveTab = (key) => {
+    setSearchParams({ tab: key }, { replace: true });
+  };
+
   const { year, periodType, periodValue } = useDashboard();
 
   const renderContent = () => {

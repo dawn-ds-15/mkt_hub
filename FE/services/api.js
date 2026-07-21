@@ -820,7 +820,7 @@ function mapOppFromBE(o) {
     id: o.id,
     companyName: o.companyName || '',
     size: sizeMap[o.size] || o.size || 'S',
-    project: o.project?.name || '',
+    project: o.project?.name || o.projectName || '',
     projectId: o.projectId || '',
     fees: o.setupFee ?? 0,
     expectedCloseDate: o.expectedCloseDate || '',
@@ -884,7 +884,7 @@ export const getClosedDeals = async () => {
     return { data: Array.isArray(list) ? list.map(d => ({
       id: d.id,
       customer: d.companyName || d.customer || '',
-      contract: d.project?.name || d.contract || '',
+      contract: d.project?.name || d.projectName || d.contract || '',
       finalFees: d.setupFee ?? d.finalFees ?? 0,
       signedDate: d.closedDate || d.signedDate || '',
       status: 'completed',

@@ -1,23 +1,11 @@
 import { useEffect, useState } from 'react';
 import { getExpenseList, deleteExpense, saveExpense, getProjects } from '../../services/api';
 
-const DELETED_EXPENSE_KEY = 'mkt_hub_deleted_expenses';
-
-function loadDeletedExpenseIds() {
-  try { return new Set(JSON.parse(localStorage.getItem(DELETED_EXPENSE_KEY) || '[]')); }
-  catch { return new Set(); }
-}
-
-function saveDeletedExpenseIds(ids) {
-  localStorage.setItem(DELETED_EXPENSE_KEY, JSON.stringify([...ids]));
-}
-
 function formatCurrency(val) {
   return (val ?? 0).toLocaleString('vi-VN');
 }
 
 export default function ExpenseHistory({ refreshKey }) {
-  const [deletedExpenseIds] = useState(loadDeletedExpenseIds);
   const [expenses, setExpenses] = useState([]);
   const [editExp, setEditExp] = useState(null);
   const [editDirect, setEditDirect] = useState('');
@@ -28,9 +16,9 @@ export default function ExpenseHistory({ refreshKey }) {
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    getExpenseList().then((res) => setExpenses((res.data || []).filter(e => !deletedExpenseIds.has(e.id))));
+    getExpenseList().then((res) => setExpenses(res.data || []));
     getProjects().then((res) => setProjects(Array.isArray(res.data) ? res.data : [])).catch(() => {});
-  }, [refreshKey, deletedExpenseIds]);
+  }, [refreshKey]);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -69,8 +57,6 @@ export default function ExpenseHistory({ refreshKey }) {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Xóa khoản chi phí này?')) return;
-    deletedExpenseIds.add(id);
-    saveDeletedExpenseIds(deletedExpenseIds);
     setExpenses(prev => prev.filter(e => e.id !== id));
     try {
       await deleteExpense(id);

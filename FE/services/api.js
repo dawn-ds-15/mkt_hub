@@ -1,3 +1,4 @@
+import { filterDeleted, markDeleted, getDeletedIds } from '../utils/softDelete';
 import axios from 'axios';
 
 const TOKEN_KEY = 'mkt_hub_token';
@@ -256,7 +257,12 @@ export const getDashboardData = async (periodType = 'year', periodValue = '2026'
   });
 
   const d = res.data?.data ?? res.data ?? {};
-  const rawAlerts = d.alerts ?? [];
+  let rawAlerts = d.alerts ?? [];
+  if (Array.isArray(rawAlerts)) {
+    rawAlerts = filterDeleted('tasks', rawAlerts);
+  } else {
+    if (rawAlerts.overdue) rawAlerts = { ...rawAlerts, overdue: filterDeleted('tasks', rawAlerts.overdue) };
+  }
   const overdueRaw = Array.isArray(rawAlerts) ? rawAlerts : rawAlerts?.overdue ?? [];
   const upcomingRaw = Array.isArray(rawAlerts) ? [] : rawAlerts?.upcoming ?? [];
   const filterByYear = (items) => items.filter(a => {
@@ -274,7 +280,7 @@ export const getDashboardData = async (periodType = 'year', periodValue = '2026'
     kpis: transformKpiCards(d.kpiCards ?? d.kpi_cards ?? []),
     funnel: transformFunnel(d.funnel ?? []),
     marketingActivities: transformActivities(d.activities ?? d.marketingActivities ?? d.marketing_activities ?? []),
-    projectProgress: transformProjectProgress(d.progress ?? {}).projects,
+    projectProgress: filterDeleted('projects', transformProjectProgress(d.progress ?? {}).projects),
     totalPct: d.progress?.totalPct ?? 0,
     taskStatus,
     alerts,
@@ -316,7 +322,7 @@ export const logout = async () => {
 
 export const getProjects = async () => {
   const res = await api.get('/v1/projects');
-  const projects = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+  const projects = filterDeleted('projects', Array.isArray(res.data) ? res.data : (res.data?.data ?? []));
   return {
     data: projects.map((p) => ({
       id: p.id,
@@ -360,6 +366,7 @@ export const updateProject = async (id, data) => {
 };
 
 export const deleteProject = async (id) => {
+  markDeleted('projects', id);
   return { success: true };
 };
 
@@ -385,7 +392,7 @@ export const getTaskList = async (filters = {}) => {
   if (filters.dateTo) params.dueDateTo = filters.dateTo;
   const res = await api.get('/v1/tasks', { params });
   const rawTasks = res.data?.data ?? res.data?.tasks ?? res.data ?? [];
-  const tasks = Array.isArray(rawTasks) ? rawTasks : [];
+  const tasks = filterDeleted('tasks', Array.isArray(rawTasks) ? rawTasks : []);
   return {
     data: tasks.map((t) => {
       const now = new Date();
@@ -425,7 +432,8 @@ export const getTasks = async (filters) => {
   if (filters?.project) params.projectId = filters.project;
   if (filters?.status) params.status = filters.status;
   const res = await api.get('/v1/tasks', { params });
-  return { data: res.data.data };
+  const items = Array.isArray(res.data?.data) ? res.data.data : [];
+  return { data: filterDeleted('tasks', items) };
 };
 
 export const getTask = async (id) => {
@@ -484,6 +492,7 @@ export const updateTask = async (id, data) => {
 };
 
 export const deleteTask = async (id) => {
+  markDeleted('tasks', id);
   return { success: true };
 };
 
@@ -524,7 +533,9 @@ export const getKanbanData = async () => {
       const meta = feStatusMeta[id] || { title: feStatus.toUpperCase(), badge: 'bg-gray-50 text-gray-600' };
       merged[id] = { id, title: meta.title, badgeColor: meta.badge, badgeCount: 0, tasks: [] };
     }
+    const deletedTasks = getDeletedIds('tasks');
     for (const t of col.tasks) {
+      if (deletedTasks.has(t.id)) continue;
       const isOverdue = t.isOverdue;
       const isDone = t.status === 'Done' || t.status === 'done' || t.status === 'Cancel' || t.status === 'cancel';
       const targetId = isOverdue && !isDone ? 'overdue' : id;
@@ -573,19 +584,19 @@ export const getWeeklyReport = async (filters = {}) => {
         backlogNotes: r.log.backlogNotes || '',
         bodNotes: r.log.bodNotes || '',
       } : null,
-      completed: (sections.done || []).map((t) => ({
+      completed: filterDeleted('tasks', (sections.done || [])).map((t) => ({
         code: t.id?.slice(0, 8) || '-',
         name: t.name,
         result: 'Hoàn thành',
         assignee: t.assignee?.name || 'Unknown',
       })),
-      nextWeek: (sections.nextWeekPlan || []).map((t) => ({
+      nextWeek: filterDeleted('tasks', (sections.nextWeekPlan || [])).map((t) => ({
         schedule: t.startDate ? formatDate(t.startDate) : '-',
         item: t.name,
         deadline: t.dueDate ? formatDate(t.dueDate) : '-',
         priority: t.priority === 'High' ? 'High' : 'Normal',
       })),
-      backlog: (sections.backlog || []).map((t) => ({
+      backlog: filterDeleted('tasks', (sections.backlog || [])).map((t) => ({
         title: t.name,
         tag: 'BLOCKER',
         tagClass: 'bg-error text-on-error',
@@ -809,7 +820,7 @@ export const getOpportunities = async (year) => {
   const d = res.data?.data ?? res.data ?? {};
   const list = d.opportunities ?? [];
   const beToFeSize = { 'Enterprise': 'S', 'Medium': 'M' };
-  return { data: Array.isArray(list) ? list.map(o => ({
+  return { data: Array.isArray(list) ? filterDeleted('opportunities', list).map(o => ({
     id: o.id,
     companyName: o.companyName || o.company_name || '',
     size: beToFeSize[o.size] || 'S',
@@ -843,6 +854,11 @@ export const updateOpportunity = async (id, data) => {
   return { data: res.data?.data ?? data };
 };
 
+export const deleteOpportunity = async (id) => {
+  markDeleted('opportunities', id);
+  return { success: true };
+};
+
 export const convertToWon = async (id) => {
   return convertOpportunityToWon(id, new Date().toISOString().split('T')[0]);
 };
@@ -857,7 +873,7 @@ export const convertOpportunityToWon = async (id, signedDate) => {
 export const getClosedDeals = async () => {
   const res = await api.get('/v1/leads-kpis/closed-deals');
   const list = res.data?.data ?? res.data ?? [];
-  return { data: Array.isArray(list) ? list.map(d => ({
+  return { data: Array.isArray(list) ? filterDeleted('deals', list).map(d => ({
     id: d.id,
     customer: d.companyName || d.company_name || d.customer || '',
     contract: d.project?.name || d.contract || '',
@@ -879,6 +895,7 @@ export const updateClosedDeal = async (id, data) => {
 };
 
 export const deleteClosedDeal = async (id) => {
+  markDeleted('deals', id);
   return { success: true };
 };
 
@@ -976,7 +993,7 @@ export const getExpenseList = async (project) => {
   if (project) params.projectId = project;
   const res = await api.get('/v1/expenses', { params });
   const raw = res.data?.data ?? res.data ?? [];
-  const list = Array.isArray(raw) ? raw : [];
+  const list = filterDeleted('expenses', Array.isArray(raw) ? raw : []);
   return { data: list.map(normalizeExpenseItem) };
 };
 
@@ -996,6 +1013,7 @@ export const saveExpense = async (data) => {
 };
 
 export const deleteExpense = async (id) => {
+  markDeleted('expenses', id);
   return { success: true };
 };
 
@@ -1113,13 +1131,14 @@ export const exportFullData = async () => {
 
 export const getMembers = async () => {
   const res = await api.get('/v1/data-management/members');
-  const list = res.data?.data ?? res.data ?? [];
-  return { data: Array.isArray(list) ? list.map(m => ({
+  const raw = res.data?.data ?? res.data ?? [];
+  const list = filterDeleted('members', Array.isArray(raw) ? raw : []);
+  return { data: list.map(m => ({
     ...m,
     active: m.isActive ?? m.active ?? true,
     role: m.role ? m.role.charAt(0).toUpperCase() + m.role.slice(1) : 'Specialist',
     locked: m.locked === true || m.protected === true || m.role === 'Super Admin',
-  })) : [] };
+  })) };
 };
 
 export const createMember = async (data) => {
@@ -1144,6 +1163,7 @@ export const updateMember = async (id, data) => {
 };
 
 export const deleteMember = async (id) => {
+  markDeleted('members', id);
   return { success: true };
 };
 
@@ -1187,7 +1207,7 @@ let backupSnapshotsCache = [];
 export const getBackupData = async () => {
   const res = await api.get('/v1/data-management/backups');
   const raw = res.data?.data ?? res.data ?? {};
-  const snapshots = Array.isArray(raw.snapshots) ? raw.snapshots : (Array.isArray(raw) ? raw : []);
+  const snapshots = filterDeleted('backups', Array.isArray(raw.snapshots) ? raw.snapshots : (Array.isArray(raw) ? raw : []));
   if (snapshots.length > 0) {
     backupSnapshotsCache = snapshots;
     return {
@@ -1221,6 +1241,7 @@ export const createBackup = async () => {
 };
 
 export const deleteBackup = async (id) => {
+  markDeleted('backups', id);
   backupSnapshotsCache = backupSnapshotsCache.filter(b => b.id !== id);
   return { success: true };
 };
@@ -1292,6 +1313,7 @@ export const getProjectsDropdown = async () => {
 };
 
 export const deleteCompareData = async (years) => {
+  markDeleted('compare', years);
   return { success: true };
 };
 

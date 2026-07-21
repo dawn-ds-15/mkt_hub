@@ -17,25 +17,12 @@ function getColor(name) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-const DELETED_KEY = 'mkt_hub_deleted_members';
-
-function loadDeletedIds() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-  } catch { return new Set(); }
-}
-
-function saveDeletedIds(ids) {
-  localStorage.setItem(DELETED_KEY, JSON.stringify([...ids]));
-}
-
 export default function TeamMembers() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', role: 'Specialist', password: '', active: true });
   const [toast, setToast] = useState(null);
-  const [deletedIds] = useState(loadDeletedIds);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -45,11 +32,11 @@ export default function TeamMembers() {
   const load = useCallback(async () => {
     try {
       const res = await getMembers();
-      setMembers((res.data || []).filter(m => !deletedIds.has(m.id)));
+      setMembers(res.data || []);
     } catch {
       showToast('Không thể tải danh sách thành viên', 'error');
     } finally { setLoading(false); }
-  }, [deletedIds]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -91,8 +78,6 @@ export default function TeamMembers() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Xóa member này?')) return;
-    deletedIds.add(id);
-    saveDeletedIds(deletedIds);
     setMembers(prev => prev.filter(m => m.id !== id));
     try {
       await deleteMember(id);

@@ -3,10 +3,10 @@ import { getKanbanData, updateTask, getProjects, getMembers, getTask } from '../
 import TaskViewModal from './TaskViewModal';
 
 const STATUS_TO_API = {
-  planning: 'Planning',
-  processing: 'Processing',
+  planning: 'To Do',
+  processing: 'In Progress',
   done: 'Done',
-  pending: 'Pending',
+  pending: 'Review',
   backlog: 'Backlog',
   cancel: 'Cancel',
   overdue: 'Overdue',

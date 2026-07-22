@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getTaskList, createTask, deleteTask, getProjects, getMembers } from '../../services/api';
+import { useDashboard } from '../../contexts/DashboardContext';
 import TaskEditDrawer from './TaskEditDrawer';
 import TaskViewModal from './TaskViewModal';
 
@@ -53,6 +54,7 @@ const statsMeta = [
 const statusFilterOptions = ['Tất cả', 'Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'overdue'];
 
 export default function TaskList() {
+  const { locale } = useDashboard();
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -164,7 +166,7 @@ export default function TaskList() {
     const pid = q.projectId || (projects.length > 0 ? projects[0].id : null);
     const aid = q.assigneeId || (members.length > 0 ? members[0].id : null);
     if (!pid || !aid) {
-      setQuickAddError('Vui lòng chọn dự án và người phụ trách');
+      setQuickAddError(locale === 'vi' ? 'Vui lòng chọn dự án và người phụ trách' : 'Please select project and assignee');
       return;
     }
     setQuickTask({ name: '', projectId: '', assigneeId: '', priority: '', due: '', execWeek: CURRENT_WEEK, execYear: CURRENT_YEAR });
@@ -181,7 +183,7 @@ export default function TaskList() {
       setShowQuickAddPopup(false);
       fetchTasks();
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Tạo task thất bại';
+      const msg = err?.response?.data?.message || err?.message || (locale === 'vi' ? 'Tạo task thất bại' : 'Create task failed');
       setQuickAddError(Array.isArray(msg) ? msg.join('; ') : msg);
     }
   };
@@ -194,7 +196,7 @@ export default function TaskList() {
   })();
 
   const handleDeleteTask = async (task) => {
-    if (!window.confirm('Xác nhận xóa task này?')) return;
+    if (!window.confirm(locale === 'vi' ? 'Xác nhận xóa task này?' : 'Confirm delete this task?')) return;
     try {
       await deleteTask(task.id);
       setTasks(prev => prev.filter(t => t.id !== task.id));
@@ -206,17 +208,17 @@ export default function TaskList() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-outline">Đang tải dữ liệu...</p>
+        <p className="text-outline">{locale === 'vi' ? 'Đang tải dữ liệu...' : 'Loading data...'}</p>
       </div>
     );
   }
 
   const s = stats();
   const filterDefs = [
-    { key: 'project', label: 'Dự án:', options: ['Tất cả', ...projects.map(p => p.name)] },
-    { key: 'status', label: 'Trạng thái:', options: statusFilterOptions },
-    { key: 'priority', label: 'Ưu tiên:', options: ['Tất cả', 'high', 'medium', 'low'] },
-    { key: 'assignee', label: 'Người phụ trách:', options: ['Tất cả', ...members.map(m => m.name)] },
+    { key: 'project', label: locale === 'vi' ? 'Dự án:' : 'Project:', options: ['Tất cả', ...projects.map(p => p.name)] },
+    { key: 'status', label: locale === 'vi' ? 'Trạng thái:' : 'Status:', options: statusFilterOptions },
+    { key: 'priority', label: locale === 'vi' ? 'Ưu tiên:' : 'Priority:', options: ['Tất cả', 'high', 'medium', 'low'] },
+    { key: 'assignee', label: locale === 'vi' ? 'Người phụ trách:' : 'Assignee:', options: ['Tất cả', ...members.map(m => m.name)] },
   ];
 
   return (
@@ -244,7 +246,7 @@ export default function TaskList() {
                 }}
                 className={`${bgClass} border ${isActive ? 'border-primary' : 'border-outline-variant'} p-2.5 rounded-lg flex flex-col items-center justify-center transition-all hover:border-primary cursor-pointer flex-1 min-w-0`}
               >
-                <span className="text-[10px] text-outline uppercase tracking-wider mb-0.5 whitespace-nowrap">{meta.label}</span>
+                <span className="text-[10px] text-outline uppercase tracking-wider mb-0.5 whitespace-nowrap">{locale === 'vi' ? meta.label : ({ total: 'Total', Planning: 'To Do', Processing: 'In Progress', Done: 'Done', Backlog: 'Backlog', Pending: 'Pending', Cancel: 'Cancelled', overdue: 'Overdue' })[meta.key] || meta.label}</span>
                 <span className={`text-headline-sm font-bold ${meta.color}`}>{val}</span>
               </div>
             );
@@ -262,8 +264,8 @@ export default function TaskList() {
               onChange={(e) => setDraftFilters(prev => ({ ...prev, [def.key]: e.target.value }))}
             >
               {def.options.map((opt) => {
-                const statusLabels = { 'Tất cả': 'Tất cả', Planning: 'Chưa làm', Processing: 'Đang làm', Done: 'Hoàn thành', Backlog: 'Tồn đọng', Pending: 'Chờ xử lý', overdue: 'Quá hạn' };
-                const priorityLabelsMap = { 'Tất cả': 'Tất cả', high: 'Cao', medium: 'Trung bình', low: 'Thấp' };
+                const statusLabels = { 'Tất cả': locale === 'vi' ? 'Tất cả' : 'All', Planning: locale === 'vi' ? 'Chưa làm' : 'To Do', Processing: locale === 'vi' ? 'Đang làm' : 'In Progress', Done: locale === 'vi' ? 'Hoàn thành' : 'Done', Backlog: locale === 'vi' ? 'Tồn đọng' : 'Backlog', Pending: locale === 'vi' ? 'Chờ xử lý' : 'Pending', overdue: locale === 'vi' ? 'Quá hạn' : 'Overdue' };
+                const priorityLabelsMap = { 'Tất cả': locale === 'vi' ? 'Tất cả' : 'All', high: locale === 'vi' ? 'Cao' : 'High', medium: locale === 'vi' ? 'Trung bình' : 'Medium', low: locale === 'vi' ? 'Thấp' : 'Low' };
                 const label = def.key === 'status' ? (statusLabels[opt] || opt) : def.key === 'priority' ? (priorityLabelsMap[opt] || opt) : opt;
                 return (
                   <option key={opt} value={opt}>
@@ -282,7 +284,7 @@ export default function TaskList() {
             value={draftFilters.dateFrom || ''}
             onChange={(e) => setDraftFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
             className="border-none bg-transparent focus:ring-0 outline-none text-xs w-[130px]"
-            placeholder="Từ ngày"
+            placeholder={locale === 'vi' ? 'Từ ngày' : 'From date'}
           />
           <span className="text-outline">-</span>
           <input
@@ -290,7 +292,7 @@ export default function TaskList() {
             value={draftFilters.dateTo || ''}
             onChange={(e) => setDraftFilters(prev => ({ ...prev, dateTo: e.target.value }))}
             className="border-none bg-transparent focus:ring-0 outline-none text-xs w-[130px]"
-            placeholder="Đến ngày"
+            placeholder={locale === 'vi' ? 'Đến ngày' : 'To date'}
           />
         </div>
         <button
@@ -298,21 +300,21 @@ export default function TaskList() {
           className="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md flex items-center gap-2 hover:bg-primary/90 transition-transform active:scale-95"
         >
           <span className="material-symbols-outlined text-sm">filter_alt</span>
-          Lọc
+          {locale === 'vi' ? 'Lọc' : 'Filter'}
         </button>
         <button
           onClick={clearFilters}
           className="text-error font-semibold text-sm flex items-center gap-1 hover:underline whitespace-nowrap"
         >
           <span className="material-symbols-outlined text-sm">close</span>
-          Xóa lọc
+          {locale === 'vi' ? 'Xóa lọc' : 'Clear Filters'}
         </button>
         <button
           onClick={() => setShowQuickAddPopup(true)}
           className="ml-auto bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md flex items-center gap-2 hover:bg-primary/90 transition-transform active:scale-95 whitespace-nowrap"
         >
           <span className="material-symbols-outlined text-sm">add</span>
-          Thêm task
+          {locale === 'vi' ? 'Thêm task' : 'Add Task'}
         </button>
       </div>
 
@@ -322,14 +324,14 @@ export default function TaskList() {
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowQuickAddPopup(false)} />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold">Thêm task mới</h3>
+              <h3 className="text-base font-bold">{locale === 'vi' ? 'Thêm task mới' : 'New Task'}</h3>
               <button onClick={() => setShowQuickAddPopup(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Tên task</label>
+              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Tên task' : 'Task Name'}</label>
               <input
                 className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
-                placeholder="Tên task mới..."
+                placeholder={locale === 'vi' ? 'Tên task mới...' : 'New task name...'}
                 type="text"
                 value={quickTask.name}
                 onChange={(e) => setQuickTask(prev => ({ ...prev, name: e.target.value }))}
@@ -339,42 +341,42 @@ export default function TaskList() {
             </div>
             <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Dự án</label>
+              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Dự án' : 'Project'}</label>
               <select
                 className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                 value={quickTask.projectId}
                 onChange={(e) => setQuickTask(prev => ({ ...prev, projectId: e.target.value }))}
               >
-                <option value="">Chọn dự án</option>
+                <option value="">{locale === 'vi' ? 'Chọn dự án' : 'Select project'}</option>
                 {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Assignee</label>
+              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Assignee' : 'Assignee'}</label>
               <select
                 className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                 value={quickTask.assigneeId}
                 onChange={(e) => setQuickTask(prev => ({ ...prev, assigneeId: e.target.value }))}
               >
-                <option value="">Chọn người</option>
+                <option value="">{locale === 'vi' ? 'Chọn người' : 'Select person'}</option>
                 {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Độ ưu tiên</label>
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Độ ưu tiên' : 'Priority'}</label>
                 <select
                   className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                   value={quickTask.priority}
                   onChange={(e) => setQuickTask(prev => ({ ...prev, priority: e.target.value }))}
                 >
-                  <option value="">Chọn</option>
-                  <option value="high">Cao</option>
-                  <option value="medium">Trung bình</option>
-                  <option value="low">Thấp</option>
+                  <option value="">{locale === 'vi' ? 'Chọn' : 'Select'}</option>
+                  <option value="high">{locale === 'vi' ? 'Cao' : 'High'}</option>
+                  <option value="medium">{locale === 'vi' ? 'Trung bình' : 'Medium'}</option>
+                  <option value="low">{locale === 'vi' ? 'Thấp' : 'Low'}</option>
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Hạn chót</label>
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Hạn chót' : 'Deadline'}</label>
                 <input
                   className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                   type="date"
@@ -383,7 +385,7 @@ export default function TaskList() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Tuần thực hiện</label>
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Tuần thực hiện' : 'Exec Week'}</label>
                 <input
                   className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                   type="number" min="1" max="53"
@@ -392,7 +394,7 @@ export default function TaskList() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Năm thực hiện</label>
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Năm thực hiện' : 'Exec Year'}</label>
                 <input
                   className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                   type="number" min="2024" max="2030"
@@ -412,13 +414,13 @@ export default function TaskList() {
                 onClick={() => { setShowQuickAddPopup(false); setQuickAddError(''); }}
                 className="px-4 py-2 border border-gray-200 rounded text-xs font-bold text-gray-500 hover:bg-gray-50 transition-all"
               >
-                Hủy
+                {locale === 'vi' ? 'Hủy' : 'Cancel'}
               </button>
               <button
                 onClick={handleQuickAdd}
                 className="px-4 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:opacity-90 transition-all"
               >
-                Thêm
+                {locale === 'vi' ? 'Thêm' : 'Add'}
               </button>
             </div>
           </div>
@@ -432,31 +434,31 @@ export default function TaskList() {
             <thead>
               <tr className="bg-surface-container-low border-b border-outline-variant">
                 <th className="w-12 p-3"><span className="material-symbols-outlined text-outline">warning</span></th>
-                <th className="p-3 text-label-sm text-outline uppercase whitespace-nowrap">Dự án</th>
-                <th className="p-3 text-label-sm text-outline uppercase min-w-[250px]">Tên Task</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Người phụ trách</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Liên quan</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Trạng thái</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Ưu tiên</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Bắt đầu</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Hạn chót</th>
-                <th className="p-3 text-label-sm text-outline uppercase">Hoàn thành</th>
+                <th className="p-3 text-label-sm text-outline uppercase whitespace-nowrap">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
+                <th className="p-3 text-label-sm text-outline uppercase min-w-[250px]">{locale === 'vi' ? 'Tên Task' : 'Task Name'}</th>
+                <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Người phụ trách' : 'Assignee'}</th>
+                <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Liên quan' : 'Related'}</th>
+                <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Trạng thái' : 'Status'}</th>
+                <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Ưu tiên' : 'Priority'}</th>
+                <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Bắt đầu' : 'Start'}</th>
+                <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Hạn chót' : 'Deadline'}</th>
+                <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Hoàn thành' : 'Completed'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase text-center"><span className="material-symbols-outlined">link</span></th>
-                <th className="p-3 text-label-sm text-outline uppercase">Ghi chú</th>
-                <th className="p-3 text-label-sm text-outline uppercase text-center">Thao tác</th>
+                <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Ghi chú' : 'Notes'}</th>
+                <th className="p-3 text-label-sm text-outline uppercase text-center">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
               {pagedTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="p-10 text-center text-outline">Không tìm thấy task</td>
+                  <td colSpan={13} className="p-10 text-center text-outline">{locale === 'vi' ? 'Không tìm thấy task' : 'No tasks found'}</td>
                 </tr>
               ) : (
                 pagedTasks.map((task) => {
                   const st = statusStyles[task.status] || statusStyles.todo;
                   return (
                     <tr key={task.id} className={`${st.row} transition-colors`}>
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center align-middle">
                         {st.icon ? (
                           <span
                             className={`material-symbols-outlined ${st.iconColor}`}
@@ -466,54 +468,54 @@ export default function TaskList() {
                           </span>
                         ) : null}
                       </td>
-                      <td className="p-3 font-semibold text-sm">{task.project}</td>
-                      <td className={`p-3 font-medium ${task.status === 'done' ? 'line-through text-outline' : ''}`}>
+                      <td className="p-3 font-semibold text-sm align-middle">{task.project}</td>
+                      <td className={`p-3 font-medium align-middle ${task.status === 'done' ? 'line-through text-outline' : ''}`}>
                         {task.taskName}
                       </td>
-                      <td className="p-3">
+                      <td className="p-3 align-middle">
                         <div className="w-7 h-7 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold">
                           {task.assignee.initials}
                         </div>
                       </td>
-                      <td className="p-3 text-xs text-outline">{task.stakeholders}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 ${st.bg} ${st.text} rounded text-xs font-bold uppercase tracking-tight`}>
-                          {st.label}
+                      <td className="p-3 text-xs text-outline align-middle">{task.stakeholders}</td>
+                      <td className="p-3 align-middle">
+                        <span className={`inline-flex items-center px-2.5 py-1 ${st.bg} ${st.text} rounded text-xs font-bold uppercase tracking-tight leading-none`}>
+                          {locale === 'vi' ? st.label : ({ Planning: 'To Do', Processing: 'In Progress', Done: 'Done', Backlog: 'Backlog', Pending: 'Pending', Cancel: 'Cancelled', overdue: 'Overdue' })[task.status] || 'To Do'}
                         </span>
                       </td>
-                      <td className="p-3">
+                      <td className="p-3 align-middle">
                         <span className={`text-xs font-bold ${priorityColors[task.priority] || 'text-slate-600'}`}>
-                          {priorityLabels[task.priority] || 'Medium'}
+                          {locale === 'vi' ? (priorityLabels[task.priority] || 'Medium') : ({ high: 'High', medium: 'Medium', low: 'Low' })[task.priority] || 'Medium'}
                         </span>
                       </td>
-                      <td className="p-3 text-xs">{task.start}</td>
-                      <td className={`p-3 text-xs font-bold ${task.status === 'overdue' ? 'text-red-600' : task.status === 'done' ? '' : ''}`}>
+                      <td className="p-3 text-xs align-middle">{task.start}</td>
+                      <td className={`p-3 text-xs font-bold align-middle ${task.status === 'overdue' ? 'text-red-600' : task.status === 'done' ? '' : ''}`}>
                         {task.due}
                       </td>
-                      <td className={`p-3 text-xs ${task.done ? 'text-green-700 font-bold' : ''}`}>
+                      <td className={`p-3 text-xs align-middle ${task.done ? 'text-green-700 font-bold' : ''}`}>
                         {task.done || '-'}
                       </td>
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center align-middle">
                         {task.linkUrl ? (
                           <a href={task.linkUrl} target="_blank" rel="noopener noreferrer" className="material-symbols-outlined text-outline cursor-pointer hover:text-primary no-underline">open_in_new</a>
                         ) : (
                           <span className="material-symbols-outlined text-outline-variant">link_off</span>
                         )}
                       </td>
-                      <td className="p-3 text-xs italic text-outline">{task.remark}</td>
-                      <td className="p-3">
+                      <td className="p-3 text-xs italic text-outline align-middle">{task.remark}</td>
+                      <td className="p-3 align-middle">
                         <div className="flex justify-center gap-2">
                           <button
                             onClick={() => setViewTask(task)}
                             className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors"
-                            title="Xem chi tiết"
+                            title={locale === 'vi' ? 'Xem chi tiết' : 'View Details'}
                           >
                             <span className="material-symbols-outlined text-lg">visibility</span>
                           </button>
                           <button
                             onClick={() => setEditTask(task)}
                             className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors"
-                            title="Chỉnh sửa"
+                            title={locale === 'vi' ? 'Chỉnh sửa' : 'Edit'}
                           >
                             <span className="material-symbols-outlined text-lg">edit</span>
                           </button>
@@ -538,7 +540,7 @@ export default function TaskList() {
         {/* Pagination Footer */}
         <div className="p-4 border-t border-outline-variant bg-surface flex items-center justify-between">
           <span className="text-label-md text-outline">
-            Hiển thị {(page - 1) * perPage + 1}-{Math.min(page * perPage, filteredTasks.length)} trong {filteredTasks.length} task
+            {locale === 'vi' ? `Hiển thị ${(page - 1) * perPage + 1}-${Math.min(page * perPage, filteredTasks.length)} trong ${filteredTasks.length} task` : `Showing ${(page - 1) * perPage + 1}-${Math.min(page * perPage, filteredTasks.length)} of ${filteredTasks.length} tasks`}
           </span>
           <div className="flex items-center gap-2">
             <button

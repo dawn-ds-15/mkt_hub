@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { getExpenseOverview } from '../../services/api';
 
 const periodTabs = [
@@ -63,7 +64,8 @@ function formatSignedCurrency(n) {
   return prefix + n.toLocaleString('vi-VN');
 }
 
-export default function ExpenseOverview() {
+export default function ExpenseOverview({ refreshKey }) {
+  const { locale } = useDashboard();
   const [data, setData] = useState(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -81,13 +83,13 @@ export default function ExpenseOverview() {
   useEffect(() => {
     const period = buildPeriodParam(periodType, periodValue, CURRENT_YEAR);
     getExpenseOverview(period).then((res) => setData(res.data));
-  }, [periodType, periodValue]);
+  }, [periodType, periodValue, refreshKey]);
 
   if (!data) {
     return (
       <div className="flex items-center justify-center h-64 text-on-surface-variant">
         <span className="material-symbols-outlined text-[48px] text-outline-variant animate-spin">sync</span>
-        <p className="font-headline-sm ml-3">Đang tải tổng quan...</p>
+        <p className="font-headline-sm ml-3">{locale === 'vi' ? 'Đang tải tổng quan...' : 'Loading overview...'}</p>
       </div>
     );
   }
@@ -110,13 +112,13 @@ export default function ExpenseOverview() {
                   : 'text-on-surface-variant hover:text-primary'
               }`}
             >
-              {tab.label}
+              {locale === 'vi' ? tab.label : { week: 'Week', month: 'Month', quarter: 'Quarter', year: 'Year' }[tab.key] || tab.label}
             </button>
           ))}
           {periodOptions.length > 0 && (
             <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border-light">
               <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">
-                {periodType === 'week' ? 'Tuần' : periodType === 'month' ? 'Tháng' : 'Quý'}:
+                {locale === 'vi' ? (periodType === 'week' ? 'Tuần' : periodType === 'month' ? 'Tháng' : 'Quý') : (periodType === 'week' ? 'Week' : periodType === 'month' ? 'Month' : 'Quarter')}:
               </span>
               <select
                 value={periodValue}
@@ -133,19 +135,19 @@ export default function ExpenseOverview() {
         </div>
         <div className="flex flex-col items-center justify-center h-80 gap-4 text-on-surface-variant">
           <span className="material-symbols-outlined text-[64px] text-outline-variant">finance_chart</span>
-          <p className="font-headline-sm">Chưa có dữ liệu tổng quan</p>
-          <p className="text-body-md text-outline">Nhập chi phí ở tab Nhập chi phí để xem dữ liệu tổng quan và báo cáo.</p>
+          <p className="font-headline-sm">{locale === 'vi' ? 'Chưa có dữ liệu tổng quan' : 'No overview data yet'}</p>
+          <p className="text-body-md text-outline">{locale === 'vi' ? 'Nhập chi phí ở tab Nhập chi phí để xem dữ liệu tổng quan và báo cáo.' : 'Enter costs in the Expense Entry tab to view overview data and reports.'}</p>
         </div>
       </div>
     );
   }
 
   const kpis = [
-    { label: 'Tổng Chi Phí', value: formatCurrency(metrics.totalExpense), suffix: 'Tổng chi phí', color: 'primary' },
-    { label: 'Khách Hàng Mới', value: metrics.newCustomers ?? 0, suffix: 'Khách hàng mới từ chi phí', color: 'primary' },
-    { label: 'CAC Trung Bình', value: formatFullCurrency(Math.round(metrics.cac || 0)), suffix: 'Chi phí thu hút / KH mới', color: 'primary' },
-    { label: 'LTV Trung Bình', value: formatFullCurrency(Math.round(metrics.ltv || 0)), suffix: 'Giá trị vòng đời KH', color: 'success' },
-    { label: 'Tỷ Lệ LTV/CAC', value: (metrics.ltvCacRatio ?? 0).toFixed(0) + 'x', suffix: 'Hiệu quả đầu tư', badge: metrics.health?.status || 'N/A', color: metrics.ltvCacRatio > 1000 ? 'success' : 'primary' },
+    { label: locale === 'vi' ? 'Tổng Chi Phí' : 'Total Expense', value: formatCurrency(metrics.totalExpense), suffix: locale === 'vi' ? 'Tổng chi phí' : 'Total cost', color: 'primary' },
+    { label: locale === 'vi' ? 'Khách Hàng Mới' : 'New Customers', value: metrics.newCustomers ?? 0, suffix: locale === 'vi' ? 'Khách hàng mới từ chi phí' : 'New customers from cost', color: 'primary' },
+    { label: locale === 'vi' ? 'CAC Trung Bình' : 'Avg CAC', value: formatFullCurrency(Math.round(metrics.cac || 0)), suffix: locale === 'vi' ? 'Chi phí thu hút / KH mới' : 'Acquisition cost / new customer', color: 'primary' },
+    { label: locale === 'vi' ? 'LTV Trung Bình' : 'Avg LTV', value: formatFullCurrency(Math.round(metrics.ltv || 0)), suffix: locale === 'vi' ? 'Giá trị vòng đời KH' : 'Customer lifetime value', color: 'success' },
+    { label: locale === 'vi' ? 'Tỷ Lệ LTV/CAC' : 'LTV/CAC Ratio', value: (metrics.ltvCacRatio ?? 0).toFixed(0) + 'x', suffix: locale === 'vi' ? 'Hiệu quả đầu tư' : 'Investment efficiency', badge: metrics.health?.status || 'N/A', color: metrics.ltvCacRatio > 1000 ? 'success' : 'primary' },
   ];
 
   const filteredRows = projects.filter((r) =>
@@ -168,13 +170,13 @@ export default function ExpenseOverview() {
                 : 'text-on-surface-variant hover:text-primary'
             }`}
           >
-            {tab.label}
-          </button>
-        ))}
+              {locale === 'vi' ? tab.label : { week: 'Week', month: 'Month', quarter: 'Quarter', year: 'Year' }[tab.key] || tab.label}
+            </button>
+          ))}
         {periodOptions.length > 0 && (
           <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border-light">
             <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">
-              {periodType === 'week' ? 'Tuần' : periodType === 'month' ? 'Tháng' : 'Quý'}:
+              {locale === 'vi' ? (periodType === 'week' ? 'Tuần' : periodType === 'month' ? 'Tháng' : 'Quý') : (periodType === 'week' ? 'Week' : periodType === 'month' ? 'Month' : 'Quarter')}:
             </span>
             <select
               value={periodValue}
@@ -222,19 +224,19 @@ export default function ExpenseOverview() {
             </div>
             <h4 className="font-headline-sm text-headline-sm mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined">info</span>
-              Logic Tính Toán
+              {locale === 'vi' ? 'Logic Tính Toán' : 'Calculation Logic'}
             </h4>
             <div className="space-y-4 relative z-10">
               <div className="bg-white/10 p-4 rounded-lg border border-white/20 backdrop-blur-sm">
-                <p className="font-label-md text-label-md uppercase text-primary-fixed mb-1">Chi phí Thu hút Khách hàng (CAC)</p>
+                <p className="font-label-md text-label-md uppercase text-primary-fixed mb-1">{locale === 'vi' ? 'Chi phí Thu hút Khách hàng (CAC)' : 'Customer Acquisition Cost (CAC)'}</p>
                 <p className="font-body-md text-body-md leading-relaxed">
-                  CAC = Tổng chi phí Marketing / Số khách hàng mới từ nguồn trả phí.
+                  {locale === 'vi' ? 'CAC = Tổng chi phí Marketing / Số khách hàng mới từ nguồn trả phí.' : 'CAC = Total Marketing Cost / New customers from paid sources.'}
                 </p>
               </div>
               <div className="bg-white/10 p-4 rounded-lg border border-white/20 backdrop-blur-sm">
-                <p className="font-label-md text-label-md uppercase text-primary-fixed mb-1">Giá trị Vòng đời KH (LTV)</p>
+                <p className="font-label-md text-label-md uppercase text-primary-fixed mb-1">{locale === 'vi' ? 'Giá trị Vòng đời KH (LTV)' : 'Customer Lifetime Value (LTV)'}</p>
                 <p className="font-body-md text-body-md leading-relaxed">
-                  LTV = Giá trị đơn hàng TB × Tần suất mua × Thời gian gắn bó. (Tự động ước tính dựa trên dữ liệu lịch sử)
+                  {locale === 'vi' ? 'LTV = Giá trị đơn hàng TB × Tần suất mua × Thời gian gắn bó. (Tự động ước tính dựa trên dữ liệu lịch sử)' : 'LTV = Avg order value × Purchase frequency × Customer lifespan. (Auto-estimated based on historical data)'}
                 </p>
               </div>
               <div className="pt-2">
@@ -247,7 +249,7 @@ export default function ExpenseOverview() {
                   }}
                   className="w-full py-2 bg-white text-primary font-bold rounded hover:bg-primary-fixed transition-colors text-label-md"
                 >
-                  EXPORT DETAILED REPORT
+                  {locale === 'vi' ? 'EXPORT DETAILED REPORT' : 'EXPORT DETAILED REPORT'}
                 </button>
               </div>
             </div>
@@ -257,13 +259,13 @@ export default function ExpenseOverview() {
         <div className="col-span-12 lg:col-span-8">
           <div className="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm overflow-hidden flex flex-col h-full">
             <div className="p-6 border-b border-border-subtle flex justify-between items-center bg-surface-muted">
-              <h4 className="font-title-lg text-title-lg text-on-surface">Bảng Chi Phí Theo Project</h4>
+              <h4 className="font-title-lg text-title-lg text-on-surface">{locale === 'vi' ? 'Bảng Chi Phí Theo Project' : 'Cost Breakdown by Project'}</h4>
               <div className="flex gap-2">
                 <div className="relative">
                   <input
                     id="expense-overview-search"
                     className="pl-9 pr-4 py-2 border border-border-subtle rounded-lg text-body-sm focus:ring-1 focus:ring-primary focus:border-primary w-48 outline-none"
-                    placeholder="Tìm dự án..."
+                    placeholder={locale === 'vi' ? 'Tìm dự án...' : 'Search project...'}
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                   />
@@ -275,12 +277,12 @@ export default function ExpenseOverview() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-surface-muted border-b border-border-subtle sticky top-0">
                   <tr>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline">Dự án</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline">Loại</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Ngân sách</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Thực tế</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">Chênh lệch</th>
-                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-center">KH Mới</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline">{locale === 'vi' ? 'Loại' : 'Type'}</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">{locale === 'vi' ? 'Ngân sách' : 'Budget'}</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">{locale === 'vi' ? 'Thực tế' : 'Actual'}</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">{locale === 'vi' ? 'Chênh lệch' : 'Variance'}</th>
+                    <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-center">{locale === 'vi' ? 'KH Mới' : 'New Cust'}</th>
                     <th className="px-cell-padding-x py-cell-padding-y font-label-md text-label-md text-outline text-right">CAC</th>
                   </tr>
                 </thead>
@@ -306,7 +308,7 @@ export default function ExpenseOverview() {
               </table>
             </div>
             <div className="p-4 border-t border-border-subtle bg-surface-muted flex justify-between items-center">
-              <span className="text-body-sm text-outline">Hiển thị {Math.min(page * rowsPerPage, totalRows)} trong {projects.length} Dự án</span>
+              <span className="text-body-sm text-outline">{locale === 'vi' ? `Hiển thị ${Math.min(page * rowsPerPage, totalRows)} trong ${projects.length} Dự án` : `Showing ${Math.min(page * rowsPerPage, totalRows)} of ${projects.length} Projects`}</span>
               <div className="flex gap-2">
                 <button
                   disabled={page === 1}

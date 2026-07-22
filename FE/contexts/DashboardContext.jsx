@@ -15,6 +15,7 @@ const currentQuarter = String(Math.floor(now.getMonth() / 3) + 1);
 const currentWeek = String(getISOWeek(now));
 
 const DASHBOARD_STORAGE_KEY = 'mkt_hub_dashboard';
+const LOCALE_STORAGE_KEY = 'mkt_hub_locale';
 
 function loadFromStorage() {
   try {
@@ -30,6 +31,12 @@ function saveToStorage(state) {
   } catch {}
 }
 
+function loadLocale() {
+  try {
+    return localStorage.getItem(LOCALE_STORAGE_KEY) || 'vi';
+  } catch { return 'vi'; }
+}
+
 const DashboardContext = createContext(null);
 
 export function DashboardProvider({ children }) {
@@ -37,10 +44,15 @@ export function DashboardProvider({ children }) {
   const [year, setYear] = useState(saved?.year || currentYear);
   const [periodType, setPeriodType] = useState(saved?.periodType || 'week');
   const [periodValue, setPeriodValue] = useState(saved?.periodValue || currentWeek);
+  const [locale, setLocale] = useState(loadLocale);
 
   useEffect(() => {
     saveToStorage({ year, periodType, periodValue });
   }, [year, periodType, periodValue]);
+
+  useEffect(() => {
+    try { localStorage.setItem(LOCALE_STORAGE_KEY, locale); } catch {}
+  }, [locale]);
 
   const updatePeriod = useCallback((type) => {
     setPeriodType(type);
@@ -64,8 +76,12 @@ export function DashboardProvider({ children }) {
     setYear(y);
   }, []);
 
+  const toggleLocale = useCallback(() => {
+    setLocale(prev => prev === 'vi' ? 'en' : 'vi');
+  }, []);
+
   return (
-    <DashboardContext.Provider value={{ year, periodType, periodValue, setYear: changeYear, setPeriodType: updatePeriod, setPeriodValue }}>
+    <DashboardContext.Provider value={{ year, periodType, periodValue, setYear: changeYear, setPeriodType: updatePeriod, setPeriodValue, locale, toggleLocale }}>
       {children}
     </DashboardContext.Provider>
   );

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useDashboard } from '../../contexts/DashboardContext';
 
 const statusConfig = {
   near_deadline: { label: 'Sắp hết hạn', bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' },
@@ -14,6 +15,7 @@ const taskStatusConfig = {
 };
 
 export default function ProjectCard({ project, onEdit, onViewOverview }) {
+  const { locale } = useDashboard();
   const [open, setOpen] = useState(project.id === 1);
   const status = statusConfig[project.status] || statusConfig.on_track;
 
@@ -39,7 +41,7 @@ export default function ProjectCard({ project, onEdit, onViewOverview }) {
                 <div className="w-6 h-6 rounded-full bg-slate-300 flex items-center justify-center text-[10px] font-bold text-white">
                   {project.owner.split(' ').map(w => w[0]).join('')}
                 </div>
-                <span className="text-label-sm text-on-surface-variant">Chủ sở hữu: {project.owner}</span>
+                <span className="text-label-sm text-on-surface-variant">{locale === 'vi' ? 'Chủ sở hữu: ' : 'Owner: '}{project.owner}</span>
               </div>
             </div>
           </div>
@@ -49,12 +51,12 @@ export default function ProjectCard({ project, onEdit, onViewOverview }) {
               <span className="text-label-md text-on-surface-variant">{project.deadline}</span>
             </div>
             <span className={`px-3 py-1 ${status.bg} ${status.text} text-[11px] font-bold rounded-full border ${status.border}`}>
-              {status.label}
+              {locale === 'vi' ? status.label : (project.status === 'near_deadline' ? 'Near Deadline' : 'On Track')}
             </span>
           </div>
           <div className="col-span-3">
             <div className="flex justify-between items-center mb-2">
-                <span className="text-label-sm text-on-surface-variant">{project.tasksCompleted} / {project.tasksTotal} Task</span>
+                <span className="text-label-sm text-on-surface-variant">{project.tasksCompleted} / {project.tasksTotal} {locale === 'vi' ? 'Task' : 'Tasks'}</span>
               <span className="text-label-sm font-bold text-on-surface">{project.progress}%</span>
             </div>
             <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
@@ -65,14 +67,14 @@ export default function ProjectCard({ project, onEdit, onViewOverview }) {
             <button
               onClick={(e) => { e.stopPropagation(); if (onViewOverview) onViewOverview(project); }}
               className="p-2 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant hover:text-primary"
-              title="Xem overview"
+              title={locale === 'vi' ? 'Xem overview' : 'View Overview'}
             >
               <span className="material-symbols-outlined text-[20px]">add_task</span>
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); if (onEdit) onEdit(project); }}
               className="p-2 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant hover:text-primary"
-              title="Chỉnh sửa"
+              title={locale === 'vi' ? 'Chỉnh sửa' : 'Edit'}
             >
               <span className="material-symbols-outlined text-[20px]">edit</span>
             </button>
@@ -88,10 +90,10 @@ export default function ProjectCard({ project, onEdit, onViewOverview }) {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-surface-container text-label-sm uppercase text-on-surface-variant">
-                      <th className="px-4 py-3 font-semibold">Tên Task</th>
-                        <th className="px-4 py-3 font-semibold">Người phụ trách</th>
-                        <th className="px-4 py-3 font-semibold">Hạn chót</th>
-                        <th className="px-4 py-3 font-semibold">Trạng thái</th>
+                      <th className="px-4 py-3 font-semibold">{locale === 'vi' ? 'Tên Task' : 'Task Name'}</th>
+                        <th className="px-4 py-3 font-semibold">{locale === 'vi' ? 'Người phụ trách' : 'Assignee'}</th>
+                        <th className="px-4 py-3 font-semibold">{locale === 'vi' ? 'Hạn chót' : 'Deadline'}</th>
+                        <th className="px-4 py-3 font-semibold">{locale === 'vi' ? 'Trạng thái' : 'Status'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant">
@@ -109,7 +111,7 @@ export default function ProjectCard({ project, onEdit, onViewOverview }) {
                           <td className="px-4 py-3 text-body-md text-on-surface-variant">{task.due}</td>
                           <td className="px-4 py-3">
                             <span className={`px-2 py-0.5 ${ts.bg} ${ts.text} text-[10px] font-bold rounded uppercase`}>
-                              {ts.label}
+                              {locale === 'vi' ? ts.label : ({ done: 'Done', in_progress: 'In Progress', todo: 'To Do', review: 'Review', overdue: 'Overdue' })[task.status] || 'To Do'}
                             </span>
                           </td>
                         </tr>
@@ -119,7 +121,7 @@ export default function ProjectCard({ project, onEdit, onViewOverview }) {
                 </table>
               </div>
             ) : (
-              <p className="text-on-surface-variant text-body-md italic">Chưa có task nào cho giai đoạn dự án này.</p>
+              <p className="text-on-surface-variant text-body-md italic">{locale === 'vi' ? 'Chưa có task nào cho giai đoạn dự án này.' : 'No tasks for this project phase yet.'}</p>
             )}
           </div>
         </div>

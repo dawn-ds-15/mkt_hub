@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login as apiLogin, register as apiRegister } from '../../services/api';
+import { useDashboard } from '../../contexts/DashboardContext';
 
 export default function Login() {
+  const { locale } = useDashboard();
   const [tab, setTab] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +24,7 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      setError('Vui lòng nhập email và mật khẩu');
+      setError({ vi: 'Vui lòng nhập email và mật khẩu', en: 'Please enter email and password' }[locale]);
       return;
     }
     setLoading(true);
@@ -34,7 +36,7 @@ export default function Login() {
     } catch (err) {
       const errData = err?.response?.data;
       const msg = Array.isArray(errData?.message) ? errData.message.join('; ')
-        : errData?.message || errData?.error || err?.message || 'Email hoặc mật khẩu không chính xác';
+        : errData?.message || errData?.error || err?.message || ({ vi: 'Email hoặc mật khẩu không chính xác', en: 'Incorrect email or password' })[locale];
       setError(msg);
     } finally {
       setLoading(false);
@@ -46,15 +48,15 @@ export default function Login() {
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!name || !email || !password || !confirmPassword) {
-      setError('Vui lòng nhập đầy đủ thông tin');
+      setError({ vi: 'Vui lòng nhập đầy đủ thông tin', en: 'Please fill in all information' }[locale]);
       return;
     }
     if (!isValidEmail(email)) {
-      setError('Email không đúng định dạng');
+      setError({ vi: 'Email không đúng định dạng', en: 'Invalid email format' }[locale]);
       return;
     }
     if (password !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
+      setError({ vi: 'Mật khẩu xác nhận không khớp', en: 'Confirm password does not match' }[locale]);
       return;
     }
     setLoading(true);
@@ -66,7 +68,7 @@ export default function Login() {
     } catch (err) {
       const errData = err?.response?.data;
       const msg = Array.isArray(errData?.message) ? errData.message.join('; ')
-        : errData?.message || errData?.error || err?.message || 'Đăng ký thất bại';
+        : errData?.message || errData?.error || err?.message || ({ vi: 'Đăng ký thất bại', en: 'Registration failed' })[locale];
       setError(msg);
     } finally {
       setLoading(false);
@@ -91,7 +93,7 @@ export default function Login() {
               <span className="material-symbols-outlined text-white text-3xl">hub</span>
             </div>
             <h1 className="text-headline-lg font-headline-lg text-on-surface">MKT Hub</h1>
-            <p className="text-body-md text-on-surface-variant mt-1">Vận hành Marketing</p>
+            <p className="text-body-md text-on-surface-variant mt-1">{{ vi: 'Vận hành Marketing', en: 'Marketing Operations' }[locale]}</p>
           </div>
 
           <div className="flex mb-6 bg-surface-container-low rounded-lg p-1" role="tablist">
@@ -101,7 +103,7 @@ export default function Login() {
               onClick={() => switchTab('login')}
               className={`flex-1 py-2 text-label-md font-semibold rounded-md transition-colors ${tab === 'login' ? 'bg-white text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
             >
-              Đăng nhập
+              {{ vi: 'Đăng nhập', en: 'Login' }[locale]}
             </button>
             <button
               role="tab"
@@ -109,14 +111,14 @@ export default function Login() {
               onClick={() => switchTab('register')}
               className={`flex-1 py-2 text-label-md font-semibold rounded-md transition-colors ${tab === 'register' ? 'bg-white text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
             >
-              Đăng ký
+              {{ vi: 'Đăng ký', en: 'Register' }[locale]}
             </button>
           </div>
 
           {tab === 'login' ? (
             <form onSubmit={handleLogin} noValidate className="space-y-5">
               <div className="space-y-1.5">
-                <label htmlFor="login-email" className="text-label-md text-on-surface-variant">Email</label>
+                <label htmlFor="login-email" className="text-label-md text-on-surface-variant">{{ vi: 'Email', en: 'Email' }[locale]}</label>
                 <input
                   id="login-email"
                   name="email"
@@ -124,7 +126,7 @@ export default function Login() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(''); }}
-                  placeholder="Nhập email"
+                  placeholder={{ vi: 'Nhập email', en: 'Enter email' }[locale]}
                   aria-describedby={error ? 'login-error' : undefined}
                   aria-invalid={error ? 'true' : undefined}
                   className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
@@ -132,7 +134,7 @@ export default function Login() {
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="login-password" className="text-label-md text-on-surface-variant">Mật khẩu</label>
+                <label htmlFor="login-password" className="text-label-md text-on-surface-variant">{{ vi: 'Mật khẩu', en: 'Password' }[locale]}</label>
                 <div className="relative">
                   <input
                     id="login-password"
@@ -146,7 +148,7 @@ export default function Login() {
                     aria-invalid={error ? 'true' : undefined}
                     className="w-full px-3 py-2.5 pr-10 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? ({ vi: 'Ẩn mật khẩu', en: 'Hide password' })[locale] : ({ vi: 'Hiện mật khẩu', en: 'Show password' })[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
                     <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
                   </button>
                 </div>
@@ -163,14 +165,14 @@ export default function Login() {
                 disabled={loading}
                 className="w-full bg-primary text-white font-bold py-2.5 rounded-lg text-body-md hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                {loading ? ({ vi: 'Đang đăng nhập...', en: 'Logging in...' })[locale] : ({ vi: 'Đăng nhập', en: 'Login' })[locale]}
               </button>
 
             </form>
           ) : (
             <form onSubmit={handleRegister} noValidate className="space-y-5">
               <div className="space-y-1.5">
-                <label htmlFor="reg-name" className="text-label-md text-on-surface-variant">Họ tên</label>
+                <label htmlFor="reg-name" className="text-label-md text-on-surface-variant">{{ vi: 'Họ tên', en: 'Full Name' }[locale]}</label>
                 <input
                   id="reg-name"
                   name="name"
@@ -186,7 +188,7 @@ export default function Login() {
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="reg-email" className="text-label-md text-on-surface-variant">Email</label>
+                <label htmlFor="reg-email" className="text-label-md text-on-surface-variant">{{ vi: 'Email', en: 'Email' }[locale]}</label>
                 <input
                   id="reg-email"
                   name="email"
@@ -202,7 +204,7 @@ export default function Login() {
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="reg-password" className="text-label-md text-on-surface-variant">Mật khẩu</label>
+                <label htmlFor="reg-password" className="text-label-md text-on-surface-variant">{{ vi: 'Mật khẩu', en: 'Password' }[locale]}</label>
                 <div className="relative">
                   <input
                     id="reg-password"
@@ -216,14 +218,14 @@ export default function Login() {
                     aria-invalid={error ? 'true' : undefined}
                     className="w-full px-3 py-2.5 pr-10 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? ({ vi: 'Ẩn mật khẩu', en: 'Hide password' })[locale] : ({ vi: 'Hiện mật khẩu', en: 'Show password' })[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
                     <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
                   </button>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="reg-confirm-password" className="text-label-md text-on-surface-variant">Xác nhận mật khẩu</label>
+                <label htmlFor="reg-confirm-password" className="text-label-md text-on-surface-variant">{{ vi: 'Xác nhận mật khẩu', en: 'Confirm Password' }[locale]}</label>
                 <div className="relative">
                   <input
                     id="reg-confirm-password"
@@ -237,7 +239,7 @@ export default function Login() {
                     aria-invalid={error ? 'true' : undefined}
                     className="w-full px-3 py-2.5 pr-10 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
                   />
-                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} aria-pressed={showNewPassword} aria-label={showNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} aria-pressed={showNewPassword} aria-label={showNewPassword ? ({ vi: 'Ẩn mật khẩu', en: 'Hide password' })[locale] : ({ vi: 'Hiện mật khẩu', en: 'Show password' })[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
                     <span className="material-symbols-outlined text-[20px]">{showNewPassword ? 'visibility_off' : 'visibility'}</span>
                   </button>
                 </div>
@@ -254,7 +256,7 @@ export default function Login() {
                 disabled={loading}
                 className="w-full bg-primary text-white font-bold py-2.5 rounded-lg text-body-md hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Đang đăng ký...' : 'Đăng ký'}
+                {loading ? ({ vi: 'Đang đăng ký...', en: 'Registering...' })[locale] : ({ vi: 'Đăng ký', en: 'Register' })[locale]}
               </button>
             </form>
           )}

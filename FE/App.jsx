@@ -3,7 +3,7 @@ import { lazy, Suspense } from 'react';
 import Layout from './components/Layout';
 import Login from './components/Login';
 import NotFound from './components/NotFound';
-import { DashboardProvider } from './contexts/DashboardContext';
+import { DashboardProvider, useDashboard } from './contexts/DashboardContext';
 import { ToastProvider } from './contexts/ToastContext';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -22,11 +22,12 @@ function ProtectedRoute({ children }) {
 }
 
 function LoadingFallback() {
+  const { locale } = useDashboard();
   return (
     <div className="min-h-screen bg-sidebar-bg flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-on-surface-variant text-sm">Đang tải...</p>
+        <p className="text-on-surface-variant text-sm">{{ vi: 'Đang tải...', en: 'Loading...' }[locale]}</p>
       </div>
     </div>
   );

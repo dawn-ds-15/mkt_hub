@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getKpiCardsData, getFunnelData } from '../../services/api';
+import { useDashboard } from '../../contexts/DashboardContext';
+import { t } from '../../utils/i18n';
 import KPIRolloverCard from './KPIRolloverCard';
 
 function formatNum(n) {
@@ -31,13 +33,21 @@ function pctSign(pct) {
   return '0%';
 }
 
-function getHealthMeta(health) {
+function getHealthMeta(health, locale) {
+  const labels = {
+    green: { vi: 'Tốt', en: 'Good' },
+    yellow: { vi: 'Cảnh báo', en: 'Warning' },
+    red: { vi: 'Nghiêm trọng', en: 'Critical' },
+    blue: { vi: 'Tối ưu', en: 'Optimal' },
+    gray: { vi: 'KXĐ', en: 'N/A' },
+  };
+  const label = (labels[health] || labels.gray)[locale] || labels.green.en;
   const map = {
-    green: { label: 'Good', dot: 'bg-success', text: 'text-success', bg: 'bg-success/10' },
-    yellow: { label: 'Warning', dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning/10' },
-    red: { label: 'Critical', dot: 'bg-danger', text: 'text-danger', bg: 'bg-danger/10' },
-    blue: { label: 'Optimal', dot: 'bg-primary', text: 'text-primary', bg: 'bg-primary/10' },
-    gray: { label: 'N/A', dot: 'bg-gray-400', text: 'text-gray-500', bg: 'bg-gray-100' },
+    green: { label, dot: 'bg-success', text: 'text-success', bg: 'bg-success/10' },
+    yellow: { label, dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning/10' },
+    red: { label, dot: 'bg-danger', text: 'text-danger', bg: 'bg-danger/10' },
+    blue: { label, dot: 'bg-primary', text: 'text-primary', bg: 'bg-primary/10' },
+    gray: { label, dot: 'bg-gray-400', text: 'text-gray-500', bg: 'bg-gray-100' },
   };
   return map[health] || map.gray;
 }
@@ -55,6 +65,7 @@ const closedDealQuarters = [
 ];
 
 export default function ViewAnalytics({ year, periodType, periodValue }) {
+  const { locale } = useDashboard();
   const [kpiCards, setKpiCards] = useState([]);
   const [funnel, setFunnel] = useState([]);
   const [funnelMode, setFunnelMode] = useState('volume');
@@ -92,7 +103,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
       setKpiCards(kpiRes.data);
       setFunnel(funnelRes.data);
     } catch (error) {
-      const msg = error?.response?.data?.message || error?.message || 'Unable to load analytics data';
+      const msg = error?.response?.data?.message || error?.message || t(locale, { vi: 'Không thể tải dữ liệu phân tích', en: 'Unable to load analytics data' });
       setLoadError(Array.isArray(msg) ? msg.join('; ') : msg);
     } finally {
       setLoading(false);
@@ -102,26 +113,26 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
   if (loading && !kpiCards.length && !funnel.length && !loadError) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-on-surface-variant">Loading data...</p>
+        <p className="text-on-surface-variant">{t(locale, { vi: 'Đang tải dữ liệu...', en: 'Loading data...' })}</p>
       </div>
     );
   }
 
   const kpiDisplayLabels = {
-    'Raw Leads': 'RAW LEADS',
+    'Raw Leads': t(locale, { vi: 'RAW LEADS', en: 'RAW LEADS' }),
     'MQL': 'MQL',
     'SQL': 'SQL',
     'OPP': 'OPP',
-    'Closed Deal': 'CLOSED DEAL',
-    'Pipeline Value': 'PIPELINE VALUE',
-    'Won Value': 'WON VALUE',
+    'Closed Deal': t(locale, { vi: 'CLOSED DEAL', en: 'CLOSED DEAL' }),
+    'Pipeline Value': t(locale, { vi: 'PIPELINE VALUE', en: 'PIPELINE VALUE' }),
+    'Won Value': t(locale, { vi: 'WON VALUE', en: 'WON VALUE' }),
   };
 
   const kpiFieldLabels = {
-    'Pipeline Value': 'Avg/Deal:',
-    'Won Value': 'Win Rate:',
+    'Pipeline Value': t(locale, { vi: 'TB/Deal:', en: 'Avg/Deal:' }),
+    'Won Value': t(locale, { vi: 'Tỷ lệ thắng:', en: 'Win Rate:' }),
   };
-  const defaultFieldLabel = 'Conv Rate:';
+  const defaultFieldLabel = t(locale, { vi: 'Tỷ lệ CĐ:', en: 'Conv Rate:' });
 
   const funnelSteps = funnel.length
     ? funnel.map((f) => ({
@@ -141,38 +152,40 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
           <span className="material-symbols-outlined text-danger mt-0.5">error</span>
           <div className="flex-1">
             <p className="text-body-sm text-red-800">{loadError}</p>
-            <button onClick={loadData} className="mt-2 text-body-xs text-red-700 underline hover:no-underline">Retry</button>
+            <button onClick={loadData} className="mt-2 text-body-xs text-red-700 underline hover:no-underline">{t(locale, { vi: 'Thử lại', en: 'Retry' })}</button>
           </div>
         </div>
       )}
       {/* Row 1: 7 KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
         {kpiCards.filter(k => k.label !== 'CAC / LTV').map((kpi) => (
-          <div key={kpi.label} className="bg-white border border-border-light p-4 rounded-lg shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
-            <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2">
-              {kpiDisplayLabels[kpi.label] || kpi.label.toUpperCase()}
-            </p>
-            <div className="text-headline-sm font-semibold text-on-surface">
-              {kpi.label === 'Pipeline Value' || kpi.label === 'Won Value'
-                ? formatCurrency(kpi.actual)
-                : formatNum(kpi.actual)}
+          <div key={kpi.label} className="bg-white border border-border-light px-3 py-3 rounded-lg shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 min-h-[130px] flex flex-col justify-between w-full">
+            <div>
+              <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2 whitespace-nowrap">
+                {kpiDisplayLabels[kpi.label] || kpi.label.toUpperCase()}
+              </p>
+              <div className="text-headline-md font-bold text-on-surface">
+                {kpi.label === 'Pipeline Value' || kpi.label === 'Won Value'
+                  ? formatCurrency(kpi.actual)
+                  : formatNum(kpi.actual)}
+              </div>
             </div>
             <div className="mt-2 space-y-1">
-              <div className="flex justify-between text-body-sm">
-                <span className="text-on-surface-variant">Plan:</span>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-on-surface-variant">{t(locale, { vi: 'KH:', en: 'Plan:' })}</span>
                 <span className="text-on-surface font-medium">
                   {kpi.label === 'Pipeline Value' || kpi.label === 'Won Value'
                     ? formatCurrency(kpi.plan)
                     : formatNum(kpi.plan)}
                 </span>
               </div>
-              <div className="flex justify-between text-body-sm">
-                <span className="text-on-surface-variant">% vs Plan:</span>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-on-surface-variant">{t(locale, { vi: '% so KH:', en: '% vs Plan:' })}</span>
                 <span className={`font-bold ${pctColor(kpi.percentVsPlan)}`}>
                   {pctSign(kpi.percentVsPlan)}
                 </span>
               </div>
-              <div className="pt-1 border-t border-border-light flex justify-between text-[11px] font-semibold">
+              <div className="pt-1.5 border-t border-border-light flex justify-between text-[11px] font-semibold">
                 <span className="text-on-surface-variant">
                   {kpiFieldLabels[kpi.label] || defaultFieldLabel}
                 </span>
@@ -193,41 +206,41 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
 
       {/* Row 2: CAC, LTV, Ratio */}
       {cacCard && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between min-h-[100px]">
             <div>
-              <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">CUSTOMER ACQUISITION COST (CAC)</p>
-              <h3 className="text-display-lg font-bold text-on-surface">${formatNum(cacCard.cac)}</h3>
-              <p className="text-body-sm text-on-surface-variant mt-1">Target: $1,500</p>
+              <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">{t(locale, { vi: 'CHI PHÍ THU HÚP KH (CAC)', en: 'CUSTOMER ACQUISITION COST (CAC)' })}</p>
+              <h3 className="text-headline-md font-bold text-on-surface">${formatNum(cacCard.cac)}</h3>
+              <p className="text-[11px] text-on-surface-variant mt-1">{t(locale, { vi: 'Mục tiêu: $1,500', en: 'Target: $1,500' })}</p>
             </div>
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${getHealthMeta(cacCard.health).bg}`}>
-              <div className={`w-3 h-3 rounded-full ${getHealthMeta(cacCard.health).dot} ${cacCard.health === 'green' ? 'animate-pulse' : ''}`}></div>
-              <span className={`text-[12px] font-semibold uppercase ${getHealthMeta(cacCard.health).text}`}>
-                {getHealthMeta(cacCard.health).label}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${getHealthMeta(cacCard.health, locale).bg}`}>
+              <div className={`w-2.5 h-2.5 rounded-full ${getHealthMeta(cacCard.health, locale).dot} ${cacCard.health === 'green' ? 'animate-pulse' : ''}`}></div>
+              <span className={`text-[11px] font-semibold uppercase ${getHealthMeta(cacCard.health, locale).text}`}>
+                {getHealthMeta(cacCard.health, locale).label}
               </span>
             </div>
           </div>
-          <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between">
+          <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between min-h-[100px]">
             <div>
-              <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">LIFETIME VALUE (LTV)</p>
-              <h3 className="text-display-lg font-bold text-on-surface">${formatNum(cacCard.ltv)}</h3>
-              <p className="text-body-sm text-on-surface-variant mt-1">Growth: +12% vs last month</p>
+              <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">{t(locale, { vi: 'GIÁ TRỊ VÒNG ĐỜI (LTV)', en: 'LIFETIME VALUE (LTV)' })}</p>
+              <h3 className="text-headline-md font-bold text-on-surface">${formatNum(cacCard.ltv)}</h3>
+              <p className="text-[11px] text-on-surface-variant mt-1">{t(locale, { vi: 'Tăng trưởng: +12% so với tháng trước', en: 'Growth: +12% vs last month' })}</p>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-warning/10 rounded-full">
-              <div className="w-3 h-3 rounded-full bg-warning"></div>
-              <span className="text-[12px] font-semibold uppercase text-warning">Warning</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 rounded-full">
+              <div className="w-2.5 h-2.5 rounded-full bg-warning"></div>
+              <span className="text-[11px] font-semibold uppercase text-warning">{t(locale, { vi: 'Cảnh báo', en: 'Warning' })}</span>
             </div>
           </div>
-          <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between">
+          <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between min-h-[100px]">
             <div>
-              <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">LTV : CAC RATIO</p>
-              <h3 className="text-display-lg font-bold text-on-surface">{cacCard.ratio != null ? cacCard.ratio.toFixed(1) + 'x' : '\u2014'}</h3>
-              <p className="text-body-sm text-on-surface-variant mt-1">Benchmark: 3.0x</p>
+              <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">{t(locale, { vi: 'TỶ LỆ LTV : CAC', en: 'LTV : CAC RATIO' })}</p>
+              <h3 className="text-headline-md font-bold text-on-surface">{cacCard.ratio != null ? cacCard.ratio.toFixed(1) + 'x' : '\u2014'}</h3>
+              <p className="text-[11px] text-on-surface-variant mt-1">{t(locale, { vi: 'Chuẩn: 3.0x', en: 'Benchmark: 3.0x' })}</p>
             </div>
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${getHealthMeta(cacCard.health).bg}`}>
-              <div className={`w-3 h-3 rounded-full ${getHealthMeta(cacCard.health).dot}`}></div>
-              <span className={`text-[12px] font-semibold uppercase ${getHealthMeta(cacCard.health).text}`}>
-                {cacCard.ratio >= 3 ? 'Optimal' : getHealthMeta(cacCard.health).label}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${getHealthMeta(cacCard.health, locale).bg}`}>
+              <div className={`w-2.5 h-2.5 rounded-full ${getHealthMeta(cacCard.health, locale).dot}`}></div>
+              <span className={`text-[11px] font-semibold uppercase ${getHealthMeta(cacCard.health, locale).text}`}>
+                {cacCard.ratio >= 3 ? t(locale, { vi: 'Tối ưu', en: 'Optimal' }) : getHealthMeta(cacCard.health, locale).label}
               </span>
             </div>
           </div>
@@ -237,19 +250,19 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
       {/* Main Section: Horizontal Funnel Chart */}
       <section className="bg-white border border-border-light rounded-lg p-4">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-headline-sm font-semibold text-on-surface">Pipeline Conversion Funnel</h3>
+          <h3 className="text-headline-sm font-semibold text-on-surface">{t(locale, { vi: 'Phễu chuyển đổi Pipeline', en: 'Pipeline Conversion Funnel' })}</h3>
           <div className="flex gap-2">
             <button
               onClick={() => setFunnelMode('volume')}
               className={`px-4 py-2 border border-border-light rounded text-[12px] font-semibold transition-colors ${funnelMode === 'volume' ? 'bg-primary text-white' : 'hover:bg-surface-container'}`}
             >
-              By Volume
+              {t(locale, { vi: 'Theo số lượng', en: 'By Volume' })}
             </button>
             <button
               onClick={() => setFunnelMode('value')}
               className={`px-4 py-2 rounded text-[12px] font-semibold transition-colors ${funnelMode === 'value' ? 'bg-primary text-white' : 'border border-border-light hover:bg-surface-container'}`}
             >
-              By Value
+              {t(locale, { vi: 'Theo giá trị', en: 'By Value' })}
             </button>
           </div>
         </div>
@@ -276,15 +289,17 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
                       {idx === 0 && (
                         <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex items-center text-on-surface-variant text-[12px] font-semibold whitespace-nowrap">
                           <span className="material-symbols-outlined text-[16px] mr-1">group</span>
-                          {funnelMode === 'volume' ? 'Volume' : 'Value'}
+                          {funnelMode === 'volume'
+                            ? t(locale, { vi: 'Số lượng', en: 'Volume' })
+                            : t(locale, { vi: 'Giá trị', en: 'Value' })}
                         </div>
                       )}
                       <span className="text-[11px] font-semibold uppercase mb-1" style={{ color: isLast ? '#fff' : idx < 2 ? '#00236f' : '#fff' }}>
-                        {step.step === 'Raw Leads' ? 'Raw Leads' :
+                        {step.step === 'Raw Leads' ? t(locale, { vi: 'Raw Leads', en: 'Raw Leads' }) :
                          step.step === 'MQL' ? 'MQL' :
                          step.step === 'SQL' ? 'SQL' :
                          step.step === 'OPP' ? 'OPP' :
-                         step.step === 'Closed Deal' ? 'Closed Deal' :
+                         step.step === 'Closed Deal' ? t(locale, { vi: 'Closed Deal', en: 'Closed Deal' }) :
                          step.step}
                       </span>
                       <span className="text-headline-md font-semibold" style={{ color: isLast ? '#fff' : idx < 2 ? '#00236f' : '#fff' }}>
@@ -293,7 +308,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
                       {idx > 0 && conv != null && (
                         <div className="absolute -bottom-10 left-0 w-px h-10 bg-border-light flex items-center justify-center">
                           <div className="bg-white px-2 border border-border-light rounded-full text-xs font-bold text-success translate-y-5 whitespace-nowrap shadow-sm">
-                            {Math.round(conv)}% Conv
+                            {Math.round(conv)}% {t(locale, { vi: 'CĐ', en: 'Conv' })}
                           </div>
                         </div>
                       )}
@@ -303,11 +318,11 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
               </div>
             </div>
             <div className="mt-14 grid grid-cols-5 text-center px-4">
-              <p className="text-body-sm text-on-surface-variant">Awareness</p>
-              <p className="text-body-sm text-on-surface-variant">Qualified</p>
-              <p className="text-body-sm text-on-surface-variant">Ready to Buy</p>
-              <p className="text-body-sm text-on-surface-variant">Negotiating</p>
-              <p className="text-body-sm text-on-surface-variant">Closed</p>
+              <p className="text-body-sm text-on-surface-variant">{t(locale, { vi: 'Nhận biết', en: 'Awareness' })}</p>
+              <p className="text-body-sm text-on-surface-variant">{t(locale, { vi: 'Đủ điều kiện', en: 'Qualified' })}</p>
+              <p className="text-body-sm text-on-surface-variant">{t(locale, { vi: 'Sẵn sàng mua', en: 'Ready to Buy' })}</p>
+              <p className="text-body-sm text-on-surface-variant">{t(locale, { vi: 'Đàm phán', en: 'Negotiating' })}</p>
+              <p className="text-body-sm text-on-surface-variant">{t(locale, { vi: 'Đã chốt', en: 'Closed' })}</p>
             </div>
           </>
         )}
@@ -319,27 +334,27 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
       {/* Bottom Section: Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Pipeline Value by Segment */}
-        <div className="bg-white border border-border-light rounded-lg overflow-hidden">
+        <div className="bg-white border border-border-light rounded-lg overflow-hidden flex flex-col">
           <div className="p-4 border-b border-border-light bg-surface-container-lowest flex justify-between items-center relative">
-            <h4 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider">Pipeline Value by Segment</h4>
+            <h4 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider">{t(locale, { vi: 'Giá trị Pipeline theo Phân khúc', en: 'Pipeline Value by Segment' })}</h4>
             <span className="material-symbols-outlined text-on-surface-variant text-[20px] cursor-pointer hover:text-primary relative" onClick={(e) => { e.stopPropagation(); setMenuOpen(prev => !prev); }}>more_horiz</span>
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                 <div className="absolute top-full right-2 mt-1 bg-white border border-border-light rounded-lg shadow-lg z-20 py-1 min-w-[160px]">
                   <button
-                    onClick={() => { setMenuOpen(false); exportCSV(segmentData, 'pipeline-by-segment.csv', [{ key: 'segment', label: 'Segment' }, { key: 'activeDeals', label: 'Open Deals' }, { key: 'value', label: 'Value' }, { key: 'growth', label: 'Growth (%)' }]); }}
+                    onClick={() => { setMenuOpen(false); exportCSV(segmentData, 'pipeline-by-segment.csv', [{ key: 'segment', label: t(locale, { vi: 'Phân khúc', en: 'Segment' }) }, { key: 'activeDeals', label: t(locale, { vi: 'Deal đang mở', en: 'Open Deals' }) }, { key: 'value', label: t(locale, { vi: 'Giá trị', en: 'Value' }) }, { key: 'growth', label: t(locale, { vi: 'Tăng trưởng (%)', en: 'Growth (%)' }) }]); }}
                     className="w-full px-4 py-2 text-left text-body-sm text-on-surface hover:bg-surface-container flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-[16px]">file_download</span>
-                    Export CSV
+                    {t(locale, { vi: 'Xuất CSV', en: 'Export CSV' })}
                   </button>
                   <button
-                    onClick={() => { setMenuOpen(false); alert('Feature in development'); }}
+                    onClick={() => { setMenuOpen(false); alert(t(locale, { vi: 'Tính năng đang phát triển', en: 'Feature in development' })); }}
                     className="w-full px-4 py-2 text-left text-body-sm text-on-surface hover:bg-surface-container flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                    View details
+                    {t(locale, { vi: 'Xem chi tiết', en: 'View details' })}
                   </button>
                 </div>
               </>
@@ -348,19 +363,19 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
           <table className="w-full text-left">
             <thead className="bg-surface-container-low border-b border-border-light">
               <tr>
-                <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">SEGMENT</th>
-                <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">OPEN DEALS</th>
-                <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">VALUE</th>
-                <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">GROWTH</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{t(locale, { vi: 'PHÂN KHÚC', en: 'SEGMENT' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">{t(locale, { vi: 'DEAL ĐANG MỞ', en: 'OPEN DEALS' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">{t(locale, { vi: 'GIÁ TRỊ', en: 'VALUE' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">{t(locale, { vi: 'TĂNG TRƯỞNG', en: 'GROWTH' })}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light">
               {segmentData.map((row) => (
                 <tr key={row.label} className="hover:bg-surface-container transition-colors">
-                  <td className="px-4 py-4 text-body-md text-on-surface">{row.segment}</td>
-                  <td className="px-4 py-4 text-data-mono text-on-surface text-right">{row.activeDeals}</td>
-                  <td className="px-4 py-4 text-data-mono text-on-surface text-right">{formatCurrency(row.value)}</td>
-                  <td className={`px-4 py-4 text-body-sm text-right ${row.growthUp ? 'text-success' : 'text-danger'}`}>
+                  <td className="px-3 py-2.5 text-body-sm text-on-surface">{row.segment}</td>
+                  <td className="px-3 py-2.5 text-data-mono text-on-surface text-right">{row.activeDeals}</td>
+                  <td className="px-3 py-2.5 text-data-mono text-on-surface text-right">{formatCurrency(row.value)}</td>
+                  <td className={`px-3 py-2.5 text-body-sm text-right ${row.growthUp ? 'text-success' : 'text-danger'}`}>
                     {row.growthUp ? '+' : ''}{row.growth}%
                   </td>
                 </tr>
@@ -372,25 +387,25 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
         {/* Closed Deal Value */}
         <div className="bg-white border border-border-light rounded-lg overflow-hidden">
           <div className="p-4 border-b border-border-light bg-surface-container-lowest flex justify-between items-center">
-            <h4 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider">Closed Deal Value</h4>
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px] cursor-pointer hover:text-primary" onClick={() => exportCSV(closedDealQuarters, 'closed-deals.csv', [{ key: 'quarter', label: 'Quarter' }, { key: 'count', label: 'Won Count' }, { key: 'revenue', label: 'Revenue' }, { key: 'target', label: 'vs Target' }])}>download</span>
+            <h4 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider">{t(locale, { vi: 'Giá trị Deal đã chốt', en: 'Closed Deal Value' })}</h4>
+            <span className="material-symbols-outlined text-on-surface-variant text-[20px] cursor-pointer hover:text-primary" onClick={() => exportCSV(closedDealQuarters, 'closed-deals.csv', [{ key: 'quarter', label: t(locale, { vi: 'Quý', en: 'Quarter' }) }, { key: 'count', label: t(locale, { vi: 'Số lượng thắng', en: 'Won Count' }) }, { key: 'revenue', label: t(locale, { vi: 'Doanh thu', en: 'Revenue' }) }, { key: 'target', label: t(locale, { vi: 'so với Mục tiêu', en: 'vs Target' }) }])}>download</span>
           </div>
           <table className="w-full text-left">
             <thead className="bg-surface-container-low border-b border-border-light">
               <tr>
-                <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">QUARTER</th>
-                <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">WON COUNT</th>
-                <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">REVENUE</th>
-                <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">VS TARGET</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{t(locale, { vi: 'QUÝ', en: 'QUARTER' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">{t(locale, { vi: 'SỐ LƯỢNG THẮNG', en: 'WON COUNT' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">{t(locale, { vi: 'DOANH THU', en: 'REVENUE' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">{t(locale, { vi: 'SO VỚI MỤC TIÊU', en: 'VS TARGET' })}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light">
               {closedDealQuarters.map((row) => (
                 <tr key={row.quarter} className="hover:bg-surface-container transition-colors">
-                  <td className="px-4 py-4 text-body-md text-on-surface">{row.quarter}</td>
-                  <td className="px-4 py-4 text-data-mono text-on-surface text-right">{row.count}</td>
-                  <td className="px-4 py-4 text-data-mono text-on-surface text-right">{formatCurrency(row.revenue)}</td>
-                  <td className="px-4 py-4 text-right">
+                  <td className="px-3 py-2.5 text-body-sm text-on-surface">{row.quarter}</td>
+                  <td className="px-3 py-2.5 text-data-mono text-on-surface text-right">{row.count}</td>
+                  <td className="px-3 py-2.5 text-data-mono text-on-surface text-right">{formatCurrency(row.revenue)}</td>
+                  <td className="px-3 py-2.5 text-right">
                     <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${row.targetClass}`}>{row.target}</span>
                   </td>
                 </tr>

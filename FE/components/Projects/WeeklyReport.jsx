@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getWeeklyReport, saveWeeklyLog, exportWeeklyReport, getProjects, getMembers } from '../../services/api';
+import { useDashboard } from '../../contexts/DashboardContext';
 
 function getISOWeek() {
   const now = new Date();
@@ -14,6 +15,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 const CURRENT_WEEK = getISOWeek();
 
 export default function WeeklyReport() {
+  const { locale } = useDashboard();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

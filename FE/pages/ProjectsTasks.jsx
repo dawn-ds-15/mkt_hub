@@ -5,15 +5,17 @@ import ProjectsPage from '../components/Projects';
 import KanbanBoard from '../components/Projects/KanbanBoard';
 import TaskList from '../components/Projects/TaskList';
 import WeeklyReport from '../components/Projects/WeeklyReport';
+import { useDashboard } from '../contexts/DashboardContext';
 
 const tabs = [
-  { label: 'Danh sách Task', key: 'tasks' },
-  { label: 'Kanban', key: 'kanban' },
-  { label: 'Báo cáo Tuần', key: 'weekly' },
-  { label: 'Dự án', key: 'projects' },
+  { vi: 'Danh sách Task', en: 'Task List', key: 'tasks' },
+  { vi: 'Kanban', en: 'Kanban', key: 'kanban' },
+  { vi: 'Báo cáo Tuần', en: 'Weekly Report', key: 'weekly' },
+  { vi: 'Dự án', en: 'Projects', key: 'projects' },
 ];
 
 export default function ProjectsTasks() {
+  const { locale } = useDashboard();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'tasks';
   const [projectsKey, setProjectsKey] = useState(0);
@@ -35,33 +37,20 @@ export default function ProjectsTasks() {
       default:
         return (
           <div className="flex items-center justify-center h-64 text-on-surface-variant">
-            Đang phát triển...
+            {locale === 'vi' ? 'Đang phát triển...' : 'In development...'}
           </div>
         );
     }
   };
 
   return (
-    <Layout title="Dự án & Task">
+    <Layout
+      title={locale === 'vi' ? 'Dự án & Task' : 'Projects & Tasks'}
+      tabs={tabs.map(t => ({ label: t[locale] || t.vi, key: t.key }))}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+    >
       <div className="space-y-6">
-        <div className="flex items-center gap-8">
-          <nav className="flex gap-6">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`text-body-md transition-opacity cursor-pointer pb-1 ${
-                  activeTab === tab.key
-                    ? 'text-primary font-semibold border-b-2 border-primary'
-                    : 'text-on-surface-variant hover:text-primary'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
         {renderContent()}
       </div>
     </Layout>

@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { getSlackSettings, saveSlackSettings, testSlackWebhook, getSlackNotificationHistory } from '../../services/api';
 
 export default function SlackSettings() {
+  const { locale } = useDashboard();
   const [settings, setSettings] = useState(null);
   const [history, setHistory] = useState([]);
   const [webhookUrl, setWebhookUrl] = useState('');
@@ -74,39 +76,39 @@ export default function SlackSettings() {
   const handleSave = async () => {
     try {
       await saveSlackSettings(buildSlackPayload());
-      showToast('Đã lưu cấu hình Slack');
+      showToast(locale === 'vi' ? 'Đã lưu cấu hình Slack' : 'Slack configuration saved');
     } catch {
-      showToast('Lỗi khi lưu cấu hình', 'error');
+      showToast(locale === 'vi' ? 'Lỗi khi lưu cấu hình' : 'Error saving configuration', 'error');
     }
   };
 
   const handleTest = async () => {
-    if (!webhookUrl) { showToast('Nhập Webhook URL trước khi test', 'error'); return; }
+    if (!webhookUrl) { showToast(locale === 'vi' ? 'Nhập Webhook URL trước khi test' : 'Enter Webhook URL before testing', 'error'); return; }
     setTesting(true);
     setTestResult(null);
     try {
       await saveSlackSettings(buildSlackPayload());
       const res = await testSlackWebhook();
       setTestResult(res.data);
-      showToast(res.data.success ? 'Kết nối thành công!' : 'Kết nối thất bại', res.data.success ? 'success' : 'error');
+      showToast(res.data.success ? (locale === 'vi' ? 'Kết nối thành công!' : 'Connection successful!') : (locale === 'vi' ? 'Kết nối thất bại' : 'Connection failed'), res.data.success ? 'success' : 'error');
     } catch {
-      setTestResult({ success: false, message: 'Lỗi kết nối' });
-      showToast('Lỗi khi test webhook', 'error');
+      setTestResult({ success: false, message: locale === 'vi' ? 'Lỗi kết nối' : 'Connection error' });
+      showToast(locale === 'vi' ? 'Lỗi khi test webhook' : 'Error testing webhook', 'error');
     }
     setTesting(false);
   };
 
-  if (!settings) return <div className="flex items-center justify-center h-64"><p className="text-on-surface-variant">Đang tải...</p></div>;
+  if (!settings) return <div className="flex items-center justify-center h-64"><p className="text-on-surface-variant">{locale === 'vi' ? 'Đang tải...' : 'Loading...'}</p></div>;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="font-headline-lg text-headline-lg text-on-surface">Cấu hình Slack</h2>
-          <p className="text-body-md text-on-surface-variant">Cấu hình cảnh báo tự động và hook tích hợp.</p>
+          <h2 className="font-headline-lg text-headline-lg text-on-surface">{locale === 'vi' ? 'Cấu hình Slack' : 'Slack Configuration'}</h2>
+          <p className="text-body-md text-on-surface-variant">{locale === 'vi' ? 'Cấu hình cảnh báo tự động và hook tích hợp.' : 'Configure auto-alerts and integration hooks.'}</p>
         </div>
-        <button className="px-4 py-2 text-primary border border-primary/20 rounded-xl font-medium hover:bg-primary/10 transition-all flex items-center gap-2">
-          <span className="material-symbols-outlined text-sm">open_in_new</span> Tài liệu Bên ngoài
+          <button className="px-4 py-2 text-primary border border-primary/20 rounded-xl font-medium hover:bg-primary/10 transition-all flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">open_in_new</span> {locale === 'vi' ? 'Tài liệu Bên ngoài' : 'External Docs'}
         </button>
       </div>
 
@@ -115,15 +117,15 @@ export default function SlackSettings() {
         <div className="md:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary">webhook</span>
-            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Cấu hình Webhook</h3>
+            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">{locale === 'vi' ? 'Cấu hình Webhook' : 'Webhook Configuration'}</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-on-surface-variant ml-1">URL Webhook Slack</label>
+              <label className="text-xs text-on-surface-variant ml-1">{locale === 'vi' ? 'URL Webhook Slack' : 'Slack Webhook URL'}</label>
               <input className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none text-sm" placeholder="https://hooks.slack.com/services/..." value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-on-surface-variant ml-1">Tên Kênh</label>
+              <label className="text-xs text-on-surface-variant ml-1">{locale === 'vi' ? 'Tên Kênh' : 'Channel Name'}</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">#</span>
                 <input className="w-full bg-surface-container-low border border-outline-variant rounded-xl pl-8 pr-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none text-sm" value={channel} onChange={(e) => setChannel(e.target.value)} />
@@ -132,12 +134,12 @@ export default function SlackSettings() {
           </div>
           {testResult && (
             <div className={`px-4 py-2 rounded-lg text-sm ${testResult.success ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}>
-              {testResult.success ? '✅ Kết nối thành công!' : `❌ ${testResult.message || 'Kết nối thất bại'}`}
+              {testResult.success ? (locale === 'vi' ? '✅ Kết nối thành công!' : '✅ Connection successful!') : `❌ ${testResult.message || (locale === 'vi' ? 'Kết nối thất bại' : 'Connection failed')}`}
             </div>
           )}
           <div className="flex justify-end gap-3 mt-2">
             <button onClick={handleTest} disabled={testing} className="px-5 py-2.5 text-on-surface-variant font-medium border border-outline-variant rounded-xl hover:bg-surface-container-high active:scale-95 transition-all text-sm">
-              {testing ? 'Đang kiểm tra...' : 'Kiểm tra Webhook'}
+              {testing ? (locale === 'vi' ? 'Đang kiểm tra...' : 'Testing...') : (locale === 'vi' ? 'Kiểm tra Webhook' : 'Test Webhook')}
             </button>
             <button onClick={handleSave} className="px-8 py-2.5 bg-primary text-on-primary font-bold rounded-xl shadow-lg hover:brightness-110 active:scale-[0.98] transition-all text-sm">Lưu</button>
           </div>
@@ -147,16 +149,16 @@ export default function SlackSettings() {
         <div className="md:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-error">notification_important</span>
-            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Cảnh báo Hạn chót</h3>
+            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">{locale === 'vi' ? 'Cảnh báo Hạn chót' : 'Deadline Alerts'}</h3>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-on-surface-variant ml-1">Cảnh báo sắp hạn (số ngày)</label>
+            <label className="text-xs text-on-surface-variant ml-1">{locale === 'vi' ? 'Cảnh báo sắp hạn (số ngày)' : 'Upcoming deadline alert (days)'}</label>
             <div className="flex items-center gap-3">
               <input type="number" value={notifyDays} onChange={(e) => setNotifyDays(Number(e.target.value))} className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none text-center text-lg" />
-              <span className="text-on-surface-variant text-sm whitespace-nowrap">Ngày trước</span>
+              <span className="text-on-surface-variant text-sm whitespace-nowrap">{locale === 'vi' ? 'Ngày trước' : 'days before'}</span>
             </div>
           </div>
-          <p className="text-xs text-on-surface-variant/70 italic">Hệ thống sẽ gửi thông báo mỗi sáng cho các công việc còn thời hạn dưới số ngày này.</p>
+          <p className="text-xs text-on-surface-variant/70 italic">{locale === 'vi' ? 'Hệ thống sẽ gửi thông báo mỗi sáng cho các công việc còn thời hạn dưới số ngày này.' : 'The system will send notifications each morning for tasks with deadlines within this many days.'}</p>
         </div>
 
         {/* Notification Schedule */}
@@ -164,7 +166,7 @@ export default function SlackSettings() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-success">schedule</span>
-              <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Lịch Thông báo</h3>
+              <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">{locale === 'vi' ? 'Lịch Thông báo' : 'Notification Schedule'}</h3>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" className="sr-only peer" checked={scheduleEnabled} onChange={() => setScheduleEnabled(!scheduleEnabled)} />
@@ -173,7 +175,7 @@ export default function SlackSettings() {
           </div>
           <div className="flex flex-col gap-4">
             <div className="flex justify-between items-center bg-surface-container-low/50 p-3 rounded-xl border border-outline-variant">
-              <span className="text-sm">Giờ Gửi</span>
+              <span className="text-sm">{locale === 'vi' ? 'Giờ Gửi' : 'Send Time'}</span>
               <input type="time" value={sendTime} onChange={(e) => setSendTime(e.target.value)} className="bg-transparent border-none text-primary text-lg p-0 focus:ring-0 cursor-pointer" />
             </div>
             <div className="grid grid-cols-4 gap-2">
@@ -195,7 +197,7 @@ export default function SlackSettings() {
         <div className="md:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-[#4A154B]">visibility</span>
-            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Xem trước</h3>
+            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">{locale === 'vi' ? 'Xem trước' : 'Preview'}</h3>
           </div>
           <div className="bg-white rounded-lg p-4 text-[15px] border border-outline-variant">
             <div className="flex gap-3">
@@ -220,7 +222,7 @@ export default function SlackSettings() {
               </div>
             </div>
           </div>
-          <div className="mt-4 text-[10px] text-center text-on-surface-variant/50 uppercase tracking-widest font-bold">Ví dụ Kết quả Gửi</div>
+          <div className="mt-4 text-[10px] text-center text-on-surface-variant/50 uppercase tracking-widest font-bold">{locale === 'vi' ? 'Ví dụ Kết quả Gửi' : 'Example Send Result'}</div>
         </div>
       </div>
 
@@ -229,19 +231,19 @@ export default function SlackSettings() {
         <div className="p-6 border-b border-outline-variant flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">history</span>
-            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Lịch sử Thông báo</h3>
+            <h3 className="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">{locale === 'vi' ? 'Lịch sử Thông báo' : 'Notification History'}</h3>
           </div>
-          <span className="text-xs text-on-surface-variant">{history.length} lần gửi</span>
+          <span className="text-xs text-on-surface-variant">{history.length} {locale === 'vi' ? 'lần gửi' : 'sends'}</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-container-high/40">
               <tr>
-                <th className="p-4 text-xs font-bold text-on-surface-variant border-b uppercase tracking-wider">Thời gian</th>
-                <th className="p-4 text-xs font-bold text-on-surface-variant border-b uppercase tracking-wider">Người nhận</th>
-                <th className="p-4 text-xs font-bold text-on-surface-variant border-b text-center uppercase tracking-wider">Quá hạn</th>
-                <th className="p-4 text-xs font-bold text-on-surface-variant border-b text-center uppercase tracking-wider">Sắp đến</th>
-                <th className="p-4 text-xs font-bold text-on-surface-variant border-b text-right uppercase tracking-wider">Trạng thái</th>
+                <th className="p-4 text-xs font-bold text-on-surface-variant border-b uppercase tracking-wider">{locale === 'vi' ? 'Thời gian' : 'Time'}</th>
+                <th className="p-4 text-xs font-bold text-on-surface-variant border-b uppercase tracking-wider">{locale === 'vi' ? 'Người nhận' : 'Recipient'}</th>
+                <th className="p-4 text-xs font-bold text-on-surface-variant border-b text-center uppercase tracking-wider">{locale === 'vi' ? 'Quá hạn' : 'Overdue'}</th>
+                <th className="p-4 text-xs font-bold text-on-surface-variant border-b text-center uppercase tracking-wider">{locale === 'vi' ? 'Sắp đến' : 'Upcoming'}</th>
+                <th className="p-4 text-xs font-bold text-on-surface-variant border-b text-right uppercase tracking-wider">{locale === 'vi' ? 'Trạng thái' : 'Status'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/5">
@@ -272,7 +274,7 @@ export default function SlackSettings() {
                 </tr>
               ))}
               {history.length === 0 && (
-                <tr><td colSpan={5} className="p-6 text-center text-on-surface-variant text-sm">Chưa có lịch sử thông báo</td></tr>
+                <tr><td colSpan={5} className="p-6 text-center text-on-surface-variant text-sm">{locale === 'vi' ? 'Chưa có lịch sử thông báo' : 'No notification history yet'}</td></tr>
               )}
             </tbody>
           </table>

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { getPlanKPIs, savePlanKPIs } from '../../services/api';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 
 const years = [2024, 2025, 2026];
 
 export default function PlanKPIsForm() {
   const addToast = useToast();
+  const { locale } = useDashboard();
   const [selectedYear, setSelectedYear] = useState(2026);
   const [formData, setFormData] = useState({
     targetLeads: '',
@@ -51,10 +53,10 @@ export default function PlanKPIsForm() {
   const handleSubmit = async () => {
     try {
       await savePlanKPIs({ ...formData, year: selectedYear });
-      addToast('Đã lưu Kế hoạch KPIs thành công!', 'success');
+      addToast(locale === 'vi' ? 'Đã lưu Kế hoạch KPIs thành công!' : 'KPI Plan saved successfully!', 'success');
     } catch (error) {
       console.error('Error saving plan KPIs:', error);
-      addToast('Có lỗi xảy ra khi lưu!', 'error');
+      addToast(locale === 'vi' ? 'Có lỗi xảy ra khi lưu!' : 'An error occurred while saving!', 'error');
     }
   };
 
@@ -68,15 +70,15 @@ export default function PlanKPIsForm() {
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
           <span className="material-symbols-outlined text-primary">target</span>
-          Kế hoạch KPIs
+          {locale === 'vi' ? 'Kế hoạch KPIs' : 'KPI Plan'}
         </h3>
         <select
           className="bg-surface-container-low text-body-sm border border-border-light rounded px-2 py-1 focus:ring-primary focus:border-primary"
           value={selectedYear}
           onChange={(e) => setSelectedYear(Number(e.target.value))}
         >
-          {years.map(year => (
-            <option key={year} value={year}>Năm {year}</option>
+            {years.map(year => (
+            <option key={year} value={year}>{locale === 'vi' ? `Năm ${year}` : `Year ${year}`}</option>
           ))}
         </select>
       </div>
@@ -84,7 +86,7 @@ export default function PlanKPIsForm() {
       <div className="space-y-4">
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            Mục tiêu Raw Leads
+            {locale === 'vi' ? 'Mục tiêu Raw Leads' : 'Raw Leads Target'}
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -99,8 +101,8 @@ export default function PlanKPIsForm() {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-              Mục tiêu MQL
-            </label>
+            {locale === 'vi' ? 'Mục tiêu MQL' : 'MQL Target'}
+          </label>
             <input
               className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
               placeholder="0"
@@ -112,7 +114,7 @@ export default function PlanKPIsForm() {
           </div>
           <div className="space-y-1">
             <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-              Mục tiêu SQL
+              {locale === 'vi' ? 'Mục tiêu SQL' : 'SQL Target'}
             </label>
             <input
               className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -127,7 +129,7 @@ export default function PlanKPIsForm() {
 
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            Số lượng Cơ hội (OPP)
+            {locale === 'vi' ? 'Số lượng Cơ hội (OPP)' : 'Opportunities (OPP)'}
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -141,7 +143,7 @@ export default function PlanKPIsForm() {
 
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            Số lượng Closed Deal
+            {locale === 'vi' ? 'Số lượng Closed Deal' : 'Closed Deal Count'}
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -155,7 +157,7 @@ export default function PlanKPIsForm() {
 
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            Giá trị Pipeline ($)
+            {locale === 'vi' ? 'Giá trị Pipeline ($)' : 'Pipeline Value ($)'}
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -169,7 +171,7 @@ export default function PlanKPIsForm() {
 
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            Giá trị Won ($)
+            {locale === 'vi' ? 'Giá trị Won ($)' : 'Won Value ($)'}
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -184,10 +186,10 @@ export default function PlanKPIsForm() {
         <div className="bg-surface-container-low p-3 rounded-lg border border-dashed border-outline-variant">
           <p className="text-label-md font-semibold text-primary mb-1 flex items-center gap-1">
             <span className="material-symbols-outlined text-[14px]">info</span>
-             Cơ chế Rollover
+            {locale === 'vi' ? 'Cơ chế Rollover' : 'Rollover Mechanism'}
           </p>
           <p className="text-body-sm text-on-surface-variant italic">
-            Số liệu kế hoạch sẽ được phân bổ đều theo tháng. Nếu tháng trước không đạt, phần dư có thể được thiết lập Rollover sang tháng kế tiếp.
+            {locale === 'vi' ? 'Số liệu kế hoạch sẽ được phân bổ đều theo tháng. Nếu tháng trước không đạt, phần dư có thể được thiết lập Rollover sang tháng kế tiếp.' : 'Plan figures are distributed evenly across months. If the previous month falls short, the surplus can be carried over to the next month.'}
           </p>
         </div>
 
@@ -197,7 +199,7 @@ export default function PlanKPIsForm() {
           className="w-full bg-primary text-white font-semibold py-3 rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-2 mt-4 shadow-sm disabled:opacity-50"
         >
           <span className="material-symbols-outlined">save</span>
-          {loading ? 'Đang lưu...' : 'Lưu Kế hoạch KPIs'}
+          {loading ? (locale === 'vi' ? 'Đang lưu...' : 'Saving...') : (locale === 'vi' ? 'Lưu Kế hoạch KPIs' : 'Save KPI Plan')}
         </button>
       </div>
     </section>

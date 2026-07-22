@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
+import { useDashboard } from '../../contexts/DashboardContext';
 
 export default function NotFound() {
+  const { locale } = useDashboard();
   return (
     <div className="min-h-screen bg-sidebar-bg flex items-center justify-center p-4">
       <div className="text-center max-w-md">
@@ -9,14 +11,14 @@ export default function NotFound() {
         </div>
         <h1 className="text-headline-lg font-headline-lg text-on-surface mb-2">404</h1>
         <p className="text-body-md text-on-surface-variant mb-8">
-          Trang bạn tìm kiếm không tồn tại hoặc đã bị di chuyển.
+          {{ vi: 'Trang bạn tìm kiếm không tồn tại hoặc đã bị di chuyển.', en: 'The page you are looking for does not exist or has been moved.' }[locale]}
         </p>
         <Link
           to="/"
           className="inline-flex items-center gap-2 bg-primary text-white font-bold px-6 py-3 rounded-lg hover:bg-primary-container transition-colors"
         >
           <span className="material-symbols-outlined">arrow_back</span>
-          Về trang chủ
+          {{ vi: 'Về trang chủ', en: 'Back to Home' }[locale]}
         </Link>
       </div>
     </div>

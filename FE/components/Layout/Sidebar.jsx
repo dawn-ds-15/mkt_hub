@@ -2,21 +2,25 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 const navItems = [
-  { label: 'Tổng quan', href: '/' },
-  { label: 'Dự án & Task', href: '/projects' },
-  { label: 'Leads & KPIs', href: '/leads' },
-  { label: 'Quản lý Chi phí', href: '/expense' },
-  { label: 'Quản lý Dữ liệu', href: '/data' },
+  { vi: 'Tổng quan', en: 'Dashboard', href: '/' },
+  { vi: 'Dự án & Task', en: 'Projects & Tasks', href: '/projects' },
+  { vi: 'Leads & KPIs', en: 'Leads & KPIs', href: '/leads' },
+  { vi: 'Quản lý Chi phí', en: 'Expense Management', href: '/expense' },
+  { vi: 'Quản lý Dữ liệu', en: 'Data Management', href: '/data' },
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
 
+function t(locale, strings) {
+  return strings[locale] || strings.vi;
+}
+
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
-  const { year, setYear } = useDashboard();
+  const { year, setYear, locale, toggleLocale } = useDashboard();
 
   return (
     <aside className="fixed left-0 top-0 h-full w-sidebar-width bg-sidebar-bg flex flex-col p-4 overflow-y-auto z-50">
@@ -26,30 +30,30 @@ export default function Sidebar() {
         </div>
         <div>
           <h1 className="text-headline-md font-headline-md font-bold text-white">MKT Hub</h1>
-          <p className="text-[10px] text-outline-variant font-medium tracking-wider uppercase">Vận hành Marketing</p>
+          <p className="text-[10px] text-outline-variant font-medium tracking-wider uppercase">{t(locale, { vi: 'Vận hành Marketing', en: 'Marketing Operations' })}</p>
         </div>
       </div>
 
       <nav className="flex-1 space-y-1">
         {navItems.map((item) => (
           <Link
-            key={item.label}
+            key={item.href}
             to={item.href}
             className={currentPath === item.href || (item.href !== '/' && currentPath.startsWith(item.href))
               ? 'sidebar-active flex items-center gap-3 px-3 py-2.5 transition-colors'
               : 'text-outline-variant hover:text-white flex items-center gap-3 px-3 py-2.5 transition-colors group'
             }
           >
-            <span className="font-body-md text-body-md">{item.label}</span>
+            <span className="font-body-md text-body-md">{item[locale]}</span>
           </Link>
         ))}
       </nav>
 
       <div className="mt-8 border-t border-slate-700 pt-6">
-        <h3 className="px-3 text-[10px] text-outline-variant font-bold uppercase mb-4 tracking-widest">Global Filters</h3>
+        <h3 className="px-3 text-[10px] text-outline-variant font-bold uppercase mb-4 tracking-widest">{t(locale, { vi: 'Bộ lọc chung', en: 'Global Filters' })}</h3>
         <div className="space-y-3 px-3">
           <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">Năm</label>
+            <label className="text-[11px] text-slate-400">{t(locale, { vi: 'Năm', en: 'Year' })}</label>
             <select
               value={year}
               onChange={(e) => setYear(e.target.value)}
@@ -66,6 +70,13 @@ export default function Sidebar() {
 
       <div className="pt-6 border-t border-slate-700 space-y-1">
         <button
+          onClick={toggleLocale}
+          className="w-full text-left text-outline-variant hover:text-white flex items-center gap-3 px-3 py-2 transition-colors"
+        >
+          <span className="material-symbols-outlined text-[18px]">language</span>
+          <span className="font-body-md text-body-md">{locale === 'vi' ? 'English' : 'Tiếng Việt'}</span>
+        </button>
+        <button
           onClick={() => {
             localStorage.removeItem('mkt_hub_token');
             localStorage.removeItem('mkt_hub_user');
@@ -74,7 +85,7 @@ export default function Sidebar() {
           className="w-full text-left text-outline-variant hover:text-white flex items-center gap-3 px-3 py-2 transition-colors"
         >
           <span className="material-symbols-outlined text-[18px]">logout</span>
-          <span className="font-body-md text-body-md">Đăng xuất</span>
+          <span className="font-body-md text-body-md">{t(locale, { vi: 'Đăng xuất', en: 'Logout' })}</span>
         </button>
       </div>
     </aside>

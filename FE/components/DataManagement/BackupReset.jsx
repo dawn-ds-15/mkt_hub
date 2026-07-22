@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { getBackupData, createBackup, deleteBackup, resetSandbox, restoreBackup } from '../../services/api';
 
 export default function BackupReset() {
+  const { locale } = useDashboard();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [resetInput, setResetInput] = useState('');
@@ -26,22 +28,22 @@ export default function BackupReset() {
     setCreating(true);
     try {
       await createBackup();
-      showToast('Tạo backup thành công');
+      showToast(locale === 'vi' ? 'Tạo backup thành công' : 'Backup created successfully');
       load();
     } catch {
-      showToast('Lỗi khi tạo backup', 'error');
+      showToast(locale === 'vi' ? 'Lỗi khi tạo backup' : 'Error creating backup', 'error');
     }
     setCreating(false);
   };
 
   const handleDeleteBackup = async (id) => {
-    if (!window.confirm('Xóa bản sao lưu này?')) return;
+    if (!window.confirm(locale === 'vi' ? 'Xóa bản sao lưu này?' : 'Delete this backup?')) return;
     setData(prev => prev ? { ...prev, snapshots: (prev.snapshots || []).filter(b => b.id !== id) } : prev);
     try {
       await deleteBackup(id);
-      showToast('Đã xóa bản sao lưu');
+      showToast(locale === 'vi' ? 'Đã xóa bản sao lưu' : 'Backup deleted');
     } catch {
-      showToast('Lỗi khi xóa', 'error');
+      showToast(locale === 'vi' ? 'Lỗi khi xóa' : 'Error deleting', 'error');
     }
   };
 
@@ -55,10 +57,10 @@ export default function BackupReset() {
       fd.append('file', input.files[0]);
       try {
         const res = await restoreBackup(fd);
-        showToast(res.data.success ? 'Khôi phục thành công' : 'Khôi phục thất bại', res.data.success ? 'success' : 'error');
+        showToast(res.data.success ? (locale === 'vi' ? 'Khôi phục thành công' : 'Restore successful') : (locale === 'vi' ? 'Khôi phục thất bại' : 'Restore failed'), res.data.success ? 'success' : 'error');
         if (res.data.success) load();
       } catch {
-        showToast('Lỗi khi khôi phục', 'error');
+        showToast(locale === 'vi' ? 'Lỗi khi khôi phục' : 'Error restoring', 'error');
       }
     };
     input.click();
@@ -66,39 +68,39 @@ export default function BackupReset() {
 
   const handleReset = async () => {
     if (resetInput !== 'RESET') return;
-    if (!window.confirm('Thao tác này sẽ xóa toàn bộ dữ liệu! Bạn có chắc chắn?')) return;
+    if (!window.confirm(locale === 'vi' ? 'Thao tác này sẽ xóa toàn bộ dữ liệu! Bạn có chắc chắn?' : 'This will delete all data! Are you sure?')) return;
     try {
       const res = await resetSandbox();
-      showToast(`Đã reset sandbox. Xóa ${res.data.removed || 0} bản ghi.`);
+      showToast(locale === 'vi' ? `Đã reset sandbox. Xóa ${res.data.removed || 0} bản ghi.` : `Sandbox reset. Deleted ${res.data.removed || 0} records.`);
       setResetInput('');
       load();
     } catch {
-      showToast('Lỗi khi reset', 'error');
+      showToast(locale === 'vi' ? 'Lỗi khi reset' : 'Error resetting', 'error');
     }
   };
 
   const getRelativeTime = (dateStr) => {
-    if (!dateStr) return 'Chưa có';
+    if (!dateStr) return locale === 'vi' ? 'Chưa có' : 'None';
     const now = new Date();
     const date = new Date(dateStr);
     const diffH = Math.floor((now - date) / 3600000);
-    if (diffH < 1) return 'Vừa xong';
-    if (diffH < 24) return `${diffH} giờ trước`;
-    return `${Math.floor(diffH / 24)} ngày trước`;
+    if (diffH < 1) return locale === 'vi' ? 'Vừa xong' : 'Just now';
+    if (diffH < 24) return locale === 'vi' ? `${diffH} giờ trước` : `${diffH}h ago`;
+    return locale === 'vi' ? `${Math.floor(diffH / 24)} ngày trước` : `${Math.floor(diffH / 24)} days ago`;
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><p className="text-on-surface-variant">Đang tải...</p></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><p className="text-on-surface-variant">{locale === 'vi' ? 'Đang tải...' : 'Loading...'}</p></div>;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="font-headline-lg text-headline-lg text-on-surface">Sao lưu & Đặt lại</h2>
-          <p className="text-on-surface-variant text-body-md mt-1">Quản lý ảnh chụp hệ thống và môi trường khôi phục không gian làm việc.</p>
+          <h2 className="font-headline-lg text-headline-lg text-on-surface">{locale === 'vi' ? 'Sao lưu & Đặt lại' : 'Backup & Reset'}</h2>
+          <p className="text-on-surface-variant text-body-md mt-1">{locale === 'vi' ? 'Quản lý ảnh chụp hệ thống và môi trường khôi phục không gian làm việc.' : 'Manage system snapshots and workspace recovery environment.'}</p>
         </div>
         <button onClick={handleCreateBackup} disabled={creating} className="flex items-center gap-2 bg-primary text-on-primary px-6 py-2.5 rounded-lg font-title-md hover:bg-primary/90 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50">
           <span className="material-symbols-outlined">{creating ? 'sync' : 'cloud_upload'}</span>
-          {creating ? 'Đang tạo...' : 'Tạo Sao lưu'}
+          {creating ? (locale === 'vi' ? 'Đang tạo...' : 'Creating...') : (locale === 'vi' ? 'Tạo Sao lưu' : 'Create Backup')}
         </button>
       </div>
 
@@ -106,8 +108,8 @@ export default function BackupReset() {
         {/* Snapshot History */}
         <div className="col-span-12 lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Lịch sử Snapshot</h3>
-            <span className="text-primary font-body-md text-sm">{data.snapshots.length} Bản sao lưu ({data.totalSize})</span>
+            <h3 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Lịch sử Snapshot' : 'Snapshot History'}</h3>
+            <span className="text-primary font-body-md text-sm">{data.snapshots.length} {locale === 'vi' ? 'Bản sao lưu' : 'Backups'} ({data.totalSize})</span>
           </div>
           <div className="flex flex-col gap-3">
             {data.snapshots.map((item) => (
@@ -122,14 +124,14 @@ export default function BackupReset() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => handleDeleteBackup(item.id)} className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-all" title="Xóa">
+                  <button onClick={() => handleDeleteBackup(item.id)} className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-all" title={locale === 'vi' ? 'Xóa' : 'Delete'}>
                     <span className="material-symbols-outlined">delete</span>
                   </button>
                 </div>
               </div>
             ))}
             {data.snapshots.length === 0 && (
-              <div className="p-8 text-center text-on-surface-variant text-sm">Chưa có bản sao lưu nào. Nhấn "Tạo Sao lưu" để bắt đầu.</div>
+              <div className="p-8 text-center text-on-surface-variant text-sm">{locale === 'vi' ? 'Chưa có bản sao lưu nào. Nhấn "Tạo Sao lưu" để bắt đầu.' : 'No backups yet. Click "Create Backup" to start.'}</div>
             )}
           </div>
         </div>
@@ -142,24 +144,24 @@ export default function BackupReset() {
               <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>upload_file</span>
             </div>
             <div>
-              <p className="font-title-md text-on-surface">Thả tệp sao lưu vào đây</p>
-              <p className="text-on-surface-variant text-sm mt-1 px-4">Tải lên tệp .zip hoặc .json từ lần xuất trước để khôi phục.</p>
+              <p className="font-title-md text-on-surface">{locale === 'vi' ? 'Thả tệp sao lưu vào đây' : 'Drop backup file here'}</p>
+              <p className="text-on-surface-variant text-sm mt-1 px-4">{locale === 'vi' ? 'Tải lên tệp .zip hoặc .json từ lần xuất trước để khôi phục.' : 'Upload a .zip or .json file from a previous export to restore.'}</p>
             </div>
-            <button className="px-6 py-2 border border-outline text-on-surface hover:bg-surface-container transition-all rounded-lg text-body-md">Chọn Tệp</button>
+            <button className="px-6 py-2 border border-outline text-on-surface hover:bg-surface-container transition-all rounded-lg text-body-md">{locale === 'vi' ? 'Chọn Tệp' : 'Select File'}</button>
           </div>
 
           {/* Reset Sandbox */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 border-l-4 border-error bg-error/5">
             <h3 className="font-label-md text-label-md text-error uppercase tracking-wider mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-lg">warning</span>
-              Đặt lại Sandbox
+              {locale === 'vi' ? 'Đặt lại Sandbox' : 'Reset Sandbox'}
             </h3>
             <p className="text-on-surface-variant text-sm mb-6">
-              Thao tác này sẽ xóa tất cả dữ liệu demo/test. Hành động này <span className="text-error font-bold">không thể hoàn tác</span>.
+              {locale === 'vi' ? 'Thao tác này sẽ xóa tất cả dữ liệu demo/test. Hành động này' : 'This will delete all demo/test data. This action is'} <span className="text-error font-bold">{locale === 'vi' ? 'không thể hoàn tác' : 'irreversible'}</span>.
             </p>
             <div className="flex flex-col gap-4">
               <div>
-                <label className="text-xs font-label-md text-on-surface-variant mb-2 block">NHẬP 'RESET' ĐỂ XÁC NHẬN</label>
+                <label className="text-xs font-label-md text-on-surface-variant mb-2 block">{locale === 'vi' ? "NHẬP 'RESET' ĐỂ XÁC NHẬN" : "TYPE 'RESET' TO CONFIRM"}</label>
                 <input className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-center tracking-[0.3em] focus:ring-2 focus:ring-error focus:outline-none transition-all" placeholder="RESET" value={resetInput} onChange={(e) => setResetInput(e.target.value)} />
               </div>
               <button
@@ -170,7 +172,7 @@ export default function BackupReset() {
                     ? 'bg-error text-on-error hover:brightness-110 active:scale-95 shadow-lg shadow-error/30'
                     : 'bg-error/10 border border-error/20 text-error/50 cursor-not-allowed'
                 }`}
-              >Đặt lại Mặc định</button>
+              >{locale === 'vi' ? 'Đặt lại Mặc định' : 'Reset to Default'}</button>
             </div>
           </div>
         </div>
@@ -181,28 +183,28 @@ export default function BackupReset() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
           <span className="material-symbols-outlined text-primary bg-primary-fixed/30 p-2 rounded-lg">history</span>
           <div>
-            <p className="text-xs font-label-md text-on-surface-variant opacity-70">SAO LƯU GẦN NHẤT</p>
+            <p className="text-xs font-label-md text-on-surface-variant opacity-70">{locale === 'vi' ? 'SAO LƯU GẦN NHẤT' : 'LAST BACKUP'}</p>
             <p className="font-body-md font-semibold">{getRelativeTime(data.lastBackup)}</p>
           </div>
         </div>
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
           <span className="material-symbols-outlined text-success bg-success/10 p-2 rounded-lg">verified</span>
           <div>
-            <p className="text-xs font-label-md text-on-surface-variant opacity-70">KIỂM TRA TOÀN VẸN</p>
+            <p className="text-xs font-label-md text-on-surface-variant opacity-70">{locale === 'vi' ? 'KIỂM TRA TOÀN VẸN' : 'INTEGRITY CHECK'}</p>
             <p className="font-body-md font-semibold">{data.integrityCheck}</p>
           </div>
         </div>
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
           <span className="material-symbols-outlined text-primary bg-primary-fixed/30 p-2 rounded-lg">storage</span>
           <div>
-            <p className="text-xs font-label-md text-on-surface-variant opacity-70">DUNG LƯỢNG ĐĨA</p>
+            <p className="text-xs font-label-md text-on-surface-variant opacity-70">{locale === 'vi' ? 'DUNG LƯỢNG ĐĨA' : 'DISK USAGE'}</p>
             <p className="font-body-md font-semibold">{data.diskUsage}</p>
           </div>
         </div>
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
           <span className="material-symbols-outlined text-on-surface-variant bg-surface-container-high p-2 rounded-lg">schedule</span>
           <div>
-            <p className="text-xs font-label-md text-on-surface-variant opacity-70">TỰ ĐỘNG CHỤP</p>
+            <p className="text-xs font-label-md text-on-surface-variant opacity-70">{locale === 'vi' ? 'TỰ ĐỘNG CHỤP' : 'AUTO SNAPSHOT'}</p>
             <p className="font-body-md font-semibold">{data.autoSnapshot}</p>
           </div>
         </div>

@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { getActuals, saveActuals } from '../../services/api';
 import OpportunitiesTable from './OpportunitiesTable';
 import ClosedDealsTable from './ClosedDealsTable';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 
 export default function ActualsForm() {
   const addToast = useToast();
+  const { locale } = useDashboard();
   const getCurrentWeek = () => {
     const now = new Date();
     const start = new Date(now.getFullYear(), 0, 1);
@@ -50,10 +52,10 @@ export default function ActualsForm() {
   const handleSubmit = async () => {
     try {
       await saveActuals({ ...formData, week: selectedWeek });
-      addToast('Đã lưu Actual Data thành công!', 'success');
+      addToast(locale === 'vi' ? 'Đã lưu Actual Data thành công!' : 'Actual Data saved successfully!', 'success');
     } catch (error) {
       console.error('Error saving actuals:', error);
-      addToast('Có lỗi xảy ra khi lưu!', 'error');
+      addToast(locale === 'vi' ? 'Có lỗi xảy ra khi lưu!' : 'An error occurred while saving!', 'error');
     }
   };
 
@@ -62,11 +64,11 @@ export default function ActualsForm() {
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
           <span className="material-symbols-outlined text-primary">edit_note</span>
-          Form Nhập Actual
+          {locale === 'vi' ? 'Form Nhập Actual' : 'Actual Entry Form'}
         </h3>
         <div className="flex items-center gap-3">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            Chọn kỳ:
+            {locale === 'vi' ? 'Chọn kỳ:' : 'Select period:'}
           </label>
           <input
             className="border-border-light rounded text-body-sm px-2 py-1 focus:ring-primary focus:border-primary outline-none"
@@ -80,7 +82,7 @@ export default function ActualsForm() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            Raw Leads Actual
+            {locale === 'vi' ? 'Raw Leads Actual' : 'Raw Leads Actual'}
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -93,7 +95,7 @@ export default function ActualsForm() {
         </div>
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            MQL
+            {locale === 'vi' ? 'MQL' : 'MQL'}
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -106,7 +108,7 @@ export default function ActualsForm() {
         </div>
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            SQL
+            {locale === 'vi' ? 'SQL' : 'SQL'}
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -129,7 +131,7 @@ export default function ActualsForm() {
           className="bg-primary text-white font-semibold px-8 py-3 rounded-lg hover:opacity-90 transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
         >
           <span className="material-symbols-outlined">publish</span>
-          {loading ? 'Đang lưu...' : 'Lưu Actual Data'}
+          {loading ? (locale === 'vi' ? 'Đang lưu...' : 'Saving...') : (locale === 'vi' ? 'Lưu Actual Data' : 'Save Actual Data')}
         </button>
       </div>
     </section>

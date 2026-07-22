@@ -65,7 +65,7 @@ const STATUS_COLORS = {
 };
 
 export default function Dashboard() {
-  const { year, periodType, periodValue, setPeriodType, setPeriodValue } = useDashboard();
+  const { year, periodType, periodValue, setPeriodType, setPeriodValue, locale } = useDashboard();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -155,8 +155,8 @@ export default function Dashboard() {
             overdue: overdueTasks.length,
           };
           result.alerts = [
-            ...overdueTasks.map(t => ({ type: 'error', title: `Quá hạn: ${t.taskName || ''}`, assignee: t.assigneeName || '', due: t.dueDate || '', icon: 'error' })),
-            ...upcomingTasks.map(t => ({ type: 'warning', title: `Sắp tới: ${t.taskName || ''}`, assignee: t.assigneeName || '', due: t.dueDate || '', icon: 'schedule' })),
+            ...overdueTasks.map(t => ({ type: 'error', title: `${({ vi: 'Quá hạn', en: 'Overdue' })[locale]}: ${t.taskName || ''}`, assignee: t.assigneeName || '', due: t.dueDate || '', icon: 'error' })),
+            ...upcomingTasks.map(t => ({ type: 'warning', title: `${({ vi: 'Sắp tới', en: 'Upcoming' })[locale]}: ${t.taskName || ''}`, assignee: t.assigneeName || '', due: t.dueDate || '', icon: 'schedule' })),
           ];
         }
         setProjectTasksCache(tasksMap);
@@ -164,7 +164,7 @@ export default function Dashboard() {
       }
     } catch (err) {
       if (!controller.signal.aborted) {
-        const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Không thể tải dữ liệu';
+        const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || ({ vi: 'Không thể tải dữ liệu', en: 'Unable to load data' })[locale];
         setError(Array.isArray(msg) ? msg.join('; ') : msg);
       }
     } finally {
@@ -208,7 +208,7 @@ export default function Dashboard() {
         setProjectTasksCache(prev => ({ ...prev, [cacheKey]: [] }));
       }
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể tải task';
+      const msg = err?.response?.data?.message || err?.message || ({ vi: 'Không thể tải task', en: 'Unable to load tasks' })[locale];
       setProjectErrors(prev => ({ ...prev, [projectId]: Array.isArray(msg) ? msg.join('; ') : msg }));
     } finally {
       setProjectLoading(prev => ({ ...prev, [projectId]: false }));
@@ -229,7 +229,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-on-surface-variant">Đang tải dữ liệu...</p>
+        <p className="text-on-surface-variant">{{ vi: 'Đang tải dữ liệu...', en: 'Loading data...' }[locale]}</p>
       </div>
     );
   }
@@ -246,7 +246,7 @@ export default function Dashboard() {
           className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded text-body-sm font-semibold hover:opacity-90 transition-opacity"
         >
           <span className="material-symbols-outlined text-sm">refresh</span>
-          Thử lại
+          {{ vi: 'Thử lại', en: 'Retry' }[locale]}
         </button>
       </div>
     );
@@ -257,7 +257,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center space-y-2">
           <span className="material-symbols-outlined text-4xl text-outline">database_off</span>
-          <p className="text-on-surface-variant">Chưa có dữ liệu kỳ này</p>
+          <p className="text-on-surface-variant">{{ vi: 'Chưa có dữ liệu kỳ này', en: 'No data for this period' }[locale]}</p>
         </div>
       </div>
     );
@@ -287,13 +287,13 @@ export default function Dashboard() {
                 : 'text-on-surface-variant hover:text-primary'
             }`}
           >
-            {tab.label}
+            {({ week: { vi: 'Tuần', en: 'Week' }, month: { vi: 'Tháng', en: 'Month' }, quarter: { vi: 'Quý', en: 'Quarter' }, year: { vi: 'Năm', en: 'Year' } })[tab.key][locale]}
           </button>
         ))}
         {periodOptions.length > 0 && (
           <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border-light">
             <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">
-              {periodType === 'week' ? 'Tuần' : periodType === 'month' ? 'Tháng' : 'Quý'}:
+              {periodType === 'week' ? ({ vi: 'Tuần', en: 'Week' })[locale] : periodType === 'month' ? ({ vi: 'Tháng', en: 'Month' })[locale] : ({ vi: 'Quý', en: 'Quarter' })[locale]}:
             </span>
             <select
               value={periodValue}
@@ -310,7 +310,7 @@ export default function Dashboard() {
         <button
           onClick={handleRetry}
           className="ml-2 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 rounded transition-colors flex items-center gap-1"
-          title="Làm mới"
+          title={({ vi: 'Làm mới', en: 'Refresh' })[locale]}
         >
           <span className="material-symbols-outlined text-sm">refresh</span>
         </button>
@@ -325,7 +325,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-            <h3 className="text-sm font-bold text-gray-900">🔻 Funnel Chuyển đổi</h3>
+            <h3 className="text-sm font-bold text-gray-900">🔻 {{ vi: 'Funnel Chuyển đổi', en: 'Conversion Funnel' }[locale]}</h3>
           </div>
           <div className="px-5 py-4 space-y-2">
             {data.funnel.map((item, idx) => (
@@ -350,7 +350,7 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-            <h3 className="text-sm font-bold text-gray-900">📡 Hiệu suất theo kênh</h3>
+            <h3 className="text-sm font-bold text-gray-900">📡 {{ vi: 'Hiệu suất theo kênh', en: 'Channel Performance' }[locale]}</h3>
           </div>
           <div className="px-5 py-4">
             <div className="flex items-end gap-3" style={{ height: 180 }}>
@@ -373,8 +373,8 @@ export default function Dashboard() {
               })}
             </div>
             <div className="flex justify-center gap-5 mt-3 text-[10px] text-gray-500">
-              <span><span className="inline-block w-2.5 h-2.5 bg-blue-300 rounded-sm mr-1.5 align-middle" />Kế hoạch</span>
-              <span><span className="inline-block w-2.5 h-2.5 bg-green-500 rounded-sm mr-1.5 align-middle" />Thực tế</span>
+              <span><span className="inline-block w-2.5 h-2.5 bg-blue-300 rounded-sm mr-1.5 align-middle" />{{ vi: 'Kế hoạch', en: 'Plan' }[locale]}</span>
+              <span><span className="inline-block w-2.5 h-2.5 bg-green-500 rounded-sm mr-1.5 align-middle" />{{ vi: 'Thực tế', en: 'Actual' }[locale]}</span>
             </div>
           </div>
         </div>
@@ -383,11 +383,11 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-            <h3 className="text-sm font-bold text-gray-900">📁 Tiến độ dự án</h3>
+            <h3 className="text-sm font-bold text-gray-900">📁 {{ vi: 'Tiến độ dự án', en: 'Project Progress' }[locale]}</h3>
           </div>
           <div className="px-5 py-4">
             <div className="text-xs text-gray-500 mb-3">
-              Tổng tiến độ: <strong className="text-blue-600">{data.totalPct}%</strong>
+              {{ vi: 'Tổng tiến độ', en: 'Total progress' }[locale]}: <strong className="text-blue-600">{data.totalPct}%</strong>
             </div>
             <div className="space-y-1">
               {data.projectProgress.map((project) => (
@@ -406,7 +406,7 @@ export default function Dashboard() {
                   {expandedProjectId === project.id && (
                     <div className="ml-7 mb-2 space-y-1">
                       {projectLoading[project.id] ? (
-                        <p className="text-[11px] text-gray-400 italic">Đang tải...</p>
+                        <p className="text-[11px] text-gray-400 italic">{{ vi: 'Đang tải...', en: 'Loading...' }[locale]}</p>
                       ) : projectErrors[project.id] ? (
                         <div className="flex items-center gap-2 text-[11px] text-danger">
                           <span>{projectErrors[project.id]}</span>
@@ -414,18 +414,18 @@ export default function Dashboard() {
                             onClick={() => handleToggleProject(project.id, project.name)}
                             className="underline hover:no-underline"
                           >
-                            Thử lại
+                            {{ vi: 'Thử lại', en: 'Retry' }[locale]}
                           </button>
                         </div>
                       ) : (() => {
                         const cacheKey = `${project.id}_${periodKey}`;
                         const tasks = projectTasksCache[cacheKey] || [];
                         if (tasks.length === 0) {
-                          return <p className="text-[11px] text-gray-400 italic">Không có task trong kỳ này</p>;
+                          return <p className="text-[11px] text-gray-400 italic">{{ vi: 'Không có task trong kỳ này', en: 'No tasks in this period' }[locale]}</p>;
                         }
                         return tasks.map((task) => {
                           const st = task.status;
-                          const stLabel = STATUS_LABELS[st] || 'Chưa bắt đầu';
+                          const stLabel = STATUS_LABELS[st] || ({ vi: 'Chưa bắt đầu', en: 'Not Started' })[locale];
                           const dotColor = st === 'done' ? 'bg-green-500' : st === 'overdue' ? 'bg-red-500' : 'bg-blue-400';
                           return (
                             <div key={task.name + task.due} className="flex items-center gap-2 py-1 px-2 rounded bg-gray-50 text-[11px]">
@@ -449,7 +449,7 @@ export default function Dashboard() {
         <div className="flex flex-col gap-4">
           <div className="bg-white rounded-xl border border-border-light overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100">
-              <h3 className="text-sm font-bold text-gray-900">✅ Trạng thái task</h3>
+              <h3 className="text-sm font-bold text-gray-900">✅ {{ vi: 'Trạng thái task', en: 'Task Status' }[locale]}</h3>
             </div>
             <div className="px-5 py-4">
               <div className="flex items-center gap-5">
@@ -476,7 +476,7 @@ export default function Dashboard() {
                   {statusKeys.map(k => (
                     <div key={k} className="flex items-center gap-2 text-xs text-gray-700">
                       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_COLORS[k] }} />
-                      <span>{STATUS_LABELS[k]}: {ts[k]}</span>
+                      <span>{({ completed: { vi: 'Hoàn thành', en: 'Completed' }, inProgress: { vi: 'Đang làm', en: 'In Progress' }, pending: { vi: 'Chưa bắt đầu', en: 'Not Started' }, waiting: { vi: 'Đang chờ', en: 'Waiting' }, canceled: { vi: 'Đã hủy', en: 'Canceled' }, overdue: { vi: 'Quá hạn', en: 'Overdue' } })[k][locale]}: {ts[k]}</span>
                     </div>
                   ))}
                 </div>
@@ -486,7 +486,7 @@ export default function Dashboard() {
 
           <div className="bg-white rounded-xl border border-border-light overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100">
-              <h3 className="text-sm font-bold text-gray-900">🔔 Cảnh báo</h3>
+              <h3 className="text-sm font-bold text-gray-900">🔔 {{ vi: 'Cảnh báo', en: 'Alerts' }[locale]}</h3>
             </div>
             <div className="px-4 py-3 space-y-2">
               {(data.alerts.length <= 3 ? data.alerts : data.alerts.slice(0, 3)).map((alert, idx) => (
@@ -510,7 +510,7 @@ export default function Dashboard() {
                   onClick={() => setShowAllAlerts(true)}
                   className="w-full mt-1 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-colors"
                 >
-                  Xem tất cả ({data.alerts.length})
+                  {{ vi: 'Xem tất cả', en: 'View all' }[locale]} ({data.alerts.length})
                 </button>
               )}
             </div>
@@ -524,7 +524,7 @@ export default function Dashboard() {
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowAllAlerts(false)} />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl z-50 p-5 max-h-[70vh] flex flex-col">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold">🔔 Tất cả cảnh báo</h3>
+              <h3 className="text-sm font-bold">🔔 {{ vi: 'Tất cả cảnh báo', en: 'All Alerts' }[locale]}</h3>
               <button onClick={() => setShowAllAlerts(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
             </div>
             <div className="overflow-y-auto space-y-2 flex-1">

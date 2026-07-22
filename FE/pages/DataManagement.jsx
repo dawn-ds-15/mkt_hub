@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { BackupReset, DropdownConfig, ExportData, ImportData, SlackSettings, TeamMembers } from '../components/DataManagement';
+import { useDashboard } from '../contexts/DashboardContext';
 
 function getUserRole() {
   try {
@@ -11,18 +12,22 @@ function getUserRole() {
 }
 
 const allTabs = [
-  { label: 'Import', key: 'import', roles: ['specialist', 'manager'] },
-  { label: 'Export', key: 'export', roles: ['manager'] },
-  { label: 'Thành viên', key: 'members', roles: ['manager'] },
-  { label: 'Cấu hình Dropdown', key: 'dropdown', roles: ['manager'] },
-  { label: 'Cấu hình Slack', key: 'slack', roles: ['manager'] },
-  { label: 'Sao lưu & Đặt lại', key: 'backup', roles: ['manager'] },
+  { vi: 'Import', en: 'Import', key: 'import', roles: ['specialist', 'manager'] },
+  { vi: 'Export', en: 'Export', key: 'export', roles: ['manager'] },
+  { vi: 'Thành viên', en: 'Members', key: 'members', roles: ['manager'] },
+  { vi: 'Cấu hình Dropdown', en: 'Dropdown Config', key: 'dropdown', roles: ['manager'] },
+  { vi: 'Cấu hình Slack', en: 'Slack Config', key: 'slack', roles: ['manager'] },
+  { vi: 'Sao lưu & Đặt lại', en: 'Backup & Reset', key: 'backup', roles: ['specialist', 'manager'] },
 ];
 
 export default function DataManagementPage() {
+  const { locale } = useDashboard();
   const [searchParams, setSearchParams] = useSearchParams();
   const role = getUserRole();
-  const tabs = useMemo(() => allTabs.filter(t => t.roles.includes(role)), [role]);
+  const tabs = useMemo(() => {
+    const filtered = allTabs.filter(t => t.roles.includes(role));
+    return filtered.map(t => ({ label: t[locale] || t.vi, key: t.key }));
+  }, [role, locale]);
   const activeTab = searchParams.get('tab') || tabs[0]?.key || 'import';
 
   const setActiveTab = (key) => {
@@ -48,7 +53,7 @@ export default function DataManagementPage() {
           <div className="flex items-center justify-center h-64 text-on-surface-variant">
             <div className="text-center">
               <span className="material-symbols-outlined text-[48px] text-outline-variant mb-4">construction</span>
-              <p className="text-headline-sm font-semibold">Đang phát triển...</p>
+              <p className="text-headline-sm font-semibold">{locale === 'vi' ? 'Đang phát triển...' : 'In development...'}</p>
             </div>
           </div>
         );
@@ -56,27 +61,13 @@ export default function DataManagementPage() {
   };
 
   return (
-    <Layout title="Quản lý Dữ liệu">
+    <Layout
+      title={locale === 'vi' ? 'Quản lý Dữ liệu' : 'Data Management'}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+    >
       <div className="space-y-6">
-        {/* Sub-navigation */}
-        <div className="border-b border-outline-variant">
-          <nav className="flex items-center gap-8 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`py-4 text-sm font-title-md transition-all whitespace-nowrap border-b-2 ${
-                  activeTab === tab.key
-                    ? 'text-primary border-primary'
-                    : 'text-on-surface-variant hover:text-primary border-transparent'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
         {renderContent()}
       </div>
     </Layout>

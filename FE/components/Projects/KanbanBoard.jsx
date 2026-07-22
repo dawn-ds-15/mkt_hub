@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getKanbanData, updateTask, getProjects, getMembers, getTask } from '../../services/api';
+import { useDashboard } from '../../contexts/DashboardContext';
 import TaskViewModal from './TaskViewModal';
 import TaskEditDrawer from './TaskEditDrawer';
 
@@ -118,7 +119,7 @@ function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, on
         ))}
         {column.tasks.length === 0 && (
           <div className="flex items-center justify-center h-24 text-gray-400 text-[11px] italic">
-            Không có task
+            {locale === 'vi' ? 'Không có task' : 'No tasks'}
           </div>
         )}
       </div>
@@ -127,6 +128,7 @@ function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, on
 }
 
 export default function KanbanBoard() {
+  const { locale } = useDashboard();
   const [columns, setColumns] = useState([]);
   const [allRawTasks, setAllRawTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -244,14 +246,14 @@ export default function KanbanBoard() {
       console.log(`[Kanban] Refetched task ${taskId} status:`, taskRes.data?.status);
       if (taskRes.data?.status !== apiStatus) {
         console.warn(`[Kanban] STATUS MISMATCH: PATCH sent "${apiStatus}" but GET returned "${taskRes.data?.status}"`);
-        showToast(`Status vẫn là "${taskRes.data?.status}", không phải "${apiStatus}"`, 'error');
+        showToast(locale === 'vi' ? `Status vẫn là "${taskRes.data?.status}", không phải "${apiStatus}"` : `Status is still "${taskRes.data?.status}", not "${apiStatus}"`, 'error');
       } else {
         console.log(`[Kanban] Status confirmed: "${apiStatus}" — PATCH persisted OK`);
       }
     }).catch((err) => {
       console.error(`[Kanban] PATCH failed for task ${taskId}:`, err?.response?.status, err?.response?.data || err);
       setColumns(prevColsCopy);
-      const msg = err?.response?.data?.message || err?.message || 'Không thể cập nhật trạng thái';
+      const msg = err?.response?.data?.message || err?.message || (locale === 'vi' ? 'Không thể cập nhật trạng thái' : 'Cannot update status');
       showToast(msg);
     });
     setDraggedTaskId(null);
@@ -306,7 +308,7 @@ export default function KanbanBoard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Đang tải dữ liệu...</p>
+        <p className="text-gray-500">{locale === 'vi' ? 'Đang tải dữ liệu...' : 'Loading data...'}</p>
       </div>
     );
   }
@@ -320,7 +322,7 @@ export default function KanbanBoard() {
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
           >
-            <option>Tất cả dự án</option>
+            <option value="Tất cả dự án">{locale === 'vi' ? 'Tất cả dự án' : 'All Projects'}</option>
             {projects.map(p => <option key={p.id}>{p.name}</option>)}
           </select>
           <select
@@ -328,7 +330,7 @@ export default function KanbanBoard() {
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
           >
-            <option>Tất cả mọi người</option>
+            <option value="Tất cả mọi người">{locale === 'vi' ? 'Tất cả mọi người' : 'All People'}</option>
             {members.map(m => <option key={m.id}>{m.name}</option>)}
           </select>
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg">
@@ -338,7 +340,7 @@ export default function KanbanBoard() {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               className="border-none bg-transparent focus:ring-0 outline-none text-[11px] w-[110px]"
-              placeholder="Từ ngày"
+              placeholder={locale === 'vi' ? 'Từ ngày' : 'From date'}
             />
             <span className="text-gray-300">—</span>
             <input
@@ -346,14 +348,14 @@ export default function KanbanBoard() {
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               className="border-none bg-transparent focus:ring-0 outline-none text-[11px] w-[110px]"
-              placeholder="Đến ngày"
+              placeholder={locale === 'vi' ? 'Đến ngày' : 'To date'}
             />
           </div>
         </div>
 
         <div className="text-[11px] text-gray-400 font-medium flex items-center gap-1.5">
           <span className="material-symbols-outlined text-sm">dashboard</span>
-          {filteredColumns.reduce((s, c) => s + c.tasks.length, 0)} task • {filteredColumns.length} cột
+          {filteredColumns.reduce((s, c) => s + c.tasks.length, 0)} {locale === 'vi' ? 'task' : 'tasks'} • {filteredColumns.length} {locale === 'vi' ? 'cột' : 'columns'}
         </div>
         <div className="flex flex-row flex-nowrap gap-3 pb-4" style={{ minHeight: 'calc(100vh - 280px)' }}>
           {filteredColumns.map((column) => (
@@ -395,13 +397,13 @@ export default function KanbanBoard() {
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => { setReasonPopup(null); setDraggedTaskId(null); setDraggedFromCol(null); }} />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
-            <h3 className="text-base font-bold">Nhập lý do</h3>
-            <p className="text-sm text-gray-500">Vui lòng nhập lý do khi chuyển task sang trạng thái này</p>
+            <h3 className="text-base font-bold">{locale === 'vi' ? 'Nhập lý do' : 'Enter Reason'}</h3>
+            <p className="text-sm text-gray-500">{locale === 'vi' ? 'Vui lòng nhập lý do khi chuyển task sang trạng thái này' : 'Please enter a reason when moving task to this status'}</p>
             <textarea
               className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none resize-vertical h-20"
               value={reasonText}
               onChange={(e) => setReasonText(e.target.value)}
-              placeholder="Nhập lý do..."
+              placeholder={locale === 'vi' ? 'Nhập lý do...' : 'Enter reason...'}
               autoFocus
             />
             <div className="flex justify-end gap-2">
@@ -409,7 +411,7 @@ export default function KanbanBoard() {
                 onClick={() => { setReasonPopup(null); setDraggedTaskId(null); setDraggedFromCol(null); }}
                 className="px-4 py-2 border border-gray-200 rounded text-xs font-bold text-gray-500 hover:bg-gray-50"
               >
-                Hủy
+                {locale === 'vi' ? 'Hủy' : 'Cancel'}
               </button>
               <button
                 onClick={() => {
@@ -420,7 +422,7 @@ export default function KanbanBoard() {
                 disabled={!reasonText.trim()}
                 className={`px-4 py-2 rounded text-xs font-bold text-white ${reasonText.trim() ? 'bg-blue-600 hover:opacity-90' : 'bg-gray-300 cursor-not-allowed'}`}
               >
-                Xác nhận
+                {locale === 'vi' ? 'Xác nhận' : 'Confirm'}
               </button>
             </div>
           </div>

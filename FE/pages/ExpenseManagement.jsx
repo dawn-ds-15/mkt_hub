@@ -6,14 +6,16 @@ import ExpenseEntryForm from '../components/ExpenseManagement/ExpenseEntryForm';
 import ExpenseHistory from '../components/ExpenseManagement/ExpenseHistory';
 import ExpenseReports from '../components/ExpenseManagement/ExpenseReports';
 import ExpenseOverview from '../components/ExpenseManagement/ExpenseOverview';
+import { useDashboard } from '../contexts/DashboardContext';
 
 const tabs = [
-  { label: 'Tổng quan', key: 'overview' },
-  { label: 'Nhập chi phí', key: 'input' },
-  { label: 'Báo cáo', key: 'reports' },
+  { vi: 'Tổng quan', en: 'Overview', key: 'overview' },
+  { vi: 'Nhập chi phí', en: 'Input Expense', key: 'input' },
+  { vi: 'Báo cáo', en: 'Reports', key: 'reports' },
 ];
 
 export default function ExpenseManagement() {
+  const { locale } = useDashboard();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'input';
   const [refreshKey, setRefreshKey] = useState(0);
@@ -36,40 +38,27 @@ export default function ExpenseManagement() {
             </section>
             <section className="col-span-12 lg:col-span-8 space-y-6">
               <ExpenseEntryForm onSaved={handleSaved} />
-              <ExpenseHistory refreshKey={refreshKey} />
+              <ExpenseHistory refreshKey={refreshKey} onSaved={handleSaved} />
             </section>
           </div>
         );
       case 'overview':
-        return <ExpenseOverview />;
+        return <ExpenseOverview refreshKey={refreshKey} />;
       case 'reports':
-        return <ExpenseReports />;
+        return <ExpenseReports refreshKey={refreshKey} />;
       default:
         return null;
     }
   };
 
   return (
-    <Layout title="Quản lý Chi phí">
+    <Layout
+      title={locale === 'vi' ? 'Quản lý Chi phí' : 'Expense Management'}
+      tabs={tabs.map(t => ({ label: t[locale] || t.vi, key: t.key }))}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+    >
       <div className="space-y-6">
-        <div className="flex items-center gap-8">
-          <nav className="flex gap-6">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`text-body-md transition-opacity cursor-pointer pb-1 ${
-                  activeTab === tab.key
-                    ? 'text-primary font-semibold border-b-2 border-primary'
-                    : 'text-on-surface-variant hover:text-primary'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
         {renderContent()}
       </div>
     </Layout>

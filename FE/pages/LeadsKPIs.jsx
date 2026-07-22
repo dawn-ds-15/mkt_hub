@@ -9,12 +9,13 @@ import ComparePeriods from '../components/LeadsKPIs/ComparePeriods';
 import { useDashboard } from '../contexts/DashboardContext';
 
 const tabs = [
-  { label: 'Xem & Phân tích', key: 'view' },
-  { label: 'Nhập số liệu', key: 'input' },
-  { label: 'So sánh kỳ', key: 'compare' },
+  { vi: 'Xem & Phân tích', en: 'View & Analytics', key: 'view' },
+  { vi: 'Nhập số liệu', en: 'Input Data', key: 'input' },
+  { vi: 'So sánh kỳ', en: 'Compare Periods', key: 'compare' },
 ];
 
 export default function LeadsKPIs() {
+  const { locale } = useDashboard();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'view';
 
@@ -54,26 +55,13 @@ export default function LeadsKPIs() {
   };
 
   return (
-    <Layout title="Leads & KPIs">
+    <Layout
+      title="Leads & KPIs"
+      tabs={tabs.map(t => ({ label: t[locale] || t.vi, key: t.key }))}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+    >
       <div className="space-y-6">
-        <div className="flex items-center gap-8">
-          <nav className="flex gap-6">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`text-body-md transition-opacity cursor-pointer pb-1 ${
-                  activeTab === tab.key
-                    ? 'text-primary font-semibold border-b-2 border-primary'
-                    : 'text-on-surface-variant hover:text-primary'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
         {renderContent()}
       </div>
     </Layout>

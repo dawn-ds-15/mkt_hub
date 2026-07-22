@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getOpportunities, addOpportunity, updateOpportunity, convertOpportunityToWon, getProjects } from '../../services/api';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 
 const feSize = { 'S': 'Enterprise', 'M': 'Medium', 'L': 'Enterprise' };
@@ -29,6 +30,7 @@ const sizeOptions = [
 
 export default function OpportunitiesTable({ onConvertSuccess = noop }) {
   const addToast = useToast();
+  const { locale } = useDashboard();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [convertingIndex, setConvertingIndex] = useState(null);
@@ -102,7 +104,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
     if (modalIndex == null) return;
     const row = rows[modalIndex];
     if (!row.companyName) {
-      addToast('Vui lòng nhập tên công ty!', 'error');
+      addToast(locale === 'vi' ? 'Vui lòng nhập tên công ty!' : 'Please enter a company name!', 'error');
       return;
     }
     setModalSubmitting(true);
@@ -129,12 +131,12 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
         });
         if (onConvertSuccess) onConvertSuccess();
       }, 400);
-      addToast('Chuyển đổi cơ hội thành Closed Deal thành công!', 'success');
+      addToast(locale === 'vi' ? 'Chuyển đổi cơ hội thành Closed Deal thành công!' : 'Opportunity converted to Closed Deal successfully!', 'success');
       setShowModal(false);
       setModalIndex(null);
     } catch (error) {
       console.error('Error converting to won:', error);
-      addToast('Có lỗi xảy ra khi chuyển đổi!', 'error');
+      addToast(locale === 'vi' ? 'Có lỗi xảy ra khi chuyển đổi!' : 'An error occurred during conversion!', 'error');
     } finally {
       setModalSubmitting(false);
     }
@@ -148,14 +150,14 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="text-label-md font-semibold text-on-surface uppercase tracking-wider">
-          Chi tiết Opportunities
+          {locale === 'vi' ? 'Chi tiết Opportunities' : 'Opportunities Detail'}
         </h4>
         <button
           onClick={addRow}
           className="text-primary flex items-center gap-1 text-body-sm font-semibold hover:underline"
         >
           <span className="material-symbols-outlined text-[18px]">add</span>
-          Thêm dòng
+          {locale === 'vi' ? 'Thêm dòng' : 'Add row'}
         </button>
       </div>
 
@@ -163,12 +165,12 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
         <table className="w-full text-left border-collapse">
           <thead className="bg-surface-container-low border-b border-border-light">
             <tr>
-              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Tên DN / Khách hàng</th>
-              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Size</th>
-              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Project</th>
-              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Fees ($)</th>
-              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Dự kiến đóng</th>
-              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Thao tác</th>
+              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Tên DN / Khách hàng' : 'Company / Customer'}</th>
+              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Size' : 'Size'}</th>
+              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Project' : 'Project'}</th>
+              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Fees ($)' : 'Fees ($)'}</th>
+              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Dự kiến đóng' : 'Expected Close'}</th>
+              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light">
@@ -210,7 +212,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                         handleRowChange(index, 'project', pName);
                       }}
                     >
-                      <option value="">Chọn dự án</option>
+                      <option value="">{locale === 'vi' ? 'Chọn dự án' : 'Select project'}</option>
                       {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </td>
@@ -238,7 +240,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       className="px-3 py-1.5 bg-success text-white rounded text-label-md font-semibold hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1 shadow-sm"
                     >
                       <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
-                      Chuyển thành Won
+                      {locale === 'vi' ? 'Chuyển thành Won' : 'Convert to Won'}
                     </button>
                   </td>
                 </tr>
@@ -255,7 +257,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-success">how_to_reg</span>
-                Xác nhận chuyển đổi
+                {locale === 'vi' ? 'Xác nhận chuyển đổi' : 'Confirm Conversion'}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -269,22 +271,22 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
               <div className="space-y-4">
                 <div className="bg-surface-container-low rounded-lg p-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-on-surface-variant">Khách hàng:</span>
+                    <span className="text-on-surface-variant">{locale === 'vi' ? 'Khách hàng:' : 'Customer:'}</span>
                     <span className="font-semibold text-on-surface">{rows[modalIndex].companyName}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-on-surface-variant">Dự án:</span>
+                    <span className="text-on-surface-variant">{locale === 'vi' ? 'Dự án:' : 'Project:'}</span>
                     <span className="font-semibold text-on-surface">{rows[modalIndex].project || '—'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-on-surface-variant">Fees:</span>
+                    <span className="text-on-surface-variant">{locale === 'vi' ? 'Fees:' : 'Fees:'}</span>
                     <span className="font-semibold text-on-surface">${Number(rows[modalIndex].fees || 0).toLocaleString()}</span>
                   </div>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-                    Ngày ký hợp đồng (signed_date)
+                    {locale === 'vi' ? 'Ngày ký hợp đồng (signed_date)' : 'Signed Date'}
                   </label>
                   <input
                     type="date"
@@ -299,7 +301,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                     onClick={() => setShowModal(false)}
                     className="flex-1 px-4 py-3 border border-border-light text-on-surface-variant font-semibold rounded-lg hover:bg-surface-container-low transition-all"
                   >
-                    Hủy
+                    {locale === 'vi' ? 'Hủy' : 'Cancel'}
                   </button>
                   <button
                     onClick={handleConfirmConvert}
@@ -307,7 +309,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                     className="flex-1 px-4 py-3 bg-success text-white font-semibold rounded-lg hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    {modalSubmitting ? 'Đang xử lý...' : 'Xác nhận Won'}
+                    {modalSubmitting ? (locale === 'vi' ? 'Đang xử lý...' : 'Processing...') : (locale === 'vi' ? 'Xác nhận Won' : 'Confirm Won')}
                   </button>
                 </div>
               </div>

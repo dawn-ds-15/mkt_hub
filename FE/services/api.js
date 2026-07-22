@@ -322,7 +322,7 @@ export const logout = async () => {
 
 export const getProjects = async () => {
   const res = await api.get('/v1/projects');
-  const projects = filterDeleted('projects', Array.isArray(res.data) ? res.data : (res.data?.data ?? []));
+  const projects = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
   return {
     data: projects.map((p) => ({
       id: p.id,
@@ -366,8 +366,8 @@ export const updateProject = async (id, data) => {
 };
 
 export const deleteProject = async (id) => {
-  markDeleted('projects', id);
-  return { success: true };
+  const res = await api.delete(`/v1/projects/${id}`);
+  return { data: res.data };
 };
 
 // ===================== TASKS =====================
@@ -392,7 +392,7 @@ export const getTaskList = async (filters = {}) => {
   if (filters.dateTo) params.dueDateTo = filters.dateTo;
   const res = await api.get('/v1/tasks', { params });
   const rawTasks = res.data?.data ?? res.data?.tasks ?? res.data ?? [];
-  const tasks = filterDeleted('tasks', Array.isArray(rawTasks) ? rawTasks : []);
+  const tasks = Array.isArray(rawTasks) ? rawTasks : [];
   return {
     data: tasks.map((t) => {
       const now = new Date();
@@ -433,7 +433,7 @@ export const getTasks = async (filters) => {
   if (filters?.status) params.status = filters.status;
   const res = await api.get('/v1/tasks', { params });
   const items = Array.isArray(res.data?.data) ? res.data.data : [];
-  return { data: filterDeleted('tasks', items) };
+  return { data: items };
 };
 
 export const getTask = async (id) => {
@@ -492,8 +492,8 @@ export const updateTask = async (id, data) => {
 };
 
 export const deleteTask = async (id) => {
-  markDeleted('tasks', id);
-  return { success: true };
+  const res = await api.delete(`/v1/tasks/${id}`);
+  return { data: res.data };
 };
 
 // ===================== KANBAN =====================
@@ -906,7 +906,7 @@ export const updateClosedDeal = async (id, data) => {
 };
 
 export const deleteClosedDeal = async (id) => {
-  const res = await api.delete(`/v1/leads-kpis/closed-deals/${id}/delete`);
+  const res = await api.delete(`/v1/leads-kpis/closed-deals/${id}`);
   return { data: res.data };
 };
 
@@ -986,12 +986,12 @@ function normalizeExpenseItem(item) {
   const projectName = typeof projObj === 'object' && projObj ? (projObj.name || '') : (item.project || item.projectName || '');
   return {
     id: item.id ?? `exp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    period: item.period ?? item.month ?? `${item.year || ''}`,
+    period: item.period ?? (item.month && item.year ? `${item.year}-${String(item.month).padStart(2, '0')}` : item.month ?? `${item.year || ''}`),
     project: projectName,
     projectId: item.projectId ?? (projObj?.id || ''),
     directCost: Number(item.directCost ?? item.direct_cost ?? item.budgetPlanDirect ?? 0),
     overhead: Number(item.overhead ?? item.overheadCost ?? item.overhead_cost ?? item.budgetPlanOverhead ?? item.actualCostOverhead ?? 0),
-    total: Number(item.total ?? item.totalCost ?? 0) || (Number(item.directCost ?? item.budgetPlanDirect ?? 0) + Number(item.overhead ?? item.budgetPlanOverhead ?? 0)),
+    total: Number(item.total ?? item.totalCost ?? 0) || (Number(item.directCost ?? item.budgetPlanDirect ?? 0) + Number(item.overhead ?? item.overheadCost ?? item.budgetPlanOverhead ?? 0)),
     note: item.note ?? item.notes ?? item.directNotes ?? item.overheadNotes ?? item.directNote ?? item.overheadNote ?? '',
     directNote: item.directNote ?? item.directNotes ?? '',
     overheadNote: item.overheadNote ?? item.overheadNotes ?? '',
@@ -1004,7 +1004,7 @@ export const getExpenseList = async (project) => {
   if (project) params.projectId = project;
   const res = await api.get('/v1/expenses', { params });
   const raw = res.data?.data ?? res.data ?? [];
-  const list = filterDeleted('expenses', Array.isArray(raw) ? raw : []);
+  const list = Array.isArray(raw) ? raw : [];
   return { data: list.map(normalizeExpenseItem) };
 };
 
@@ -1023,9 +1023,24 @@ export const saveExpense = async (data) => {
   return { data: res.data?.data ?? res.data };
 };
 
+export const updateExpense = async (id, data) => {
+  const periodParts = (data.period || '').split('-');
+  const payload = {
+    projectId: data.projectId || data.project,
+    month: parseInt(periodParts[1], 10) || new Date().getMonth() + 1,
+    year: parseInt(periodParts[0], 10) || new Date().getFullYear(),
+    directCost: Number(data.directCost) || 0,
+    directNotes: data.directNote || '',
+    overheadCost: Number(data.overhead) || 0,
+    overheadNotes: data.overheadNote || '',
+  };
+  const res = await api.patch(`/v1/expenses/${id}`, payload);
+  return { data: res.data?.data ?? res.data };
+};
+
 export const deleteExpense = async (id) => {
-  markDeleted('expenses', id);
-  return { success: true };
+  const res = await api.delete(`/v1/expenses/${id}`);
+  return { data: res.data };
 };
 
 export const getExpenseReports = async (period) => {
@@ -1396,6 +1411,7 @@ export default {
   updateMember,
   deleteMember,
   deleteExpense,
+  updateExpense,
   getExpenseSystemParams,
   saveExpenseSystemParam,
   getExpenseList,

@@ -10,6 +10,8 @@
 | Service file | `FE/services/api.js` |
 | Backend prefix | `/api` (NestJS) |
 | Auth | JWT Bearer token + Roles guard |
+| Soft-delete | ✅ Một số entity dùng backend `archivedAt`, số còn lại dùng localStorage `filterDeleted` |
+| i18n | ✅ EN/VI — context `DashboardContext.locale` |
 
 ---
 
@@ -123,7 +125,7 @@
 | 7 | **Backup path sai** | `api.js` | `/v1/backup` → `/v1/data-management/backups`, `/v1/backup/restore` → `/v1/data-management/backups/restore` |
 | 8 | **Sandbox path sai** | `api.js` | `/v1/sandbox/reset` → `/v1/data-management/reset` |
 | 9 | **getMembers endpoint sai** | `api.js` | `GET /auth/members` → `GET /v1/data-management/members` |
-| 10 | **deleteMember là no-op** | `api.js` | `deleteMember` không gọi API — chỉ xoá UI + lưu deletedIds vào localStorage để filter khi re-fetch. Tất cả delete functions đều là no-op (giữ DB, chỉ ẩn UI). |
+| 10 | **deleteMember là no-op (chỉ UI)** | `api.js` | `deleteMember` không gọi API — `markDeleted('members', id)` + optimistic remove UI. |
 | 11 | **Edit member dùng name để tìm** | `TeamMembers.jsx` | Sửa thành dùng `email` để tránh bug trùng tên |
 | 12 | **toggleActive gửi toàn bộ object** | `TeamMembers.jsx` | Chỉ gửi `{name, email, role, active}` |
 | 13 | **createMember thiếu active field** | `api.js` | Thêm `isActive` trong payload |
@@ -132,11 +134,40 @@
 
 ---
 
-## 6. Thống kê endpoints đồng bộ
+## 6. Soft-delete trong Data Management
+
+Data Management dùng **2 cơ chế soft-delete**:
+
+### 6.1 localStorage soft-delete (cho entity không có BE delete endpoint)
+- `members` — `deleteMember()` chỉ `markDeleted('members', id)`
+- `backups` — `deleteBackup()` chỉ `markDeleted('backups', id)`
+- Các entity này không gọi API xoá, chỉ ẩn UI qua `filterDeleted()`
+
+### 6.2 Backend soft-delete (cho entity có BE delete endpoint)
+- Các entity khác (tasks, projects, expenses, etc.) gọi API `DELETE` → backend set `archivedAt`
+- FE vẫn giữ `filterDeleted()` trong 1 số trường hợp như safety net
+
+### 6.3 Centralized utility
+- File: `FE/utils/softDelete.js`
+- API: `markDeleted(type, id)`, `filterDeleted(type, items)`, `getDeletedIds(type)`, `restoreDeleted(type, id)`
+- Key localStorage: `mkt_hub_deleted`
+
+---
+
+## 7. Thống kê endpoints đồng bộ
 
 **Tổng số endpoints BE Data Management: 21**
 **Tổng số FE đã kết nối: 21 (100%) — ĐÃ ĐỒNG BỘ HOÀN TOÀN**
 
 ### Ghi chú quan trọng
-- **Tất cả delete functions** (`deleteMember`, `deleteExpense`, `deleteBackup`, `deleteClosedDeal`, `deleteProject`, `deleteTask`) đều là **no-op** — không gọi API xoá database, chỉ ẩn khỏi UI + lưu deletedIds vào localStorage.
-- `deleteCompareData`, `generateAIReport` — không có BE endpoint tương ứng.
+- **delete functions gọi BE API (soft-delete `archivedAt`):**
+  - `deleteTask` → `DELETE /v1/tasks/:id`
+  - `deleteProject` → `DELETE /v1/projects/:id`
+  - `deleteOpportunity` → `DELETE /v1/leads-kpis/opportunities/:id`
+  - `deleteClosedDeal` → `DELETE /v1/leads-kpis/closed-deals/:id`
+  - `deleteExpense` → `DELETE /v1/expenses/:id`
+- **delete functions no-op (chỉ UI + localStorage):**
+  - `deleteMember` → `markDeleted('members', id)` — không có BE endpoint
+  - `deleteBackup` → `markDeleted('backups', id)` — không có BE endpoint
+  - `deleteCompareData` → `markDeleted('compare', years)` — không có BE endpoint
+- `generateAIReport` — gọi `POST /v1/ai/report` (có BE endpoint).

@@ -10,6 +10,8 @@
 | Service file | `FE/services/api.js` |
 | Backend prefix | `/api` (NestJS) |
 | Auth | JWT Bearer token |
+| Soft-delete | ✅ Frontend `filterDeleted('tasks', ...)` và `filterDeleted('projects', ...)` trên dashboard data |
+| i18n | ✅ EN/VI — context `DashboardContext.locale` |
 
 ---
 
@@ -116,7 +118,19 @@ Các endpoint này có thể dùng để refresh riêng từng phần.
 
 ---
 
-## 6. Các vấn đề / lưu ý
+## 6. Soft-delete trong Dashboard
+
+Dashboard áp dụng frontend soft-delete (`filterDeleted`) cho:
+- **Tasks** trong alerts (overdue/upcoming)
+- **Projects** trong project progress list
+
+Khi user xoá task/project, backend set `archivedAt`. Dashboard overview gọi `filterDeleted('tasks')` và `filterDeleted('projects')` dựa trên localStorage IDs.
+
+**Lưu ý:** Dashboard dùng localStorage soft-delete (client-side) còn backend xoá là soft-delete DB (`archivedAt`). Cần đảm bảo đồng bộ giữa 2 layer.
+
+---
+
+## 7. Các vấn đề / lưu ý
 
 | # | Vấn đề | Mô tả |
 |---|--------|-------|
@@ -125,9 +139,10 @@ Các endpoint này có thể dùng để refresh riêng từng phần.
 | 3 | **SyncStatus không dùng** | BE trả về `syncStatus` nhưng FE không hiển thị. |
 | 4 | **Alerts lồng trong overview** | Alerts là part của overview response, FE extract từ đó. |
 | 5 | **transformKpiCards chỉ gọi trong getDashboardData** | `getKpiCardsData` standalone trả về raw BE data, không transform. |
+| 6 | **Soft-delete dual layer** | Backend `archivedAt` + Frontend localStorage `filterDeleted`. Cần đồng bộ. |
 
 ---
 
-## 7. Kết luận
+## 8. Kết luận
 
-**Module Dashboard đồng bộ hoàn toàn.** FE dùng chính endpoint `GET /v1/dashboard/overview` để lấy toàn bộ dữ liệu. Các transform function mapping field names BE ↔ FE nằm trong `api.js`. Không có localStorage fallback cho business data.
+**Module Dashboard đồng bộ hoàn toàn.** FE dùng chính endpoint `GET /v1/dashboard/overview` để lấy toàn bộ dữ liệu. Các transform function mapping field names BE ↔ FE nằm trong `api.js`. Dashboard áp dụng localStorage soft-delete filter cho tasks/projects alerts và progress.

@@ -10,6 +10,8 @@
 | Service file | `FE/services/api.js` |
 | Backend prefix | `/api` (NestJS) |
 | Trạng thái | **ĐÃ XOÁ localStorage fallback** — gọi BE trực tiếp 100% |
+| Soft-delete | ✅ Backend `archivedAt` trên ExpenseRecord |
+| i18n | ✅ EN/VI — context `DashboardContext.locale` |
 
 ---
 
@@ -116,7 +118,8 @@
 | 3 | **deleteExpense UI không ẩn** | ✅ | Đã fix: optimistic remove + lưu deletedId vào localStorage để filter khi re-fetch. |
 
 ### Ghi chú
-- `deleteExpense` là no-op — không gọi API xoá database, chỉ ẩn khỏi UI.
+- `deleteExpense` gọi `DELETE /v1/expenses/:id` — backend soft-delete via `archivedAt`.
+- `deleteExpense` trong UI: vừa gọi API + optimistic remove + lưu deletedId vào localStorage để filter khi re-fetch.
 
 ---
 

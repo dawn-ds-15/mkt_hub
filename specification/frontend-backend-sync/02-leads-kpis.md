@@ -11,6 +11,8 @@
 | Service file | `FE/services/api.js` |
 | Backend prefix | `/api` (NestJS) |
 | Trạng thái | **ĐÃ XOÁ localStorage fallback** — gọi BE trực tiếp 100% |
+| Soft-delete | ✅ Backend `archivedAt` trên Opportunity, ClosedDeal — FE không dùng localStorage filter |
+| i18n | ✅ EN/VI — context `DashboardContext.locale` |
 
 ---
 
@@ -118,5 +120,7 @@
 **Module Leads & KPIs đã xử lý hết các issues CAO và TRUNG BÌNH.** Còn 3 issues THẤP chưa ảnh hưởng tới chức năng chính.
 
 ### Ghi chú
-- `deleteClosedDeal` là no-op (không gọi API, dùng trong UI).
-- `deleteCompareData` là no-op (không có BE endpoint).
+- `deleteOpportunity` gọi `DELETE /v1/leads-kpis/opportunities/:id` — backend soft-delete via `archivedAt`.
+- `deleteClosedDeal` gọi `DELETE /v1/leads-kpis/closed-deals/:id` — backend soft-delete via `archivedAt`.
+- `deleteCompareData` là no-op — chỉ `markDeleted('compare', years)` trong localStorage (không có BE endpoint).
+- Đã align với backend `archivedAt` pattern — không còn localStorage soft-delete riêng lẻ.

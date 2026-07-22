@@ -10,6 +10,8 @@
 | Service file | `FE/services/api.js` |
 | Backend prefix | `/api` (NestJS) |
 | Auth | JWT Bearer token + Roles guard |
+| Soft-delete | ✅ Backend `archivedAt` + Frontend localStorage `filterDeleted('tasks')` |
+| i18n | ✅ EN/VI — context `DashboardContext.locale` |
 
 ---
 
@@ -184,13 +186,37 @@
 | 9 | **TaskViewModal từ Kanban** | `KanbanBoard.jsx` | Thêm onClick card → fetch `GET /v1/tasks/:id` → hiện TaskViewModal. |
 | 10 | **Project type mismatch** | `CreateProjectForm.jsx` | `typeMap` sai giá trị backend — fix thành `Internal/Client/Research`. |
 | 11 | **Weekly report 304 cache** | `api.js` | Thêm `_t=Date.now()` vào request interceptor cho all GET requests. |
+| 12 | **Soft-delete BE: archivedAt** | `api.js:deleteTask`, `api.js:deleteProject` | Backend chuyển từ `delete` → `update` set `archivedAt`. FE gọi API xoá, BE set archived. |
+| 13 | **Soft-delete FE: filterDeleted** | `api.js:getWeeklyReport`, `api.js:getDashboardData`, `api.js:getKanbanData` | FE áp dụng `filterDeleted('tasks', ...)` và `filterDeleted('projects', ...)` để loại bỏ deleted items khỏi UI sau khi nhận từ BE. |
+| 14 | **deleteTask gọi BE API** | `api.js:deleteTask` | `DELETE /v1/tasks/:id` — Backend soft-delete (set `archivedAt`), không xoá DB. |
+| 15 | **deleteProject gọi BE API** | `api.js:deleteProject` | `DELETE /v1/projects/:id` — Backend soft-delete (set `archivedAt`). |
+| 16 | **Centralized softDelete util** | `utils/softDelete.js` | Thư viện tập trung: `markDeleted`, `filterDeleted`, `getDeletedIds`, `restoreDeleted`. |
+| 17 | **Weekly report filterDeleted tasks** | `api.js:getWeeklyReport` | 3 section `completed`, `nextWeek`, `backlog` đều dùng `filterDeleted('tasks', ...)`. |
 
 ---
 
-## 7. Kết luận
+## 7. Soft-delete Dataflow
 
-**Module Projects & Tasks đồng bộ hoàn toàn.** Tất cả endpoints FE gọi đều có BE tương ứng. Các vấn đề path mismatch đã được fix.
+### Backend (BE — `archivedAt`)
+- `DELETE /v1/tasks/:id` → `tasks.service.ts::remove()` → set `archivedAt = new Date()`, `archivedBy = userId`
+- `DELETE /v1/projects/:id` → `projects.service.ts::remove()` → set `archivedAt`
+- Các query `findAll`/`findOne` filter `where: { archivedAt: null }`
+- ⚠️ **Lưu ý:** `weekly-reports.service.ts::scope()` **THIẾU** filter `archivedAt: null` — cần BE fix
+
+### Frontend (FE — localStorage)
+- `utils/softDelete.js` — key `mkt_hub_deleted`
+- `api.js:deleteTask()` gọi BE API (set `archivedAt`) nhưng **không** gọi `markDeleted('tasks', id)`
+- `api.js:getWeeklyReport()` dùng `filterDeleted('tasks', ...)` nhưng localStorage không có ID → không filter được
+- `getDashboardData()`, `getKanbanData()` cũng dùng `filterDeleted` cho tasks/projects
+
+---
+
+## 8. Kết luận
+
+**Module Projects & Tasks đồng bộ hoàn toàn.** Tất cả endpoints FE gọi đều có BE tương ứng.
 
 ### Ghi chú
-- `deleteTask` không gọi API — chỉ ẩn khỏi UI (theo yêu cầu).
-- `deleteProject` là no-op (không dùng trong UI hiện tại).
+- `deleteTask` gọi BE API (`DELETE /v1/tasks/:id`) — backend soft-delete via `archivedAt`.
+- `deleteProject` gọi BE API (`DELETE /v1/projects/:id`) — backend soft-delete.
+- FE áp dụng `filterDeleted('tasks', ...)` trong weekly report, kanban, dashboard.
+- **Cần BE fix:** thêm `archivedAt: null` vào `WeeklyReportsService.scope()`.

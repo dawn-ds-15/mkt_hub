@@ -157,7 +157,7 @@ export default function PlanKPIsForm() {
 
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            {locale === 'vi' ? 'Giá trị Pipeline ($)' : 'Pipeline Value ($)'}
+            {locale === 'vi' ? 'Giá trị Pipeline' : 'Pipeline Value'}
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -171,7 +171,7 @@ export default function PlanKPIsForm() {
 
         <div className="space-y-1">
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
-            {locale === 'vi' ? 'Giá trị Won ($)' : 'Won Value ($)'}
+            {locale === 'vi' ? 'Giá trị Won' : 'Won Value'}
           </label>
           <input
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"

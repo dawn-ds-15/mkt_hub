@@ -5,14 +5,20 @@ import ClosedDealsTable from './ClosedDealsTable';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 
+function getISOWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+}
+
 export default function ActualsForm() {
   const addToast = useToast();
   const { locale } = useDashboard();
   const getCurrentWeek = () => {
     const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 1);
-    const diff = (now - start + (start.getTimezoneOffset() - now.getTimezoneOffset()) * 60000) / 86400000;
-    const week = Math.ceil((diff + start.getDay() + 1) / 7);
+    const week = getISOWeek(now);
     return `${now.getFullYear()}-W${String(week).padStart(2, '0')}`;
   };
   const [selectedWeek, setSelectedWeek] = useState(getCurrentWeek());

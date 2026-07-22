@@ -39,6 +39,9 @@ export default function ImportData() {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('year', year);
+    if (dataType === 'tasks') {
+      fd.append('confirm', 'true');
+    }
 
     const importers = { tasks: importTasks, kpi: importKPIHistory, deals: importClosedDeals };
     try {
@@ -46,8 +49,9 @@ export default function ImportData() {
       setResult(res.data);
       if (res.data.imported > 0) showToast(locale === 'vi' ? `Import thành công ${res.data.imported} dòng` : `Successfully imported ${res.data.imported} rows`);
       if (res.data.errors > 0) showToast(locale === 'vi' ? `${res.data.errors} dòng lỗi` : `${res.data.errors} error rows`, 'error');
-    } catch {
-      showToast(locale === 'vi' ? 'Lỗi khi import dữ liệu' : 'Error importing data', 'error');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || (locale === 'vi' ? 'Lỗi khi import dữ liệu' : 'Error importing data');
+      showToast(locale === 'vi' ? `Import thất bại: ${msg}` : `Import failed: ${msg}`, 'error');
     }
     setImporting(false);
   };

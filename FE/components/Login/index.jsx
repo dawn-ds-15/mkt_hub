@@ -19,16 +19,21 @@ export default function Login() {
   useEffect(() => {
     localStorage.removeItem('mkt_hub_token');
     localStorage.removeItem('mkt_hub_user');
+    sessionStorage.removeItem('mkt_hub_dashboard');
   }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
     if (!email || !password) {
       setError({ vi: 'Vui lòng nhập email và mật khẩu', en: 'Please enter email and password' }[locale]);
       return;
     }
+    if (!isValidEmail(email)) {
+      setError({ vi: 'Email không đúng định dạng', en: 'Invalid email format' }[locale]);
+      return;
+    }
     setLoading(true);
-    setError('');
     try {
       const res = await apiLogin(email, password);
       localStorage.setItem('mkt_hub_user', JSON.stringify(res.data.user));

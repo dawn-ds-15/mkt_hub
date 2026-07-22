@@ -17,7 +17,7 @@ const priorityOptions = (locale) => [
   { value: 'Low', label: locale === 'vi' ? 'Thấp' : 'Low' },
 ];
 
-const stakeholderOptions = ['BOD', 'Sales Team', 'Dev Team', 'Design Team', 'Content Team'];
+const stakeholderOptions = ['BOD', 'Sales Team', 'Dev Team', 'Design Team', 'Content Team', 'CS Team'];
 
 function getUserRole() {
   try {

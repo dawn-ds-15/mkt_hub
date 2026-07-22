@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { updateTask } from '../../services/api';
 
 const statusBadge = (locale) => ({
   overdue: { label: locale === 'vi' ? 'Quá hạn' : 'Overdue', cls: 'bg-red-100 text-red-700' },
@@ -12,10 +14,30 @@ const statusBadge = (locale) => ({
 
 const priorityLabel = (locale) => ({ high: locale === 'vi' ? 'Cao' : 'High', medium: locale === 'vi' ? 'Trung bình' : 'Medium', low: locale === 'vi' ? 'Thấp' : 'Low' });
 
-export default function TaskViewModal({ task, onClose, onEdit }) {
+export default function TaskViewModal({ task, onClose, onEdit, onSaved }) {
   const { locale } = useDashboard();
+  const [startDate, setStartDate] = useState(task.startDate || '');
+  const [dueDate, setDueDate] = useState(task.dueDate || '');
+  const [completedDate, setCompletedDate] = useState(task.completedDate || '');
+  const [saving, setSaving] = useState(false);
+
   if (!task) return null;
   const st = statusBadge(locale)[task.status] || statusBadge(locale).Planning;
+
+  const handleSaveDate = async (field, value) => {
+    setSaving(true);
+    try {
+      const payload = { [field]: value || null };
+      await updateTask(task.id, payload);
+      if (onSaved) onSaved();
+    } catch {
+      if (field === 'startDate') setStartDate(task.startDate || '');
+      else if (field === 'dueDate') setDueDate(task.dueDate || '');
+      else if (field === 'completedDate') setCompletedDate(task.completedDate || '');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -78,15 +100,42 @@ export default function TaskViewModal({ task, onClose, onEdit }) {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Bắt đầu' : 'Start'}</label>
-                <p className="mt-1 text-sm text-gray-900">{task.start || '-'}</p>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    handleSaveDate('startDate', e.target.value);
+                  }}
+                  disabled={saving}
+                  className="mt-1 w-full px-2 py-1 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                />
               </div>
               <div>
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Hạn chót' : 'Deadline'}</label>
-                <p className={`mt-1 text-sm font-bold ${task.status === 'overdue' ? 'text-red-600' : 'text-gray-900'}`}>{task.due || '-'}</p>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => {
+                    setDueDate(e.target.value);
+                    handleSaveDate('dueDate', e.target.value);
+                  }}
+                  disabled={saving}
+                  className={`mt-1 w-full px-2 py-1 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none ${task.status === 'overdue' ? 'text-red-600' : ''}`}
+                />
               </div>
               <div>
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Hoàn thành' : 'Completed'}</label>
-                <p className="mt-1 text-sm text-gray-900">{task.done || task.completedDate || '-'}</p>
+                <input
+                  type="date"
+                  value={completedDate}
+                  onChange={(e) => {
+                    setCompletedDate(e.target.value);
+                    handleSaveDate('completedDate', e.target.value);
+                  }}
+                  disabled={saving}
+                  className="mt-1 w-full px-2 py-1 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                />
               </div>
             </div>
 
@@ -106,11 +155,6 @@ export default function TaskViewModal({ task, onClose, onEdit }) {
           </div>
 
           <div className="border-t border-gray-200 px-6 py-4 flex items-center gap-2 justify-end">
-            {onEdit && (
-              <button onClick={() => onEdit(task)} className="px-4 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:opacity-90 transition-all">
-                {locale === 'vi' ? 'Chỉnh sửa' : 'Edit'}
-              </button>
-            )}
             <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-xs font-bold hover:bg-gray-200 transition-all">
               {locale === 'vi' ? 'Đóng' : 'Close'}
             </button>

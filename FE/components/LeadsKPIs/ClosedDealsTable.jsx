@@ -44,7 +44,7 @@ export default function ClosedDealsTable() {
         <tr>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Khách hàng' : 'Customer'}</th>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Hợp đồng' : 'Contract'}</th>
-          <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Final Fees ($)' : 'Final Fees ($)'}</th>
+          <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Final Fees</th>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Ngày ký' : 'Signed Date'}</th>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Trạng thái' : 'Status'}</th>
         </tr>

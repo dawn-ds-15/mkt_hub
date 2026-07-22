@@ -13,11 +13,11 @@ function getUserRole() {
 
 const allTabs = [
   { vi: 'Import', en: 'Import', key: 'import', roles: ['specialist', 'manager'] },
-  { vi: 'Export', en: 'Export', key: 'export', roles: ['manager'] },
+  { vi: 'Export', en: 'Export', key: 'export', roles: ['specialist', 'manager'] },
   { vi: 'Thành viên', en: 'Members', key: 'members', roles: ['manager'] },
   { vi: 'Cấu hình Dropdown', en: 'Dropdown Config', key: 'dropdown', roles: ['manager'] },
   { vi: 'Cấu hình Slack', en: 'Slack Config', key: 'slack', roles: ['manager'] },
-  { vi: 'Sao lưu & Đặt lại', en: 'Backup & Reset', key: 'backup', roles: ['specialist', 'manager'] },
+  { vi: 'Sao lưu & Đặt lại', en: 'Backup & Reset', key: 'backup', roles: ['manager'] },
 ];
 
 export default function DataManagementPage() {

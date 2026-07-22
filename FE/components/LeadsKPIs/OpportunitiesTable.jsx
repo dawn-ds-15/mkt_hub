@@ -168,7 +168,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
               <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Tên DN / Khách hàng' : 'Company / Customer'}</th>
               <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Size' : 'Size'}</th>
               <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Project' : 'Project'}</th>
-              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Fees ($)' : 'Fees ($)'}</th>
+              <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Fees</th>
               <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Dự kiến đóng' : 'Expected Close'}</th>
               <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
             </tr>
@@ -280,7 +280,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-on-surface-variant">{locale === 'vi' ? 'Fees:' : 'Fees:'}</span>
-                    <span className="font-semibold text-on-surface">${Number(rows[modalIndex].fees || 0).toLocaleString()}</span>
+                    <span className="font-semibold text-on-surface">{Number(rows[modalIndex].fees || 0).toLocaleString()}</span>
                   </div>
                 </div>
 

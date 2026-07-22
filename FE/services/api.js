@@ -7,7 +7,6 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const api = axios.create({
   baseURL: API_BASE,
-  headers: { 'Content-Type': 'application/json' },
 });
 
 api.interceptors.request.use((config) => {
@@ -137,7 +136,7 @@ function transformKpiCards(kpiCards) {
         label: 'CAC / LTV',
         emoji: meta.emoji,
         accent: meta.accent,
-        value: `1:${ratio.toFixed(1)}`,
+        value: `1:${ratio.toFixed(3)}`,
         trend: null,
         percentage: null,
         badge,
@@ -310,7 +309,12 @@ export const register = async (name, email, password) => {
     localStorage.setItem(TOKEN_KEY, token);
     return { data: { token, user } };
   }
-  return login(email, password);
+  const loginRes = await api.post('/auth/login', { email, password });
+  const loginData = loginRes.data?.data ?? loginRes.data;
+  const token = loginData.access_token || loginData.token;
+  const user = loginData.user || loginData.profile || {};
+  localStorage.setItem(TOKEN_KEY, token);
+  return { data: { token, user } };
 };
 
 export const logout = async () => {
@@ -707,7 +711,14 @@ export const getCompareData = async (years = ['2026', '2025'], periodType = 'yea
     params: { periodType, currentPeriodValue: periodValue, year1: years[0], year2: years[1], year3: years[2] }
   });
   const raw = res.data?.data ?? res.data ?? {};
-  return { data: (raw && typeof raw === 'object') ? raw : {} };
+  const result = (raw && typeof raw === 'object') ? raw : {};
+  const deletedYears = getDeletedIds('compare');
+  for (const key of ['year1', 'year2', 'year3']) {
+    if (result[key] && deletedYears.has(String(result[key].year))) {
+      result[key] = null;
+    }
+  }
+  return { data: result };
 };
 
 export const getQuarterlyCompareData = async (selectedYears, metric = 'Raw Leads') => {
@@ -947,7 +958,9 @@ export const getExpenseSystemParams = async () => {
 };
 
 export const saveExpenseSystemParam = async (data) => {
-  const [year, month] = data.period.split('-').map(Number);
+  const periodParts = (data.period || '').split('-');
+  if (periodParts.length < 2) throw new Error('Kỳ không hợp lệ. Định dạng: YYYY-MM');
+  const [year, month] = periodParts.map(Number);
   const effectiveFrom = `${data.period}-01T00:00:00.000Z`;
   const notes = data.note || '';
   const results = [];
@@ -1071,29 +1084,62 @@ export const importConfirm = async (rows) => {
 };
 
 export const importTasks = async (formData) => {
-  const res = await api.post('/v1/tasks/import', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return { data: res.data?.data ?? { imported: 0, errors: 0, errorList: [] } };
+  const res = await api.post('/v1/tasks/import', formData);
+  return { data: mapImportResult(res.data) };
 };
 
 export const importKPIHistory = async (formData) => {
-  const res = await api.post('/v1/data-management/import/preview?type=kpi', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return { data: res.data?.data ?? { imported: 0, errors: 0, errorList: [] } };
+  const res = await api.post('/v1/data-management/import/preview?type=kpi&confirm=true', formData);
+  return { data: mapImportResult(res.data) };
 };
 
 export const importClosedDeals = async (formData) => {
-  const res = await api.post('/v1/data-management/import/preview?type=deal', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return { data: res.data?.data ?? { imported: 0, errors: 0, errorList: [] } };
+  const res = await api.post('/v1/data-management/import/preview?type=deal&confirm=true', formData);
+  return { data: mapImportResult(res.data) };
+};
+
+function mapImportResult(data) {
+  if (!data) return { imported: 0, errors: 0, errorList: [] };
+  if (data.imported !== undefined) return { imported: data.imported, errors: data.errors || 0, errorList: data.errorList || data.errors || [] };
+  return {
+    imported: data.createdRows ?? data.validRows ?? 0,
+    errors: data.errorRows ?? 0,
+    errorList: (data.errors ?? []).map((e) => (typeof e === 'string' ? e : e.errors?.join('; ') || JSON.stringify(e))),
+  };
+}
+
+const IMPORT_TYPES = ['tasks', 'kpi', 'deals'];
+const EXPORT_TEMPLATE_FILES = {
+  'weekly-report': { filename: 'weekly_report_template.pdf', path: '/templates/weekly_report_template.pdf' },
+  'dashboard-report': { filename: 'dashboard_report_template.xlsx', path: '/templates/dashboard_report_template.xlsx' },
+  'full-data-backup': { filename: 'full_data_backup_template.xlsx', path: '/templates/full_data_backup_template.xlsx' },
 };
 
 export const downloadTemplate = async (type) => {
+  const isExport = EXPORT_TEMPLATE_FILES[type];
+  if (isExport) {
+    try {
+      const res = await fetch(isExport.path);
+      if (res.ok) {
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = isExport.filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        return { success: true };
+      }
+    } catch {}
+    const blob = new Blob([], { type: 'application/octet-stream' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = isExport.filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return { success: true };
+  }
   try {
-    const endpoint = type === 'tasks' ? '/v1/tasks/import/template' : '/v1/data-management/import/template';
+    const endpoint = type === 'tasks' ? '/v1/tasks/import/template' : `/v1/data-management/import/template?type=${type}`;
     const res = await api.get(endpoint, { responseType: 'blob' });
     const contentType = res.headers?.['content-type'] || '';
     const ext = contentType.includes('spreadsheetml') || contentType.includes('officedocument') ? 'xlsx' : 'csv';
@@ -1120,7 +1166,7 @@ export const downloadTemplate = async (type) => {
       }
     } catch {}
     const templates = {
-      tasks: { filename: 'task_template.csv', headers: 'task_name,project_id,assignee,status,priority,start_date,due_date,exec_week,remark\n', sample: 'Example task,1,Nguyen Van A,Planning,High,2026-06-15,2026-06-30,26,\n' },
+      tasks: { filename: 'task_template.csv', headers: 'task_name,project_id,assignee,status,priority,start_date,due_date,exec_week,remark,reason\n', sample: 'Example task,1,Nguyen Van A,Planning,High,2026-06-15,2026-06-30,26,,\n' },
       kpi: { filename: 'kpi_template.csv', headers: 'year,week,raw_leads,mql,sql,opp_count,closed_deal_count\n', sample: '2026,20,280,112,49,10,4\n' },
       deals: { filename: 'deals_template.csv', headers: 'year,week,company_name,size,project,setup_fee,monthly_fee,closed_date\n', sample: '2025,10,Cong ty ABC,Enterprise,Lead Generation,50000000,5000000,2025-03-10\n' },
     };
@@ -1141,7 +1187,9 @@ export const exportWeeklyReportPDF = async (params) => {
   const url = window.URL.createObjectURL(new Blob([res.data]));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `weekly-report-w${params.week || '00'}-${params.year || '2026'}.pdf`;
+  const week = params.week != null ? params.week : '00';
+  const year = params.year || '2026';
+  a.download = `weekly-report-w${week}-${year}.pdf`;
   a.click();
   window.URL.revokeObjectURL(url);
   return { success: true };
@@ -1205,6 +1253,7 @@ export const updateMember = async (id, data) => {
 };
 
 export const deleteMember = async (id) => {
+  await api.delete(`/v1/data-management/members/${id}`);
   markDeleted('members', id);
   return { success: true };
 };
@@ -1355,7 +1404,10 @@ export const getProjectsDropdown = async () => {
 };
 
 export const deleteCompareData = async (years) => {
-  markDeleted('compare', years);
+  const yearList = Array.isArray(years) ? years : [years];
+  for (const year of yearList) {
+    markDeleted('compare', String(year));
+  }
   return { success: true };
 };
 

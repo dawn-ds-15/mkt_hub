@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { exportWeeklyReportPDF, exportDashboardExcel, exportFullData } from '../../services/api';
+import { exportWeeklyReportPDF, exportDashboardExcel, exportFullData, downloadTemplate } from '../../services/api';
 
 export default function ExportData() {
   const { locale } = useDashboard();
@@ -92,7 +92,10 @@ export default function ExportData() {
             </div>
           </div>
           <div className="mt-8 flex items-center justify-between">
-            <p className="text-sm text-on-surface-variant italic">{locale === 'vi' ? 'Kích thước ước tính: ~2.4MB' : 'Estimated size: ~2.4MB'}</p>
+            <button onClick={() => downloadTemplate('weekly-report')} className="flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-primary transition-all px-2 py-1 rounded hover:bg-surface-container-high">
+              <span className="material-symbols-outlined text-sm">download</span>
+              {locale === 'vi' ? 'Tải template PDF' : 'Download PDF template'}
+            </button>
             <button onClick={() => handleExport('pdf')} disabled={exporting} className="bg-surface-container-high hover:bg-primary-container hover:text-on-primary-container text-on-surface-variant font-title-md text-sm py-3 px-6 rounded-xl flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50">
               <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
               {exporting ? (locale === 'vi' ? 'Đang xuất...' : 'Exporting...') : (locale === 'vi' ? 'Xuất PDF' : 'Export PDF')}
@@ -135,10 +138,16 @@ export default function ExportData() {
               </select>
             </div>
           </div>
-          <button onClick={() => handleExport('excel')} disabled={exporting} className="mt-6 w-full bg-success text-on-primary font-title-md text-sm py-4 rounded-xl flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50">
-            <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>analytics</span>
-            {exporting ? (locale === 'vi' ? 'Đang xuất...' : 'Exporting...') : (locale === 'vi' ? 'Xuất Excel' : 'Export Excel')}
-          </button>
+          <div className="flex items-center justify-between mt-6">
+            <button onClick={() => downloadTemplate('dashboard-report')} className="flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-primary transition-all px-2 py-1 rounded hover:bg-surface-container-high">
+              <span className="material-symbols-outlined text-sm">download</span>
+              {locale === 'vi' ? 'Tải template Excel' : 'Download Excel template'}
+            </button>
+            <button onClick={() => handleExport('excel')} disabled={exporting} className="bg-success text-on-primary font-title-md text-sm py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50">
+              <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>analytics</span>
+              {exporting ? (locale === 'vi' ? 'Đang xuất...' : 'Exporting...') : (locale === 'vi' ? 'Xuất Excel' : 'Export Excel')}
+            </button>
+          </div>
         </section>
 
         {/* Section 3: System Archive & Backup */}
@@ -170,6 +179,10 @@ export default function ExportData() {
               </div>
             </div>
             <div className="flex flex-col items-center gap-3 w-full md:w-auto">
+              <button onClick={() => downloadTemplate('full-data-backup')} className="flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-primary transition-all px-2 py-1 rounded hover:bg-surface-container-high self-start">
+                <span className="material-symbols-outlined text-sm">download</span>
+                {locale === 'vi' ? 'Tải template' : 'Download template'}
+              </button>
               <button
                 onClick={() => handleExport('full')}
                 disabled={exporting}

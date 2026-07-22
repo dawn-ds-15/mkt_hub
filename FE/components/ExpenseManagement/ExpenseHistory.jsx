@@ -49,12 +49,12 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
         overheadNote: editNote,
       });
       showToast(locale === 'vi' ? 'Cập nhật chi phí thành công' : 'Expense updated successfully');
+      const res = await getExpenseList();
+      setExpenses(res.data);
+      setEditExp(null);
     } catch {
       showToast(locale === 'vi' ? 'Lỗi khi cập nhật chi phí' : 'Error updating expense', 'error');
     }
-    setEditExp(null);
-    const res = await getExpenseList();
-    setExpenses(res.data);
   };
 
   const handleDelete = async (id) => {

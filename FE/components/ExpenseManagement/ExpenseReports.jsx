@@ -10,7 +10,10 @@ function formatCurrency(n) {
 }
 
 function formatFullCurrency(n) {
-  return '$' + (n ?? 0).toLocaleString('en-US');
+  n = n ?? 0;
+  if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'B';
+  if (n >= 1000000) return (n / 1000000).toFixed(0) + 'M';
+  return n.toLocaleString('en-US');
 }
 
 const periodTabs = [
@@ -247,7 +250,7 @@ export default function ExpenseReports({ refreshKey }) {
                     />
                   </div>
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-md z-10 pointer-events-none">
-                    {formatCurrency(d.totalExpense)} | CAC: ${(d.cac ?? 0).toLocaleString('en-US')}
+                    {formatCurrency(d.totalExpense)} | CAC: {formatFullCurrency(d.cac)}
                   </div>
                 </div>
               );

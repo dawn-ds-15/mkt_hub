@@ -55,15 +55,18 @@
 | POST | `/v1/data-management/slack/test` | `testSlackWebhook(url)` | Test kết nối Slack |
 | GET | `/v1/data-management/slack/logs` | `getSlackNotificationHistory()` | Lịch sử thông báo Slack |
 
-### 3.4 Import (2-step: preview + confirm)
+### 3.4 Import (1-step: preview + confirm gộp)
 
 | Method | Endpoint FE gọi | Function | Ghi chú |
 |--------|-----------------|----------|---------|
-| POST | `/v1/tasks/import` | `importTasks(formData)` | Import tasks (trực tiếp, không preview) |
-| POST | `/v1/data-management/import/preview?type=kpi` | `importKPIHistory(formData)` | Import KPI history |
-| POST | `/v1/data-management/import/preview?type=deal` | `importClosedDeals(formData)` | Import closed deals |
+| POST | `/v1/tasks/import` | `importTasks(formData)` | Import tasks. `confirm` gửi dạng form field. |
+| POST | `/v1/data-management/import/preview?type=kpi&confirm=true` | `importKPIHistory(formData)` | Import KPI history (1-step). `confirm` là query param. |
+| POST | `/v1/data-management/import/preview?type=deal&confirm=true` | `importClosedDeals(formData)` | Import closed deals (1-step). `confirm` là query param. |
 | GET | `/v1/tasks/import/template` | `downloadTemplate('tasks')` | Download template từ BE |
-| GET | `/v1/data-management/import/template` | `downloadTemplate('kpi'|'deals')` | Download template từ BE |
+| GET | `/v1/data-management/import/template?type=kpi` | `downloadTemplate('kpi')` | Download template KPI từ BE |
+| GET | `/v1/data-management/import/template?type=deal` | `downloadTemplate('deals')` | Download template deals từ BE |
+
+> **Lưu ý Content-Type:** Các hàm import **không set `Content-Type` header** — axios sẽ tự động dùng `multipart/form-data` khi data là `FormData`. Việc set cứng `'Content-Type': 'application/json'` trong axios instance sẽ làm BE không parse được multipart request.
 
 ### 3.5 Export
 
@@ -99,7 +102,8 @@
 | POST | `/api/v1/data-management/slack/config` | ✅ `POST /v1/data-management/slack/config` | **ĐÃ FIX** |
 | POST | `/api/v1/data-management/slack/test` | ✅ `POST /v1/data-management/slack/test` | **ĐÃ FIX** |
 | GET | `/api/v1/data-management/slack/logs` | ✅ `GET /v1/data-management/slack/logs` | **ĐÃ FIX** |
-| POST | `/api/v1/data-management/import/preview` | ✅ `POST /v1/data-management/import/preview` | **ĐÃ FIX** |
+| POST | `/api/v1/tasks/import` | ✅ `POST /v1/tasks/import` | **ĐÃ FIX** |
+| POST | `/api/v1/data-management/import/preview` | ✅ `POST /v1/data-management/import/preview?type=kpi\|deal&confirm=true` | **ĐÃ FIX** |
 | POST | `/api/v1/data-management/import/confirm` | ✅ `POST /v1/data-management/import/confirm` | **ĐÃ FIX** |
 | GET | `/api/v1/data-management/import/template` | ✅ `GET /v1/data-management/import/template` | **ĐÃ FIX** |
 | GET | `/api/v1/data-management/export/pdf` | ✅ `GET /v1/data-management/export/pdf` | **ĐÃ FIX** |
@@ -131,6 +135,10 @@
 | 13 | **createMember thiếu active field** | `api.js` | Thêm `isActive` trong payload |
 | 14 | **Role mapping case-sensitive** | `api.js` | `role.toLowerCase()` khi gửi, capitalize khi nhận |
 | 15 | **Backup delete UI không ẩn** | `BackupReset.jsx` | Optimistic update + localStorage deletedIds lọc khi re-fetch |
+| 16 | **Removed Content-Type: application/json default** | `api.js` | Xoá `headers: { 'Content-Type': 'application/json' }` khỏi `axios.create()` để FormData auto-set `multipart/form-data; boundary=…` |
+| 17 | **Import KPI/Deals 1-step confirm** | `api.js` | Thêm `&confirm=true` query param vào URL `importKPIHistory` và `importClosedDeals` — gộp preview + confirm thành 1 bước |
+| 18 | **Template download URL sai cho KPI/Deals** | `api.js` | `downloadTemplate('kpi')`/`downloadTemplate('deals')` thêm `?type=kpi`/`?type=deal` query param |
+| 19 | **mapImportResult xử lý response đa format** | `api.js` | `mapImportResult()` parse cả `createdRows`,`validRows`,`errorRows` (BE data-management) và `imported` (BE tasks) |
 
 ---
 
@@ -156,8 +164,8 @@ Data Management dùng **2 cơ chế soft-delete**:
 
 ## 7. Thống kê endpoints đồng bộ
 
-**Tổng số endpoints BE Data Management: 21**
-**Tổng số FE đã kết nối: 21 (100%) — ĐÃ ĐỒNG BỘ HOÀN TOÀN**
+**Tổng số endpoints BE Data Management: 22** (thêm `/api/v1/tasks/import`)
+**Tổng số FE đã kết nối: 22 (100%) — ĐÃ ĐỒNG BỘ HOÀN TOÀN**
 
 ### Ghi chú quan trọng
 - **delete functions gọi BE API (soft-delete `archivedAt`):**

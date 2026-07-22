@@ -47,7 +47,7 @@ export default function WeeklyReport() {
         });
       }
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Unable to load report';
+      const msg = err?.response?.data?.message || err?.message || 'Không thể tải báo cáo';
       setError(Array.isArray(msg) ? msg.join('; ') : msg);
     } finally {
       setLoading(false);
@@ -73,7 +73,7 @@ export default function WeeklyReport() {
       setTimeout(() => setSaved(false), 2000);
       loadReport();
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Save failed';
+      const msg = err?.response?.data?.message || err?.message || 'Lưu thất bại';
       setSaveError(Array.isArray(msg) ? msg.join('; ') : msg);
     } finally {
       setSaving(false);
@@ -94,7 +94,7 @@ export default function WeeklyReport() {
   if (loading && !data) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-on-surface-variant">Loading data...</p>
+        <p className="text-on-surface-variant">Đang tải dữ liệu...</p>
       </div>
     );
   }
@@ -104,7 +104,7 @@ export default function WeeklyReport() {
       <section className="bg-white border border-outline-variant p-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex flex-col gap-1">
-            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Week</label>
+            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Tuần</label>
             <input
               className="w-20 border border-primary rounded p-1.5 text-body-md focus:border-primary focus:ring-0"
               type="number" value={filters.week}
@@ -112,7 +112,7 @@ export default function WeeklyReport() {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Year</label>
+            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Năm</label>
             <select className="border border-outline-variant rounded p-1.5 text-body-md focus:border-primary focus:ring-0 min-w-[100px]"
               value={filters.year}
               onChange={(e) => setFilters(p => ({ ...p, year: +e.target.value }))}>
@@ -120,20 +120,20 @@ export default function WeeklyReport() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Project</label>
+            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Dự án</label>
             <select className="border border-outline-variant rounded p-1.5 text-body-md focus:border-primary focus:ring-0 min-w-[180px]"
               value={filters.projectId}
               onChange={(e) => setFilters(p => ({ ...p, projectId: e.target.value }))}>
-              <option value="">All projects</option>
+              <option value="">Tất cả dự án</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Assignee</label>
+            <label className="font-label-sm text-label-sm text-on-surface-variant uppercase">Người phụ trách</label>
             <select className="border border-outline-variant rounded p-1.5 text-body-md focus:border-primary focus:ring-0 min-w-[150px]"
               value={filters.memberId}
               onChange={(e) => setFilters(p => ({ ...p, memberId: e.target.value }))}>
-              <option value="">All members</option>
+              <option value="">Tất cả thành viên</option>
               {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </div>
@@ -141,11 +141,11 @@ export default function WeeklyReport() {
         <div className="flex items-center gap-2">
           <button onClick={handleAutoFill} className="px-4 py-2 bg-surface-container-high text-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-surface-variant transition-colors border border-outline-variant">
             <span className="material-symbols-outlined text-[18px]">bolt</span>
-            Auto Fill
+            Tự động điền
           </button>
           <button onClick={handleExport} className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-primary/90 transition-colors">
             <span className="material-symbols-outlined text-[18px]">download</span>
-            Export TXT
+            Xuất TXT
           </button>
         </div>
       </section>
@@ -156,33 +156,33 @@ export default function WeeklyReport() {
         </div>
       )}
 
-      {loading && <div className="text-center py-8 text-on-surface-variant">Loading...</div>}
+      {loading && <div className="text-center py-8 text-on-surface-variant">Đang tải...</div>}
 
       {data && (
         <>
           <div className="flex items-center justify-between">
             <h3 className="font-headline-lg text-headline-lg text-primary flex items-center gap-3">
-              <span className="text-[32px]">\uD83D\uDCCA</span> Weekly Report \u2014 Week {data.week}/{data.year}
+              <span className="material-symbols-outlined text-[32px]">bar_chart</span> Báo cáo tuần {data.week}/{data.year}
             </h3>
             <span className="text-label-md font-medium text-on-surface-variant bg-surface-container px-3 py-1 rounded-full border border-outline-variant">
-              Status: {data.status}
+              Trạng thái: {data.status}
             </span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }} className="mb-4">
             <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
               <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900">\u2705 1. Completed Work</h4>
+                <h4 className="text-sm font-bold text-gray-900"><span className="material-symbols-outlined text-[18px] align-text-bottom text-green-600">check_circle</span> 1. Công việc đã hoàn thành</h4>
                 <span className="text-[11px] text-gray-400">{data.completed.length}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Code</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Mã</th>
                       <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Task</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-center">Result</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-right">Assignee</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-center">Kết quả</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-right">Người làm</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -203,17 +203,17 @@ export default function WeeklyReport() {
 
             <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
               <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900">\uD83D\uDCCC 2. Plan for Week {data.week + 1}</h4>
+                <h4 className="text-sm font-bold text-gray-900"><span className="material-symbols-outlined text-[18px] align-text-bottom text-blue-600">assignment</span> 2. Kế hoạch tuần {data.week + 1}</h4>
                 <span className="text-[11px] text-gray-400">{data.nextWeek.length}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Schedule</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Item</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Deadline</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-right">Priority</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Lịch</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Hạng mục</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Hạn chót</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-right">Ưu tiên</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -234,7 +234,7 @@ export default function WeeklyReport() {
 
             <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
               <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900">\uD83D\uDEA7 3. Backlog / Issues</h4>
+                <h4 className="text-sm font-bold text-gray-900"><span className="material-symbols-outlined text-[18px] align-text-bottom text-orange-600">error_outline</span> 3. Tồn đọng / Vấn đề</h4>
                 <span className="text-[11px] text-gray-400">{data.backlog.length}</span>
               </div>
               <div className="p-3 space-y-2">
@@ -252,15 +252,15 @@ export default function WeeklyReport() {
 
             <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
               <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900">\uD83E\uDD1D 4. BOD Support Needed</h4>
+                <h4 className="text-sm font-bold text-gray-900"><span className="material-symbols-outlined text-[18px] align-text-bottom text-purple-600">support</span> 4. Cần BOD hỗ trợ</h4>
                 <span className="text-[11px] text-gray-400">{data.bod.length}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Project</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Support Request</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Dự án</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Yêu cầu hỗ trợ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -278,7 +278,7 @@ export default function WeeklyReport() {
 
           <section>
             <div className="flex items-center justify-between mb-stack_md">
-              <h3 className="font-headline-md text-headline-md">Weekly Log</h3>
+              <h3 className="font-headline-md text-headline-md">Nhật ký tuần</h3>
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -289,7 +289,7 @@ export default function WeeklyReport() {
                 <span className="material-symbols-outlined text-[18px]">
                   {saving ? 'sync' : saved ? 'check' : 'save'}
                 </span>
-                {saving ? 'Saving...' : saved ? 'Saved Successfully' : 'Save Log'}
+                {saving ? 'Đang lưu...' : saved ? 'Đã lưu' : 'Lưu nhật ký'}
               </button>
             </div>
             {saveError && (
@@ -300,44 +300,44 @@ export default function WeeklyReport() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
               <div className="flex flex-col gap-2">
                 <label className="font-label-md text-on-surface-variant flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">comment</span> Work Details Notes
+                  <span className="material-symbols-outlined text-[18px]">comment</span> Ghi chú công việc
                 </label>
                 <textarea
                   className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
-                  placeholder="Enter detailed notes about weekly tasks..."
+                  placeholder="Nhập chi tiết công việc trong tuần..."
                   value={log.doneNotes}
                   onChange={(e) => setLog(p => ({ ...p, doneNotes: e.target.value }))}
                 />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="font-label-md text-on-surface-variant flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">trending_up</span> Process Improvement Suggestions
+                  <span className="material-symbols-outlined text-[18px]">trending_up</span> Đề xuất cải tiến
                 </label>
                 <textarea
                   className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
-                  placeholder="Suggest workflow optimizations..."
+                  placeholder="Đề xuất tối ưu quy trình..."
                   value={log.planNotes}
                   onChange={(e) => setLog(p => ({ ...p, planNotes: e.target.value }))}
                 />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="font-label-md text-on-surface-variant flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">psychology</span> Lessons Learned
+                  <span className="material-symbols-outlined text-[18px]">psychology</span> Bài học kinh nghiệm
                 </label>
                 <textarea
                   className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
-                  placeholder="Key takeaways from campaigns/projects..."
+                  placeholder="Rút kinh nghiệm từ chiến dịch/dự án..."
                   value={log.backlogNotes}
                   onChange={(e) => setLog(p => ({ ...p, backlogNotes: e.target.value }))}
                 />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="font-label-md text-on-surface-variant flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">notifications_active</span> Announcements / Reminders
+                  <span className="material-symbols-outlined text-[18px]">notifications_active</span> Thông báo / Nhắc nhở
                 </label>
                 <textarea
                   className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
-                  placeholder="Important notes for departments..."
+                  placeholder="Thông báo quan trọng cho các phòng ban..."
                   value={log.bodNotes}
                   onChange={(e) => setLog(p => ({ ...p, bodNotes: e.target.value }))}
                 />

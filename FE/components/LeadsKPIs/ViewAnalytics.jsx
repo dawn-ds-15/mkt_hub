@@ -6,16 +6,18 @@ import KPIRolloverCard from './KPIRolloverCard';
 
 function formatNum(n) {
   if (n == null) return '0';
+  if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'B';
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
   if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
   return n.toLocaleString();
 }
 
 function formatCurrency(n) {
-  if (n == null) return '$0';
-  if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
-  if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
-  return '$' + n.toLocaleString();
+  if (n == null) return '\u2014';
+  if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'B';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return n.toLocaleString();
 }
 
 function pctColor(pct) {
@@ -210,8 +212,8 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
           <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between min-h-[100px]">
             <div>
               <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">{t(locale, { vi: 'CHI PHÍ THU HÚP KH (CAC)', en: 'CUSTOMER ACQUISITION COST (CAC)' })}</p>
-              <h3 className="text-headline-md font-bold text-on-surface">${formatNum(cacCard.cac)}</h3>
-              <p className="text-[11px] text-on-surface-variant mt-1">{t(locale, { vi: 'Mục tiêu: $1,500', en: 'Target: $1,500' })}</p>
+              <h3 className="text-headline-md font-bold text-on-surface">{formatCurrency(cacCard.cac)}</h3>
+              <p className="text-[11px] text-on-surface-variant mt-1">{t(locale, { vi: 'Mục tiêu: 1.500', en: 'Target: 1,500' })}</p>
             </div>
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${getHealthMeta(cacCard.health, locale).bg}`}>
               <div className={`w-2.5 h-2.5 rounded-full ${getHealthMeta(cacCard.health, locale).dot} ${cacCard.health === 'green' ? 'animate-pulse' : ''}`}></div>
@@ -223,7 +225,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
           <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between min-h-[100px]">
             <div>
               <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">{t(locale, { vi: 'GIÁ TRỊ VÒNG ĐỜI (LTV)', en: 'LIFETIME VALUE (LTV)' })}</p>
-              <h3 className="text-headline-md font-bold text-on-surface">${formatNum(cacCard.ltv)}</h3>
+              <h3 className="text-headline-md font-bold text-on-surface">{formatCurrency(cacCard.ltv)}</h3>
               <p className="text-[11px] text-on-surface-variant mt-1">{t(locale, { vi: 'Tăng trưởng: +12% so với tháng trước', en: 'Growth: +12% vs last month' })}</p>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 rounded-full">
@@ -234,7 +236,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
           <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between min-h-[100px]">
             <div>
               <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">{t(locale, { vi: 'TỶ LỆ LTV : CAC', en: 'LTV : CAC RATIO' })}</p>
-              <h3 className="text-headline-md font-bold text-on-surface">{cacCard.ratio != null ? cacCard.ratio.toFixed(1) + 'x' : '\u2014'}</h3>
+              <h3 className="text-headline-md font-bold text-on-surface">{cacCard.ratio != null ? cacCard.ratio.toFixed(3) + 'x' : '\u2014'}</h3>
               <p className="text-[11px] text-on-surface-variant mt-1">{t(locale, { vi: 'Chuẩn: 3.0x', en: 'Benchmark: 3.0x' })}</p>
             </div>
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${getHealthMeta(cacCard.health, locale).bg}`}>

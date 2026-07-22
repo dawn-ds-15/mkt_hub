@@ -14,6 +14,16 @@ const STATUS_TO_API = {
   overdue: 'Overdue',
 };
 
+const ALLOWED_TRANSITIONS = {
+  planning: ['processing', 'done', 'pending', 'backlog', 'cancel', 'overdue'],
+  processing: ['done', 'pending', 'backlog', 'cancel', 'overdue'],
+  done: [],
+  pending: ['processing', 'done', 'backlog', 'cancel', 'overdue'],
+  backlog: ['planning', 'processing', 'done', 'cancel', 'overdue'],
+  cancel: [],
+  overdue: ['processing', 'done', 'pending', 'backlog'],
+};
+
 const priorityColors = {
   High: { bar: 'bg-red-500', dot: 'text-red-500', bg: 'bg-red-50' },
   Medium: { bar: 'bg-amber-400', dot: 'text-amber-500', bg: 'bg-amber-50' },
@@ -38,6 +48,16 @@ const columnHeaderAccent = {
   backlog: 'bg-amber-200 text-amber-700',
   cancel: 'bg-gray-200 text-gray-600',
   overdue: 'bg-red-200 text-red-700',
+};
+
+const COLUMN_LABELS = {
+  planning: { vi: 'Chưa làm', en: 'To Do' },
+  processing: { vi: 'Đang làm', en: 'In Progress' },
+  done: { vi: 'Hoàn thành', en: 'Done' },
+  pending: { vi: 'Chờ xử lý', en: 'Pending' },
+  backlog: { vi: 'Tồn đọng', en: 'Backlog' },
+  cancel: { vi: 'Đã huỷ', en: 'Cancelled' },
+  overdue: { vi: 'Quá hạn', en: 'Overdue' },
 };
 
 function getTaskId(task) {
@@ -90,6 +110,7 @@ function KanbanCard({ task, onDragStart, onCardClick }) {
 }
 
 function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, onDragLeave, isOver, onCardClick }) {
+  const { locale } = useDashboard();
   const bg = columnBg[column.id] || 'bg-gray-50';
   const accent = columnHeaderAccent[column.id] || 'bg-gray-200 text-gray-700';
 
@@ -139,6 +160,7 @@ export default function KanbanBoard() {
   const [members, setMembers] = useState([]);
   const [reasonPopup, setReasonPopup] = useState(null);
   const [reasonText, setReasonText] = useState('');
+  const [warningPopup, setWarningPopup] = useState(null);
 
   const [viewTask, setViewTask] = useState(null);
   const [viewTaskData, setViewTaskData] = useState(null);
@@ -258,7 +280,7 @@ export default function KanbanBoard() {
     });
     setDraggedTaskId(null);
     setDraggedFromCol(null);
-  }, [draggedTaskId, draggedFromCol, columns, getTask]);
+  }, [draggedTaskId, draggedFromCol, columns, locale]);
 
   const handleCardClick = useCallback(async (taskId) => {
     setViewTask(taskId);
@@ -293,6 +315,13 @@ export default function KanbanBoard() {
     e.preventDefault();
     setOverColId(null);
     if (!draggedTaskId || !draggedFromCol || draggedFromCol === targetColId) {
+      setDraggedTaskId(null);
+      setDraggedFromCol(null);
+      return;
+    }
+    const allowed = ALLOWED_TRANSITIONS[draggedFromCol];
+    if (!allowed || !allowed.includes(targetColId)) {
+      setWarningPopup({ from: draggedFromCol, to: targetColId });
       setDraggedTaskId(null);
       setDraggedFromCol(null);
       return;
@@ -375,7 +404,7 @@ export default function KanbanBoard() {
       </div>
 
       {viewTask && viewTaskData && (
-        <TaskViewModal task={viewTaskData} onClose={() => { setViewTask(null); setViewTaskData(null); }} onEdit={handleEdit} />
+        <TaskViewModal task={viewTaskData} onClose={() => { setViewTask(null); setViewTaskData(null); }} onSaved={loadKanban} />
       )}
 
       {editingTask && (
@@ -427,6 +456,32 @@ export default function KanbanBoard() {
             </div>
           </div>
         </>
+      )}
+
+      {warningPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/30" onClick={() => setWarningPopup(null)} />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-3xl text-amber-500">warning</span>
+              <h3 className="text-base font-bold">{locale === 'vi' ? 'Không thể di chuyển' : 'Cannot move task'}</h3>
+            </div>
+            <p className="text-sm text-gray-600">
+              {locale === 'vi'
+                ? `Không được phép kéo task từ "${COLUMN_LABELS[warningPopup.from]?.[locale === 'vi' ? 'vi' : 'en'] || warningPopup.from}" sang "${COLUMN_LABELS[warningPopup.to]?.[locale === 'vi' ? 'vi' : 'en'] || warningPopup.to}"`
+                : `Cannot drag task from "${COLUMN_LABELS[warningPopup.from]?.en || warningPopup.from}" to "${COLUMN_LABELS[warningPopup.to]?.en || warningPopup.to}"`
+              }
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setWarningPopup(null)}
+                className="px-4 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:opacity-90"
+              >
+                {locale === 'vi' ? 'Đóng' : 'Close'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

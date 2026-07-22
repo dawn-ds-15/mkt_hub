@@ -200,8 +200,9 @@ export default function TaskList() {
     try {
       await deleteTask(task.id);
       setTasks(prev => prev.filter(t => t.id !== task.id));
-    } catch {
-      setTasks(prev => prev.filter(t => t.id !== task.id));
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || (locale === 'vi' ? 'Xóa task thất bại' : 'Delete task failed');
+      alert(msg);
     }
   };
 

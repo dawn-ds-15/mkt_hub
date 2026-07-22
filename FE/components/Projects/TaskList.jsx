@@ -87,11 +87,11 @@ export default function TaskList() {
   });
 
   useEffect(() => {
-    getProjects().then(r => setProjects(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+    getProjects().then(r => setProjects(Array.isArray(r.data) ? r.data : [])).catch(e => console.error('[TaskList] getProjects:', e));
     getMembers().then(r => {
       const m = Array.isArray(r.data) ? r.data : (r.data?.members || []);
       setMembers(m);
-    }).catch(() => {});
+    }).catch(e => console.error('[TaskList] getMembers:', e));
   }, []);
 
   const fetchTasks = useCallback(() => {

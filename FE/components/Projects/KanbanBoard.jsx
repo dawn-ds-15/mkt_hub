@@ -85,7 +85,7 @@ function KanbanCard({ task, onDragStart, onCardClick }) {
         <PriorityDot priority={task.priority} />
         <span className="text-[10px] font-mono text-gray-400 font-medium">{getTaskId(task)}</span>
       </div>
-      <p className={`text-xs font-medium leading-snug text-gray-800 line-clamp-2 ${task.done ? 'line-through text-gray-400' : ''}`}>
+      <p className={`text-xs font-medium leading-snug text-gray-800 line-clamp-2 ${task.status === 'done' ? 'line-through text-gray-400' : ''}`}>
         {task.title}
       </p>
       <div className="flex items-center justify-between pt-1">
@@ -173,11 +173,11 @@ export default function KanbanBoard() {
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    getProjects().then(r => setProjects(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+    getProjects().then(r => setProjects(Array.isArray(r.data) ? r.data : [])).catch(e => console.error('[Kanban] getProjects failed:', e));
     getMembers().then(r => {
       const m = Array.isArray(r.data) ? r.data : (r.data?.members || []);
       setMembers(m);
-    }).catch(() => {});
+    }).catch(e => console.error('[Kanban] getMembers failed:', e));
   }, []);
 
   const loadKanban = useCallback(() => {
@@ -234,10 +234,12 @@ export default function KanbanBoard() {
 
   const handleDragEnter = useCallback((e, colId) => {
     e.preventDefault();
+    e.stopPropagation();
     setOverColId(colId);
   }, []);
 
   const handleDragLeave = useCallback((e) => {
+    e.stopPropagation();
     if (e.currentTarget.contains(e.relatedTarget)) return;
     setOverColId(null);
   }, []);

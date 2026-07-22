@@ -1332,6 +1332,7 @@ export const createBackup = async () => {
 };
 
 export const deleteBackup = async (id) => {
+  await api.delete(`/v1/data-management/backups/${id}`);
   markDeleted('backups', id);
   backupSnapshotsCache = backupSnapshotsCache.filter(b => b.id !== id);
   return { success: true };
@@ -1496,6 +1497,4 @@ export default {
   importConfirm,
   updateClosedDeal,
   deleteClosedDeal,
-  updateOpportunity,
-  addOpportunity,
 };

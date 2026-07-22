@@ -18,8 +18,8 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    getExpenseList().then((res) => setExpenses(res.data || [])).catch(() => {});
-    getProjects().then((res) => setProjects(Array.isArray(res.data) ? res.data : [])).catch(() => {});
+    getExpenseList().then((res) => setExpenses(res.data || [])).catch(e => console.error('[ExpenseHistory] getExpenseList:', e));
+    getProjects().then((res) => setProjects(Array.isArray(res.data) ? res.data : [])).catch(e => console.error('[ExpenseHistory] getProjects:', e));
   }, [refreshKey]);
 
   const showToast = (msg, type = 'success') => {

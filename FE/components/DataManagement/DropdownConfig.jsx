@@ -13,7 +13,7 @@ export default function DropdownConfig() {
     getDropdownKeys().then((res) => {
       setKeys(res.data);
       if (res.data.length > 0) setActiveKey(res.data[0]);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(e => console.error('[DropdownConfig] getDropdownKeys:', e)).finally(() => setLoading(false));
   }, []);
 
   const handleAdd = () => {

@@ -28,8 +28,8 @@ export default function WeeklyReport() {
   const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
-    getProjects().then(r => setProjects(r.data)).catch(() => {});
-    getMembers().then(r => setMembers(r.data)).catch(() => {});
+    getProjects().then(r => setProjects(r.data)).catch(e => console.error('[WeeklyReport] getProjects:', e));
+    getMembers().then(r => setMembers(r.data)).catch(e => console.error('[WeeklyReport] getMembers:', e));
   }, []);
 
   const loadReport = useCallback(async () => {

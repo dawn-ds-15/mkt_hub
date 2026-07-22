@@ -22,6 +22,8 @@ export default function Login() {
     sessionStorage.removeItem('mkt_hub_dashboard');
   }, []);
 
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -47,8 +49,6 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleRegister = async (e) => {
     e.preventDefault();

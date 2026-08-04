@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getTaskList, createTask, deleteTask, getProjects, getMembers } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { translateTaskErrors } from '../../utils/taskErrors';
 import TaskEditDrawer from './TaskEditDrawer';
 import TaskViewModal from './TaskViewModal';
 
@@ -40,6 +41,8 @@ const priorityLabels = {
 
 const priorityWeight = { high: 3, medium: 2, low: 1 };
 
+const statusOrder = { Planning: 0, Processing: 1, Pending: 2, Backlog: 3, Done: 4, Cancel: 5, overdue: 6 };
+
 const statsMeta = [
   { key: 'total', label: 'Tổng cộng', color: 'text-primary' },
   { key: 'Planning', label: 'Chưa làm', color: 'text-secondary' },
@@ -72,6 +75,7 @@ export default function TaskList() {
     dateTo: '',
   });
   const [filters, setFilters] = useState({ ...draftFilters });
+  const [searchTerm, setSearchTerm] = useState('');
   const perPage = 10;
 
   const [showQuickAddPopup, setShowQuickAddPopup] = useState(false);
@@ -131,10 +135,18 @@ export default function TaskList() {
     if (filters.dateTo) {
       result = result.filter(t => t.due && t.due !== '-' && new Date(t.due) <= new Date(filters.dateTo));
     }
-    result.sort((a, b) => (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0));
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toLowerCase();
+      result = result.filter(t => t.taskName && t.taskName.toLowerCase().includes(q));
+    }
+    result.sort((a, b) => {
+      const statusDiff = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99);
+      if (statusDiff !== 0) return statusDiff;
+      return (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0);
+    });
     setFilteredTasks(result);
     setPage(1);
-  }, [filters, tasks]);
+  }, [filters, tasks, searchTerm]);
 
   const stats = useCallback(() => {
     const total = tasks.length;
@@ -184,7 +196,7 @@ export default function TaskList() {
       fetchTasks();
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || (locale === 'vi' ? 'Tạo task thất bại' : 'Create task failed');
-      setQuickAddError(Array.isArray(msg) ? msg.join('; ') : msg);
+      setQuickAddError(translateTaskErrors(msg, locale));
     }
   };
 
@@ -278,6 +290,16 @@ export default function TaskList() {
             <span className="material-symbols-outlined text-sm absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
           </div>
         ))}
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm min-w-[200px]">
+          <span className="material-symbols-outlined text-sm text-outline">search</span>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border-none bg-transparent focus:ring-0 outline-none text-xs w-full"
+            placeholder={locale === 'vi' ? 'Tìm tên task...' : 'Search task name...'}
+          />
+        </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm">
           <span className="material-symbols-outlined text-sm text-outline">calendar_today</span>
           <input
@@ -389,7 +411,7 @@ export default function TaskList() {
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Tuần thực hiện' : 'Exec Week'}</label>
                 <input
                   className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
-                  type="number" min="1" max="53"
+                  type="number"
                   value={quickTask.execWeek}
                   onChange={(e) => setQuickTask(prev => ({ ...prev, execWeek: +e.target.value }))}
                 />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { updateTask, deleteTask } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { translateTaskErrors } from '../../utils/taskErrors';
 
 const statusOptions = (locale) => [
   { value: 'Planning', label: locale === 'vi' ? 'Chưa làm' : 'To Do' },
@@ -120,7 +121,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
       if (onClose) onClose();
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || (locale === 'vi' ? 'Lưu thất bại' : 'Save failed');
-      setError(Array.isArray(msg) ? msg.join('\n') : msg);
+      setError(translateTaskErrors(msg, locale));
     } finally {
       setSaving(false);
     }
@@ -273,7 +274,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
             </div>
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Tuần thực hiện' : 'Exec Week'}</label>
-              <input type="number" min="1" max="53" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={execWeek} onChange={(e) => setExecWeek(e.target.value)}               placeholder={locale === 'vi' ? 'VD: 24' : 'E.g. 24'} disabled={readOnly} />
+              <input type="number" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={execWeek} onChange={(e) => setExecWeek(e.target.value)}               placeholder={locale === 'vi' ? 'VD: 24' : 'E.g. 24'} disabled={readOnly} />
               <div className="text-[10px] text-gray-400 mt-0.5">{locale === 'vi' ? '→ Dùng để lọc trong báo cáo tuần' : '→ Used for weekly report filtering'}</div>
             </div>
           </div>

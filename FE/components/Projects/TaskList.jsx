@@ -175,13 +175,21 @@ export default function TaskList() {
   const pagedTasks = filteredTasks.slice((page - 1) * perPage, page * perPage);
 
   const pageItems = useMemo(() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+    const end = Math.min(totalPages, start + 4);
     const items = [];
-    const shown = Math.min(5, totalPages);
-    for (let i = 1; i <= shown; i++) items.push(i);
-    if (totalPages > shown + 1) items.push('...');
-    if (totalPages > shown) items.push(totalPages);
+    if (start > 1) {
+      items.push(1);
+      if (start > 2) items.push('...');
+    }
+    for (let i = start; i <= end; i++) items.push(i);
+    if (end < totalPages) {
+      if (end < totalPages - 1) items.push('...');
+      items.push(totalPages);
+    }
     return items;
-  }, [totalPages]);
+  }, [page, totalPages]);
 
   const handlePageJump = () => {
     const num = parseInt(pageJumpValue, 10);

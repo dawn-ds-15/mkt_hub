@@ -14,7 +14,7 @@ const taskStatusConfig = {
   overdue: { label: 'Quá hạn', bg: 'bg-red-100', text: 'text-red-700' },
 };
 
-export default function ProjectCard({ project, onEdit, onViewOverview }) {
+export default function ProjectCard({ project, onEdit, onViewOverview, onDelete }) {
   const { locale } = useDashboard();
   const [open, setOpen] = useState(project.id === 1);
   const status = statusConfig[project.status] || statusConfig.on_track;
@@ -77,6 +77,13 @@ export default function ProjectCard({ project, onEdit, onViewOverview }) {
               title={locale === 'vi' ? 'Chỉnh sửa' : 'Edit'}
             >
               <span className="material-symbols-outlined text-[20px]">edit</span>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); if (onDelete) onDelete(project); }}
+              className="p-2 hover:bg-error/10 rounded-lg transition-colors text-on-surface-variant hover:text-error"
+              title={locale === 'vi' ? 'Xóa dự án' : 'Delete Project'}
+            >
+              <span className="material-symbols-outlined text-[20px]">delete</span>
             </button>
           </div>
         </div>

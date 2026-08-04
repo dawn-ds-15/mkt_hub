@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { getProjects } from '../../services/api';
+import { getProjects, deleteProject } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import ProjectCard from './ProjectCard';
 import CreateProjectForm from './CreateProjectForm';
@@ -22,6 +22,16 @@ export default function ProjectsPage({ onProjectCreated }) {
       setFiltered(res.data);
     });
   }, []);
+
+  const handleDelete = async (project) => {
+    if (!window.confirm(locale === 'vi' ? `Xác nhận xóa dự án "${project.name}"?` : `Confirm delete project "${project.name}"?`)) return;
+    try {
+      await deleteProject(project.id);
+      refreshProjects();
+    } catch (err) {
+      alert(locale === 'vi' ? 'Xóa dự án thất bại' : 'Failed to delete project');
+    }
+  };
 
   const summary = useMemo(() => {
     const total = projects.length;
@@ -201,6 +211,7 @@ export default function ProjectsPage({ onProjectCreated }) {
             project={project}
             onEdit={setEditProject}
             onViewOverview={setViewProject}
+            onDelete={handleDelete}
           />
         ))}
         {filtered.length === 0 && (

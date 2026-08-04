@@ -328,7 +328,7 @@ export const getProjects = async () => {
   const res = await api.get('/v1/projects');
   const projects = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
   return {
-    data: projects.map((p) => ({
+    data: filterDeleted('projects', projects).map((p) => ({
       id: p.id,
       name: p.name,
       type: p.type,
@@ -370,8 +370,9 @@ export const updateProject = async (id, data) => {
 };
 
 export const deleteProject = async (id) => {
-  const res = await api.delete(`/v1/projects/${id}`);
-  return { data: res.data };
+  await api.delete(`/v1/projects/${id}`);
+  markDeleted('projects', id);
+  return { success: true };
 };
 
 // ===================== TASKS =====================

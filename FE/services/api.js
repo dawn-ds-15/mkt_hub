@@ -1072,9 +1072,7 @@ export const getExpenseOverview = async (period) => {
 
 // --- Import (BE: /v1/tasks/import cho tasks, /v1/data-management/import/* cho kpi/deals) ---
 export const importPreview = async (formData, type = 'kpi') => {
-  const res = await api.post(`/v1/data-management/import/preview?type=${type}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const res = await api.post(`/v1/data-management/import/preview?type=${type}`, formData);
   return { data: res.data?.data ?? { totalRows: 0, validRows: 0, errorRows: 0, preview: [], errors: [] } };
 };
 
@@ -1339,9 +1337,7 @@ export const deleteBackup = async (id) => {
 };
 
 export const restoreBackup = async (formData) => {
-  const res = await api.post('/v1/data-management/backups/restore', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const res = await api.post('/v1/data-management/backups/restore', formData);
   return { data: res.data?.data ?? { success: true } };
 };
 
@@ -1357,7 +1353,7 @@ const DROPDOWN_DEFAULTS = [
   { id: 'dd_3', key: 'task_status', label: 'Trạng thái Task', values: ['Planning', 'Processing', 'Done', 'Pending', 'Backlog', 'Cancel'].map(v => ({ id: `ts_${v}`, label: v })) },
   { id: 'dd_4', key: 'task_priority', label: 'Độ ưu tiên Task', values: ['High', 'Medium', 'Low'].map(v => ({ id: `tp_${v}`, label: v })) },
   { id: 'dd_5', key: 'company_size', label: 'Phân khúc Khách hàng', values: ['Enterprise', 'Medium'].map(v => ({ id: `cs_${v}`, label: v })) },
-  { id: 'dd_6', key: 'stakeholder', label: 'Stakeholders', values: ['BOD', 'Sales Team', 'Dev Team', 'CS Team'].map(v => ({ id: `sh_${v}`, label: v })) },
+  { id: 'dd_6', key: 'stakeholder', label: 'Stakeholders', values: ['BOD', 'Sales Team', 'Dev Team', 'CS Team', 'Partner'].map(v => ({ id: `sh_${v}`, label: v })) },
 ];
 
 let dropdownCache = [];

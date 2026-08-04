@@ -25,6 +25,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
   const [kpiActual, setKpiActual] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [errorField, setErrorField] = useState('');
   const [initialized, setInitialized] = useState(false);
   const [membersLoading, setMembersLoading] = useState(true);
 
@@ -56,12 +57,24 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !ownerId) {
-      setError(locale === 'vi' ? 'Vui lòng nhập tên dự án và chọn chủ sở hữu' : 'Please enter project name and select owner');
+    setError('');
+    setErrorField('');
+    if (!name.trim()) {
+      setErrorField('name');
+      setError(locale === 'vi' ? 'Vui lòng nhập tên dự án' : 'Please enter project name');
+      return;
+    }
+    if (!ownerId) {
+      setErrorField('ownerId');
+      setError(locale === 'vi' ? 'Vui lòng chọn chủ sở hữu' : 'Please select owner');
+      return;
+    }
+    if (!deadline.trim()) {
+      setErrorField('deadline');
+      setError(locale === 'vi' ? 'Vui lòng chọn hạn chót (bắt buộc cho loại dự án này)' : 'Deadline is required for this project type');
       return;
     }
     setSaving(true);
-    setError('');
     try {
       const payload = {
         name: name.trim(),
@@ -82,8 +95,13 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
       if (onSuccess) onSuccess();
       if (onClose) onClose();
     } catch (err) {
-      const msg = err?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg.join('\n') : msg || (locale === 'vi' ? 'Lưu thất bại' : 'Save failed'));
+      const data = err?.response?.data;
+      const msg = data?.message ?? data?.error?.message ?? err?.message;
+      if (typeof msg === 'string' && /Internal server error/i.test(msg)) {
+        setError(locale === 'vi' ? 'Lỗi hệ thống. Vui lòng kiểm tra lại Hạn chót và Người phụ trách, sau đó thử lại.' : 'System error. Please check the deadline and owner, then retry.');
+      } else {
+        setError(Array.isArray(msg) ? msg.join('\n') : msg || (locale === 'vi' ? 'Lưu thất bại' : 'Save failed'));
+      }
     } finally {
       setSaving(false);
     }
@@ -103,11 +121,11 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
         <div className="space-y-1">
           <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Tên Dự án' : 'Project Name'}</label>
           <input
-            className="w-full px-4 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+            className={`w-full px-4 py-2 bg-surface-container-low border rounded text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none ${errorField === 'name' ? 'border-red-400' : 'border-outline-variant'}`}
             placeholder={locale === 'vi' ? 'VD: Báo cáo thường niên 2024' : 'E.g. Annual Report 2024'}
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); if (errorField === 'name') { setError(''); setErrorField(''); } }}
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -129,9 +147,9 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
           <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">person</span>
             <select
-              className="w-full pl-10 pr-4 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
+              className={`w-full pl-10 pr-4 py-2 bg-surface-container-low text-body-md border rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none ${errorField === 'ownerId' ? 'border-red-400' : 'border-outline-variant'}`}
               value={ownerId}
-              onChange={(e) => setOwnerId(e.target.value)}
+              onChange={(e) => { setOwnerId(e.target.value); if (errorField === 'ownerId') { setError(''); setErrorField(''); } }}
             >
               <option value="">{locale === 'vi' ? (membersLoading ? 'Đang tải...' : 'Chọn chủ sở hữu...') : (membersLoading ? 'Loading...' : 'Select owner...')}</option>
               {members.map((m) => (
@@ -145,10 +163,10 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
           <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">event</span>
             <input
-              className="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+              className={`w-full pl-10 pr-4 py-2 bg-surface-container-low border rounded text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none ${errorField === 'deadline' ? 'border-red-400' : 'border-outline-variant'}`}
               type="date"
               value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
+              onChange={(e) => { setDeadline(e.target.value); if (errorField === 'deadline') { setError(''); setErrorField(''); } }}
             />
           </div>
         </div>

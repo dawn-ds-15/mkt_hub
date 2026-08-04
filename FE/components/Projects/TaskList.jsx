@@ -78,6 +78,9 @@ export default function TaskList() {
   const [searchTerm, setSearchTerm] = useState('');
   const perPage = 10;
 
+  const [showPageJump, setShowPageJump] = useState(false);
+  const [pageJumpValue, setPageJumpValue] = useState('');
+
   const [showQuickAddPopup, setShowQuickAddPopup] = useState(false);
   const [quickAddError, setQuickAddError] = useState('');
   const [quickTask, setQuickTask] = useState({
@@ -170,6 +173,23 @@ export default function TaskList() {
 
   const totalPages = Math.ceil(filteredTasks.length / perPage);
   const pagedTasks = filteredTasks.slice((page - 1) * perPage, page * perPage);
+
+  const pageItems = useMemo(() => {
+    const items = [];
+    const shown = Math.min(5, totalPages);
+    for (let i = 1; i <= shown; i++) items.push(i);
+    if (totalPages > shown + 1) items.push('...');
+    if (totalPages > shown) items.push(totalPages);
+    return items;
+  }, [totalPages]);
+
+  const handlePageJump = () => {
+    const num = parseInt(pageJumpValue, 10);
+    if (!Number.isNaN(num)) {
+      setPage(Math.min(totalPages, Math.max(1, num)));
+    }
+    setShowPageJump(false);
+  };
 
   const handleQuickAdd = async () => {
     if (!quickTask.name.trim()) return;
@@ -573,18 +593,29 @@ export default function TaskList() {
             >
               <span className="material-symbols-outlined text-sm">chevron_left</span>
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
-                className={`w-8 h-8 flex items-center justify-center rounded text-sm font-bold transition-colors ${
-                  p === page
-                    ? 'bg-primary text-on-primary'
-                    : 'border border-outline-variant hover:bg-surface-container-high'
-                }`}
-              >
-                {p}
-              </button>
+            {pageItems.map((p) => (
+              p === '...' ? (
+                <button
+                  key="..."
+                  onClick={() => { setPageJumpValue(''); setShowPageJump(true); }}
+                  className="w-8 h-8 flex items-center justify-center rounded text-sm font-bold text-outline border border-dashed border-outline-variant hover:bg-surface-container-high transition-colors"
+                  title={locale === 'vi' ? 'Nhập số trang' : 'Enter page number'}
+                >
+                  ...
+                </button>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-8 h-8 flex items-center justify-center rounded text-sm font-bold transition-colors ${
+                    p === page
+                      ? 'bg-primary text-on-primary'
+                      : 'border border-outline-variant hover:bg-surface-container-high'
+                  }`}
+                >
+                  {p}
+                </button>
+              )
             ))}
             <button
               disabled={page >= totalPages}
@@ -618,6 +649,45 @@ export default function TaskList() {
             setEditTask(null);
           }}
         />
+      )}
+
+      {showPageJump && (
+        <>
+          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowPageJump(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xs bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold">{locale === 'vi' ? 'Nhập số trang' : 'Enter page number'}</h3>
+              <button onClick={() => setShowPageJump(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? `Trang (1 - ${totalPages})` : `Page (1 - ${totalPages})`}</label>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                value={pageJumpValue}
+                onChange={(e) => setPageJumpValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handlePageJump()}
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowPageJump(false)}
+                className="px-4 py-2 border border-gray-200 rounded text-xs font-bold text-gray-500 hover:bg-gray-50 transition-all"
+              >
+                {locale === 'vi' ? 'Hủy' : 'Cancel'}
+              </button>
+              <button
+                onClick={handlePageJump}
+                className="px-4 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:opacity-90 transition-all"
+              >
+                {locale === 'vi' ? 'Đến trang' : 'Go'}
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </>
   );

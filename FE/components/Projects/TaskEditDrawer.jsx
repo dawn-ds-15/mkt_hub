@@ -18,7 +18,7 @@ const priorityOptions = (locale) => [
   { value: 'Low', label: locale === 'vi' ? 'Thấp' : 'Low' },
 ];
 
-const stakeholderOptions = ['BOD', 'Sales Team', 'Dev Team', 'Design Team', 'Content Team', 'CS Team'];
+const stakeholderOptions = ['BOD', 'Sales Team', 'Dev Team', 'CS Team', 'Partner'];
 
 function getUserRole() {
   try {
@@ -54,8 +54,8 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
   const [reason, setReason] = useState(task.reason || '');
   const [neededSupportBod, setNeededSupportBod] = useState(task.neededSupportBod || '');
   const [stakeholders, setStakeholders] = useState(() => {
-    if (Array.isArray(task.stakeholders)) return task.stakeholders;
-    return task.stakeholders ? task.stakeholders.split(', ').filter(Boolean) : [];
+    const list = Array.isArray(task.stakeholders) ? task.stakeholders : (task.stakeholders ? task.stakeholders.split(', ').filter(Boolean) : []);
+    return list.filter((s) => stakeholderOptions.includes(s));
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

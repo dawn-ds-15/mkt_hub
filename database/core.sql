@@ -128,6 +128,7 @@ CREATE TABLE "core"."projects" (
     "status_id" bigint NOT NULL,
     "owner_id" bigint NOT NULL,
     "description" text,
+    "event" text,
     "planned_start_date" date,
     "planned_end_date" date,
     "actual_start_date" date,

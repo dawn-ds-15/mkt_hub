@@ -35,23 +35,13 @@ function pctSign(pct) {
   return '0%';
 }
 
-function getHealthMeta(health, locale) {
-  const labels = {
-    green: { vi: 'Tốt', en: 'Good' },
-    yellow: { vi: 'Cảnh báo', en: 'Warning' },
-    red: { vi: 'Nghiêm trọng', en: 'Critical' },
-    blue: { vi: 'Tối ưu', en: 'Optimal' },
-    gray: { vi: 'KXĐ', en: 'N/A' },
-  };
-  const label = (labels[health] || labels.gray)[locale] || labels.green.en;
+function targetLabel(locale, target) {
   const map = {
-    green: { label, dot: 'bg-success', text: 'text-success', bg: 'bg-success/10' },
-    yellow: { label, dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning/10' },
-    red: { label, dot: 'bg-danger', text: 'text-danger', bg: 'bg-danger/10' },
-    blue: { label, dot: 'bg-primary', text: 'text-primary', bg: 'bg-primary/10' },
-    gray: { label, dot: 'bg-gray-400', text: 'text-gray-500', bg: 'bg-gray-100' },
+    'Beat': t(locale, { vi: 'Vượt mục tiêu', en: 'Beat' }),
+    'On Track': t(locale, { vi: 'Đúng tiến độ', en: 'On Track' }),
+    'Baseline': t(locale, { vi: 'Đường cơ sở', en: 'Baseline' }),
   };
-  return map[health] || map.gray;
+  return map[target] || target;
 }
 
 const segmentData = [
@@ -79,7 +69,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
 
   const exportCSV = (rows, filename, columns) => {
     const header = columns.map(c => c.label).join(',');
-    const body = rows.map(r => columns.map(c => r[c.key]).join(',')).join('\n');
+    const body = rows.map(r => columns.map(c => (typeof c.value === 'function' ? c.value(r) : r[c.key])).join(',')).join('\n');
     const bom = '\uFEFF';
     const blob = new Blob([bom + header + '\n' + body], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -145,8 +135,6 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
 
   const maxFlex = funnelSteps.length > 0 ? Math.max(...funnelSteps.map(f => f.flex)) : 1;
 
-  const cacCard = kpiCards.find(k => k.label === 'CAC / LTV');
-
   return (
     <div className="space-y-6">
       {loadError && (
@@ -160,7 +148,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
       )}
       {/* Row 1: 7 KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
-        {kpiCards.filter(k => k.label !== 'CAC / LTV').map((kpi) => (
+        {kpiCards.filter(k => k.label !== 'CAC / LTV' && k.label !== 'CAC/LTV').map((kpi) => (
           <div key={kpi.label} className="bg-white border border-border-light px-3 py-3 rounded-lg shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 min-h-[130px] flex flex-col justify-between w-full">
             <div>
               <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2 whitespace-nowrap">
@@ -205,49 +193,6 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
           </div>
         ))}
       </div>
-
-      {/* Row 2: CAC, LTV, Ratio */}
-      {cacCard && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between min-h-[100px]">
-            <div>
-              <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">{t(locale, { vi: 'CHI PHÍ THU HÚP KH (CAC)', en: 'CUSTOMER ACQUISITION COST (CAC)' })}</p>
-              <h3 className="text-headline-md font-bold text-on-surface">{formatCurrency(cacCard.cac)}</h3>
-              <p className="text-[11px] text-on-surface-variant mt-1">{t(locale, { vi: 'Mục tiêu: 1.500', en: 'Target: 1,500' })}</p>
-            </div>
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${getHealthMeta(cacCard.health, locale).bg}`}>
-              <div className={`w-2.5 h-2.5 rounded-full ${getHealthMeta(cacCard.health, locale).dot} ${cacCard.health === 'green' ? 'animate-pulse' : ''}`}></div>
-              <span className={`text-[11px] font-semibold uppercase ${getHealthMeta(cacCard.health, locale).text}`}>
-                {getHealthMeta(cacCard.health, locale).label}
-              </span>
-            </div>
-          </div>
-          <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between min-h-[100px]">
-            <div>
-              <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">{t(locale, { vi: 'GIÁ TRỊ VÒNG ĐỜI (LTV)', en: 'LIFETIME VALUE (LTV)' })}</p>
-              <h3 className="text-headline-md font-bold text-on-surface">{formatCurrency(cacCard.ltv)}</h3>
-              <p className="text-[11px] text-on-surface-variant mt-1">{t(locale, { vi: 'Tăng trưởng: +12% so với tháng trước', en: 'Growth: +12% vs last month' })}</p>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 rounded-full">
-              <div className="w-2.5 h-2.5 rounded-full bg-warning"></div>
-              <span className="text-[11px] font-semibold uppercase text-warning">{t(locale, { vi: 'Cảnh báo', en: 'Warning' })}</span>
-            </div>
-          </div>
-          <div className="bg-white border border-border-light p-4 rounded-lg flex items-center justify-between min-h-[100px]">
-            <div>
-              <p className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1">{t(locale, { vi: 'TỶ LỆ LTV : CAC', en: 'LTV : CAC RATIO' })}</p>
-              <h3 className="text-headline-md font-bold text-on-surface">{cacCard.ratio != null ? cacCard.ratio.toFixed(3) + 'x' : '\u2014'}</h3>
-              <p className="text-[11px] text-on-surface-variant mt-1">{t(locale, { vi: 'Chuẩn: 3.0x', en: 'Benchmark: 3.0x' })}</p>
-            </div>
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${getHealthMeta(cacCard.health, locale).bg}`}>
-              <div className={`w-2.5 h-2.5 rounded-full ${getHealthMeta(cacCard.health, locale).dot}`}></div>
-              <span className={`text-[11px] font-semibold uppercase ${getHealthMeta(cacCard.health, locale).text}`}>
-                {cacCard.ratio >= 3 ? t(locale, { vi: 'Tối ưu', en: 'Optimal' }) : getHealthMeta(cacCard.health, locale).label}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Main Section: Horizontal Funnel Chart */}
       <section className="bg-white border border-border-light rounded-lg p-4">
@@ -390,7 +335,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
         <div className="bg-white border border-border-light rounded-lg overflow-hidden">
           <div className="p-4 border-b border-border-light bg-surface-container-lowest flex justify-between items-center">
             <h4 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider">{t(locale, { vi: 'Giá trị Deal đã chốt', en: 'Closed Deal Value' })}</h4>
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px] cursor-pointer hover:text-primary" onClick={() => exportCSV(closedDealQuarters, 'closed-deals.csv', [{ key: 'quarter', label: t(locale, { vi: 'Quý', en: 'Quarter' }) }, { key: 'count', label: t(locale, { vi: 'Số lượng thắng', en: 'Won Count' }) }, { key: 'revenue', label: t(locale, { vi: 'Doanh thu', en: 'Revenue' }) }, { key: 'target', label: t(locale, { vi: 'so với Mục tiêu', en: 'vs Target' }) }])}>download</span>
+            <span className="material-symbols-outlined text-on-surface-variant text-[20px] cursor-pointer hover:text-primary" onClick={() => exportCSV(closedDealQuarters, 'closed-deals.csv', [{ key: 'quarter', label: t(locale, { vi: 'Quý', en: 'Quarter' }) }, { key: 'count', label: t(locale, { vi: 'Số lượng thắng', en: 'Won Count' }) }, { key: 'revenue', label: t(locale, { vi: 'Doanh thu', en: 'Revenue' }) }, { key: 'target', label: t(locale, { vi: 'so với Mục tiêu', en: 'vs Target' }), value: (r) => targetLabel(locale, r.target) }])}>download</span>
           </div>
           <table className="w-full text-left">
             <thead className="bg-surface-container-low border-b border-border-light">
@@ -408,7 +353,7 @@ export default function ViewAnalytics({ year, periodType, periodValue }) {
                   <td className="px-3 py-2.5 text-data-mono text-on-surface text-right">{row.count}</td>
                   <td className="px-3 py-2.5 text-data-mono text-on-surface text-right">{formatCurrency(row.revenue)}</td>
                   <td className="px-3 py-2.5 text-right">
-                    <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${row.targetClass}`}>{row.target}</span>
+                    <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${row.targetClass}`}>{targetLabel(locale, row.target)}</span>
                   </td>
                 </tr>
               ))}

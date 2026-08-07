@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getOpportunities, addOpportunity, updateOpportunity, convertOpportunityToWon, getProjects } from '../../services/api';
+import { getOpportunities, addOpportunity, updateOpportunity, deleteOpportunity, convertOpportunityToWon, getProjects } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
+import NumberInput from '../common/NumberInput';
 
 const feSize = { 'S': 'Enterprise', 'M': 'Medium', 'L': 'Enterprise' };
 const beSize = { 'Enterprise': 'S', 'Medium': 'M' };
@@ -146,6 +147,30 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
     openConvertModal(index);
   };
 
+  const handleDeleteRow = async (index, row) => {
+    const isTempId = typeof row.id === 'number';
+    if (saveTimers.current[index]) clearTimeout(saveTimers.current[index]);
+    if (isTempId) {
+      setRows(prev => prev.filter((_, i) => i !== index));
+      return;
+    }
+    try {
+      await deleteOpportunity(row.id);
+      setRemovingIds(prev => new Set([...prev, row.id]));
+      setTimeout(() => {
+        setRows(prev => prev.filter((_, i) => i !== index));
+        setRemovingIds(prev => {
+          const next = new Set(prev);
+          next.delete(row.id);
+          return next;
+        });
+      }, 400);
+    } catch (error) {
+      console.error('Error deleting opportunity:', error);
+      addToast(locale === 'vi' ? 'Có lỗi khi xóa cơ hội!' : 'An error occurred while deleting!', 'error');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -217,10 +242,9 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                     </select>
                   </td>
                   <td className="p-3">
-                    <input
+                    <NumberInput
                       className="w-full border-0 focus:ring-0 p-0 text-data-display outline-none"
                       placeholder="5,000"
-                      type="number"
                       value={row.fees}
                       onChange={(e) => handleRowChange(index, 'fees', e.target.value)}
                     />
@@ -234,14 +258,23 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                     />
                   </td>
                   <td className="p-3">
-                    <button
-                      onClick={() => handleConvert(index)}
-                      disabled={convertingIndex === index}
-                      className="px-3 py-1.5 bg-success text-white rounded text-label-md font-semibold hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1 shadow-sm"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
-                      {locale === 'vi' ? 'Chuyển thành Won' : 'Convert to Won'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleConvert(index)}
+                        disabled={convertingIndex === index}
+                        className="px-3 py-1.5 bg-success text-white rounded text-label-md font-semibold hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1 shadow-sm"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
+                        {locale === 'vi' ? 'Chuyển thành Won' : 'Convert to Won'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRow(index, row)}
+                        title={locale === 'vi' ? 'Xóa' : 'Delete'}
+                        className="p-1.5 text-on-surface-variant hover:text-error hover:bg-error/10 rounded transition-all flex items-center justify-center"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );

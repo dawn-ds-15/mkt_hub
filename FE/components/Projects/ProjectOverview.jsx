@@ -1,3 +1,6 @@
+import { useNavigate } from 'react-router-dom';
+import { useDashboard } from '../../contexts/DashboardContext';
+
 const statusConfig = {
   near_deadline: { label: 'Sắp hết hạn', bg: 'bg-amber-100', text: 'text-amber-700' },
   active: { label: 'Đang thực hiện', bg: 'bg-primary/10', text: 'text-primary' },
@@ -18,7 +21,24 @@ const taskStatusConfig = {
 };
 
 export default function ProjectOverview({ project, onClose }) {
+  const navigate = useNavigate();
+  const { locale } = useDashboard();
   const st = statusConfig[project.status] || statusConfig.active;
+
+  const formatCurrency = (num) => {
+    if (num == null || isNaN(num)) return '\u2014';
+    if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toLocaleString();
+  };
+
+  const budgetTotal = (project.budgetPlanDirect ?? 0) + (project.budgetPlanOverhead ?? 0);
+  const costTotal = (project.actualCostDirect ?? 0) + (project.actualCostOverhead ?? 0);
+
+  const handleCostClick = () => {
+    navigate('/expense?tab=input');
+  };
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-2xl overflow-hidden">
@@ -59,6 +79,25 @@ export default function ProjectOverview({ project, onClose }) {
             <p className="text-label-sm text-on-surface-variant mt-1">Tiến độ</p>
           </div>
         </div>
+
+        {/* Project Cost */}
+        <button
+          onClick={handleCostClick}
+          className="w-full flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg p-4 hover:bg-primary/10 transition-colors text-left cursor-pointer group"
+          title={locale === 'vi' ? 'Chuyển đến tab nhập chi phí' : 'Go to expense input tab'}
+        >
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-primary">payments</span>
+            <div>
+              <p className="text-label-sm font-bold text-on-surface uppercase tracking-wider">Chi phí dự án</p>
+              <p className="text-body-sm text-on-surface-variant mt-0.5">Kế hoạch: {formatCurrency(budgetTotal)} · Thực tế: {formatCurrency(costTotal)}</p>
+            </div>
+          </div>
+          <span className="flex items-center gap-1 text-label-sm font-semibold text-primary">
+            Nhập chi phí
+            <span className="material-symbols-outlined text-[16px] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+          </span>
+        </button>
 
         {/* Progress Bar */}
         <div>

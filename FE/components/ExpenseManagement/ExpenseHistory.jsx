@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { getExpenseList, deleteExpense, updateExpense, getProjects } from '../../services/api';
+import NumberInput from '../common/NumberInput';
 
 function formatCurrency(val) {
   return (val ?? 0).toLocaleString('vi-VN');
@@ -194,11 +195,11 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
               <div className="space-y-3">
                 <div>
                   <label className="text-[11px] font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Chi phí trực tiếp' : 'Direct Cost'}</label>
-                  <input type="number" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary outline-none" value={editDirect} onChange={(e) => setEditDirect(e.target.value)} />
+                  <NumberInput className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary outline-none" value={editDirect} onChange={(e) => setEditDirect(e.target.value)} />
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Chi phí gián tiếp' : 'Indirect Cost'}</label>
-                  <input type="number" className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary outline-none" value={editOverhead} onChange={(e) => setEditOverhead(e.target.value)} />
+                  <NumberInput className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary outline-none" value={editOverhead} onChange={(e) => setEditOverhead(e.target.value)} />
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Ghi chú' : 'Note'}</label>

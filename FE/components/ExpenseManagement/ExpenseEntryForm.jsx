@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { getProjects, saveExpense } from '../../services/api';
+import NumberInput from '../common/NumberInput';
+import FileUploadModal from '../common/FileUploadModal';
 
 export default function ExpenseEntryForm({ onSaved }) {
   const { locale } = useDashboard();
@@ -14,6 +16,9 @@ export default function ExpenseEntryForm({ onSaved }) {
   const [overhead, setOverhead] = useState('');
   const [directNote, setDirectNote] = useState('');
   const [overheadNote, setOverheadNote] = useState('');
+  const [dataFile, setDataFile] = useState('');
+  const [contractFile, setContractFile] = useState('');
+  const [uploadModal, setUploadModal] = useState(null);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -57,6 +62,8 @@ export default function ExpenseEntryForm({ onSaved }) {
       setOverhead('');
       setDirectNote('');
       setOverheadNote('');
+      setDataFile('');
+      setContractFile('');
       if (onSaved) onSaved();
     } catch {
       showToast(locale === 'vi' ? 'Lỗi khi lưu chi phí. Kiểm tra kết nối và thử lại.' : 'Error saving expense. Check connection and try again.', 'error');
@@ -87,7 +94,7 @@ export default function ExpenseEntryForm({ onSaved }) {
             <div>
               <label className="block font-label-md text-on-surface-variant mb-1">{locale === 'vi' ? 'Chi phí trực tiếp (VNĐ)' : 'Direct Cost (VND)'}</label>
               <div className="relative">
-                <input className="w-full border border-border-light rounded-lg pl-3 pr-14 py-2.5 text-body-md font-semibold text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="0" type="number" value={directCost} onChange={(e) => setDirectCost(e.target.value)} />
+                <NumberInput className="w-full border border-border-light rounded-lg pl-3 pr-14 py-2.5 text-body-md font-semibold text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="0" value={directCost} onChange={(e) => setDirectCost(e.target.value)} />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant">VNĐ</span>
               </div>
             </div>
@@ -100,7 +107,7 @@ export default function ExpenseEntryForm({ onSaved }) {
             <div>
               <label className="block font-label-md text-on-surface-variant mb-1">{locale === 'vi' ? 'Chi phí gián tiếp (VNĐ)' : 'Indirect Cost (VND)'}</label>
               <div className="relative">
-                <input className="w-full border border-border-light rounded-lg pl-3 pr-14 py-2.5 text-body-md font-semibold text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="0" type="number" value={overhead} onChange={(e) => setOverhead(e.target.value)} />
+                <NumberInput className="w-full border border-border-light rounded-lg pl-3 pr-14 py-2.5 text-body-md font-semibold text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="0" value={overhead} onChange={(e) => setOverhead(e.target.value)} />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant">VNĐ</span>
               </div>
             </div>
@@ -108,6 +115,32 @@ export default function ExpenseEntryForm({ onSaved }) {
               <label className="block font-label-md text-on-surface-variant mb-1">{locale === 'vi' ? 'Ghi chú gián tiếp' : 'Indirect Cost Note'}</label>
               <textarea className="w-full border border-border-light rounded-lg px-3 py-2 text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none h-20" placeholder={locale === 'vi' ? 'Chi phí vận hành chung, văn phòng...' : 'General operations, office...'} value={overheadNote} onChange={(e) => setOverheadNote(e.target.value)} />
             </div>
+          </div>
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <button
+              type="button"
+              onClick={() => setUploadModal('excel')}
+              className="flex items-center gap-3 p-4 rounded-lg border border-border-light bg-background-subtle hover:border-primary/60 hover:bg-primary/5 transition-colors text-left cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[28px] text-primary">upload_file</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-label-md text-on-surface">{locale === 'vi' ? 'File số liệu (Excel)' : 'Data File (Excel)'}</p>
+                <p className="text-xs text-on-surface-variant truncate">{dataFile || (locale === 'vi' ? 'Chưa có file — bấm để tải lên' : 'No file — click to upload')}</p>
+              </div>
+              {dataFile && <span className="material-symbols-outlined text-primary">check_circle</span>}
+            </button>
+            <button
+              type="button"
+              onClick={() => setUploadModal('image')}
+              className="flex items-center gap-3 p-4 rounded-lg border border-border-light bg-background-subtle hover:border-primary/60 hover:bg-primary/5 transition-colors text-left cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[28px] text-primary">description</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-label-md text-on-surface">{locale === 'vi' ? 'Hợp đồng (Ảnh)' : 'Contract (Image)'}</p>
+                <p className="text-xs text-on-surface-variant truncate">{contractFile || (locale === 'vi' ? 'Chưa có file — bấm để tải lên' : 'No file — click to upload')}</p>
+              </div>
+              {contractFile && <span className="material-symbols-outlined text-primary">check_circle</span>}
+            </button>
           </div>
           <div className="md:col-span-2 bg-background-subtle p-4 rounded-lg flex items-center justify-between border border-border-light">
             <div>
@@ -120,7 +153,7 @@ export default function ExpenseEntryForm({ onSaved }) {
             </div>
           </div>
           <div className="md:col-span-2 flex justify-end gap-3">
-            <button className="px-6 py-2.5 border border-border-light rounded-lg font-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer" type="reset" onClick={() => { setDirectCost(''); setOverhead(''); setDirectNote(''); setOverheadNote(''); }}>
+            <button className="px-6 py-2.5 border border-border-light rounded-lg font-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer" type="reset" onClick={() => { setDirectCost(''); setOverhead(''); setDirectNote(''); setOverheadNote(''); setDataFile(''); setContractFile(''); }}>
               {locale === 'vi' ? 'Hủy bỏ' : 'Cancel'}
             </button>
             <button className="px-10 py-2.5 bg-primary text-on-primary rounded-lg font-bold shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 cursor-pointer" type="submit">
@@ -130,6 +163,18 @@ export default function ExpenseEntryForm({ onSaved }) {
           </div>
         </form>
       </div>
+
+      {uploadModal && (
+        <FileUploadModal
+          type={uploadModal}
+          onClose={() => setUploadModal(null)}
+          onConfirm={(fileName) => {
+            if (uploadModal === 'excel') setDataFile(fileName);
+            else setContractFile(fileName);
+            setUploadModal(null);
+          }}
+        />
+      )}
 
       {toast && (
         <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-semibold transition-all ${

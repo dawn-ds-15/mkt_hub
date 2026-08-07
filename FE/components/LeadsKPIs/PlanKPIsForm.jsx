@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getPlanKPIs, savePlanKPIs } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
+import NumberInput from '../common/NumberInput';
 
 const years = [2024, 2025, 2026];
 
@@ -88,10 +89,9 @@ export default function PlanKPIsForm() {
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
             {locale === 'vi' ? 'Mục tiêu Raw Leads' : 'Raw Leads Target'}
           </label>
-          <input
+          <NumberInput
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
             placeholder="0"
-            type="number"
             name="targetLeads"
             value={formData.targetLeads}
             onChange={handleChange}
@@ -103,10 +103,9 @@ export default function PlanKPIsForm() {
             <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
             {locale === 'vi' ? 'Mục tiêu MQL' : 'MQL Target'}
           </label>
-            <input
+            <NumberInput
               className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
               placeholder="0"
-              type="number"
               name="mqlTarget"
               value={formData.mqlTarget}
               onChange={handleChange}
@@ -116,10 +115,9 @@ export default function PlanKPIsForm() {
             <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
               {locale === 'vi' ? 'Mục tiêu SQL' : 'SQL Target'}
             </label>
-            <input
+            <NumberInput
               className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
               placeholder="0"
-              type="number"
               name="sqlTarget"
               value={formData.sqlTarget}
               onChange={handleChange}
@@ -131,10 +129,9 @@ export default function PlanKPIsForm() {
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
             {locale === 'vi' ? 'Số lượng Cơ hội (OPP)' : 'Opportunities (OPP)'}
           </label>
-          <input
+          <NumberInput
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
             placeholder="0"
-            type="number"
             name="opportunityCount"
             value={formData.opportunityCount}
             onChange={handleChange}
@@ -145,10 +142,9 @@ export default function PlanKPIsForm() {
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
             {locale === 'vi' ? 'Số lượng Closed Deal' : 'Closed Deal Count'}
           </label>
-          <input
+          <NumberInput
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
             placeholder="0"
-            type="number"
             name="closedDealCount"
             value={formData.closedDealCount}
             onChange={handleChange}
@@ -159,10 +155,9 @@ export default function PlanKPIsForm() {
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
             {locale === 'vi' ? 'Giá trị Pipeline' : 'Pipeline Value'}
           </label>
-          <input
+          <NumberInput
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
             placeholder="0"
-            type="number"
             name="pipelineValue"
             value={formData.pipelineValue}
             onChange={handleChange}
@@ -173,10 +168,9 @@ export default function PlanKPIsForm() {
           <label className="text-label-md font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">
             {locale === 'vi' ? 'Giá trị Won' : 'Won Value'}
           </label>
-          <input
+          <NumberInput
             className="w-full border border-border-light rounded px-3 py-2 text-data-display bg-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
             placeholder="0"
-            type="number"
             name="wonValue"
             value={formData.wonValue}
             onChange={handleChange}

@@ -146,8 +146,6 @@ export default function ExpenseOverview({ refreshKey }) {
     { label: locale === 'vi' ? 'Tổng Chi Phí' : 'Total Expense', value: formatCurrency(metrics.totalExpense), suffix: locale === 'vi' ? 'Tổng chi phí' : 'Total cost', color: 'primary' },
     { label: locale === 'vi' ? 'Khách Hàng Mới' : 'New Customers', value: metrics.newCustomers ?? 0, suffix: locale === 'vi' ? 'Khách hàng mới từ chi phí' : 'New customers from cost', color: 'primary' },
     { label: locale === 'vi' ? 'CAC Trung Bình' : 'Avg CAC', value: formatFullCurrency(Math.round(metrics.cac || 0)), suffix: locale === 'vi' ? 'Chi phí thu hút / KH mới' : 'Acquisition cost / new customer', color: 'primary' },
-    { label: locale === 'vi' ? 'LTV Trung Bình' : 'Avg LTV', value: formatFullCurrency(Math.round(metrics.ltv || 0)), suffix: locale === 'vi' ? 'Giá trị vòng đời KH' : 'Customer lifetime value', color: 'success' },
-    { label: locale === 'vi' ? 'Tỷ Lệ LTV/CAC' : 'LTV/CAC Ratio', value: (metrics.ltvCacRatio ?? 0).toFixed(0) + 'x', suffix: locale === 'vi' ? 'Hiệu quả đầu tư' : 'Investment efficiency', badge: metrics.health?.status || 'N/A', color: metrics.ltvCacRatio > 1000 ? 'success' : 'primary' },
   ];
 
   const filteredRows = projects.filter((r) =>
@@ -192,7 +190,7 @@ export default function ExpenseOverview({ refreshKey }) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {kpis.map((kpi) => (
           <div
             key={kpi.label}

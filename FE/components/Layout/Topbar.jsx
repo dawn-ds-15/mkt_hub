@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileModal from './ProfileModal';
+import NotificationBell from './NotificationBell';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 function getInitials(name) {
@@ -61,6 +62,7 @@ export default function Topbar({ title = 'Tổng quan', tabs, activeTab, onTabCh
         )}
       </div>
       <div className="flex items-center gap-6">
+        <NotificationBell />
         <div className="h-8 w-[1px] bg-gray-400" />
         <div className="relative">
           <div

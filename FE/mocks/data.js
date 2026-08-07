@@ -6,7 +6,6 @@ export const mockDashboard = {
     { id: 4, label: 'Opp', value: '115', trend: 'down', percentage: 74, suffix: 'vs Plan', barColor: 'bg-danger', barWidth: '74%' },
     { id: 5, label: 'Closed Deal', value: '42', trend: 'up', percentage: 110, suffix: 'vs Plan', barColor: 'bg-success', barWidth: '100%' },
     { id: 6, label: 'Pipeline Value', value: '$4.2M', trend: null, percentage: 94, suffix: 'vs Plan', barColor: 'bg-warning', barWidth: '94%' },
-    { id: 7, label: 'CAC / LTV', value: '1:4.8', trend: null, percentage: null, suffix: 'Healthy', barColor: 'bg-primary', barWidth: '100%' },
   ],
   funnel: [
     { stage: 'RAW LEADS', value: 1240, percent: '100%', color: 'bg-primary' },

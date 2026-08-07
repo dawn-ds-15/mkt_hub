@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { getSlackSettings, saveSlackSettings, testSlackWebhook, getSlackNotificationHistory } from '../../services/api';
+import NumberInput from '../common/NumberInput';
 
 export default function SlackSettings() {
   const { locale } = useDashboard();
@@ -154,7 +155,7 @@ export default function SlackSettings() {
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-on-surface-variant ml-1">{locale === 'vi' ? 'Cảnh báo sắp hạn (số ngày)' : 'Upcoming deadline alert (days)'}</label>
             <div className="flex items-center gap-3">
-              <input type="number" value={notifyDays} onChange={(e) => setNotifyDays(Number(e.target.value))} className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none text-center text-lg" />
+              <NumberInput value={notifyDays} onChange={(e) => setNotifyDays(Number(e.target.value))} className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none text-center text-lg" />
               <span className="text-on-surface-variant text-sm whitespace-nowrap">{locale === 'vi' ? 'Ngày trước' : 'days before'}</span>
             </div>
           </div>

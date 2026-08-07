@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createProject, updateProject, getMembers } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
+import NumberInput from '../common/NumberInput';
 
 const typeMap = {
   'Nội bộ': 'Internal', 'Khách hàng': 'Client', 'Nghiên cứu': 'Research',
@@ -177,11 +178,11 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Ngân sách' : 'Budget'}</label>
-              <input className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md text-right focus:ring-1 focus:ring-primary outline-none" placeholder="0" type="number" value={budget} onChange={(e) => setBudget(e.target.value)} />
+              <NumberInput className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md text-right focus:ring-1 focus:ring-primary outline-none" placeholder="0" value={budget} onChange={(e) => setBudget(e.target.value)} />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Chi phí phát sinh' : 'Overhead Cost'}</label>
-              <input className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md text-right focus:ring-1 focus:ring-primary outline-none" placeholder="0" type="number" value={overhead} onChange={(e) => setOverhead(e.target.value)} />
+              <NumberInput className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md text-right focus:ring-1 focus:ring-primary outline-none" placeholder="0" value={overhead} onChange={(e) => setOverhead(e.target.value)} />
             </div>
           </div>
         </div>
@@ -192,11 +193,11 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Kế hoạch (Mục tiêu)' : 'Plan (Target)'}</label>
-              <input className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary outline-none" placeholder="100,000" type="number" value={kpiPlan} onChange={(e) => setKpiPlan(e.target.value)} />
+              <NumberInput className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary outline-none" placeholder="100,000" value={kpiPlan} onChange={(e) => setKpiPlan(e.target.value)} />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Thực tế (Đạt được)' : 'Actual (Achieved)'}</label>
-              <input className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary outline-none" placeholder="0" type="number" value={kpiActual} onChange={(e) => setKpiActual(e.target.value)} />
+              <NumberInput className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary outline-none" placeholder="0" value={kpiActual} onChange={(e) => setKpiActual(e.target.value)} />
             </div>
           </div>
         </div>

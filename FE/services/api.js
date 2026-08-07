@@ -100,20 +100,12 @@ function getKpiBarWidth(percentVsPlan) {
   return `${Math.min(percentVsPlan, 100)}%`;
 }
 
-function getLtvCacBadge(ratio) {
-  if (ratio < 1.5) return { label: 'Nguy hiểm', textColor: 'text-red-700', bgColor: 'bg-red-50', icon: 'dangerous' };
-  if (ratio <= 2.5) return { label: 'Cần tối ưu', textColor: 'text-amber-700', bgColor: 'bg-amber-50', icon: 'warning' };
-  if (ratio <= 4.0) return { label: 'Tỷ lệ vàng', textColor: 'text-green-700', bgColor: 'bg-green-50', icon: 'check_circle' };
-  return { label: 'Tăng ngân sách', textColor: 'text-blue-700', bgColor: 'bg-blue-50', icon: 'trending_up' };
-}
-
 const kpiLabelVi = {
   'Raw Leads': 'Raw Leads',
   'MQL': 'MQL',
   'SQL': 'SQL',
   'Closed Deal': 'Closed Deal',
   'Pipeline Value': 'Giá trị Pipeline',
-  'CAC / LTV': 'CAC / LTV',
 };
 
 const kpiDisplayMeta = {
@@ -122,30 +114,12 @@ const kpiDisplayMeta = {
   'SQL': { emoji: '🟠', accent: 'orange', planLabel: 'KH' },
   'Closed Deal': { emoji: '🟢', accent: 'green', planLabel: 'KH' },
   'Pipeline Value': { emoji: '💰', accent: 'purple', planLabel: 'KH' },
-  'CAC / LTV': { emoji: '💎', accent: 'purple', planLabel: null },
 };
 
 function transformKpiCards(kpiCards) {
-  return kpiCards.map((kpi, idx) => {
-    if (kpi.label === 'CAC / LTV') {
-      const ratio = kpi.ratio != null ? kpi.ratio : 0;
-      const badge = getLtvCacBadge(ratio);
-      const meta = kpiDisplayMeta['CAC / LTV'] || {};
-      return {
-        id: idx + 1,
-        label: 'CAC / LTV',
-        emoji: meta.emoji,
-        accent: meta.accent,
-        value: `1:${ratio.toFixed(3)}`,
-        trend: null,
-        percentage: null,
-        badge,
-        planValue: kpi.plan != null ? formatCurrency(kpi.plan) : null,
-        planLabel: 'LTV',
-        barColor: 'bg-primary',
-        barWidth: '100%',
-      };
-    }
+  return kpiCards
+    .filter((kpi) => kpi.label !== 'CAC / LTV' && kpi.label !== 'CAC/LTV')
+    .map((kpi, idx) => {
     const viLabel = kpiLabelVi[kpi.label] || kpi.label;
     const meta = kpiDisplayMeta[kpi.label] || { emoji: '📊', accent: 'blue', planLabel: 'KH' };
     const actual = kpi.actual ?? kpi.value ?? 0;
@@ -410,6 +384,7 @@ export const getTaskList = async (filters = {}) => {
         taskName: t.name,
         description: t.description || '',
         assignee: { initials: getInitials(t.assignee?.name || ''), name: t.assignee?.name || 'Unknown' },
+        assigneeId: t.assignee?.id || t.assigneeId || '',
         stakeholders: (t.stakeholders || []).join(', '),
         status: taskStatusToMock(t.status, isOverdueLocal || t.isOverdue),
         priority: t.priority?.toLowerCase() || 'medium',
@@ -712,12 +687,29 @@ export const getCompareData = async (years = ['2026', '2025'], periodType = 'yea
     params: { periodType, currentPeriodValue: periodValue, year1: years[0], year2: years[1], year3: years[2] }
   });
   const raw = res.data?.data ?? res.data ?? {};
-  const result = (raw && typeof raw === 'object') ? raw : {};
+  const source = (raw && typeof raw === 'object') ? raw : {};
   const deletedYears = getDeletedIds('compare');
+  const metricMap = {
+    'Raw Leads': 'rawLeads',
+    'MQL': 'mql',
+    'SQL': 'sql',
+    'Won Value': 'wonValue',
+  };
+  const result = {};
   for (const key of ['year1', 'year2', 'year3']) {
-    if (result[key] && deletedYears.has(String(result[key].year))) {
-      result[key] = null;
+    const item = source[key];
+    if (!item || item.year == null) continue;
+    if (deletedYears.has(String(item.year))) continue;
+    const data = item.data ?? {};
+    const byMetric = {};
+    for (const [label, apiKey] of Object.entries(metricMap)) {
+      byMetric[label] = {
+        actual: data.actual?.[apiKey] ?? 0,
+        plan: data.plan?.[apiKey] ?? 0,
+        percentVsPlan: data.pct?.[apiKey] ?? null,
+      };
     }
+    result[String(item.year)] = byMetric;
   }
   return { data: result };
 };
@@ -794,14 +786,15 @@ function parseWeekString(weekStr) {
   return { year: new Date().getFullYear(), week: 1 };
 }
 
-export const getActuals = async (week) => {
+export const getActuals = async (week, projectId) => {
   const { year, week: weekNum } = parseWeekString(week);
-  const res = await api.get('/v1/leads-kpis/weekly', { params: { year, week: weekNum } });
+  const res = await api.get('/v1/leads-kpis/weekly', { params: { year, week: weekNum, projectId: projectId || undefined } });
   const d = res.data?.data ?? res.data ?? {};
   const actual = d.actual ?? {};
   return {
     data: {
       week,
+      projectId: projectId || d.projectId || '',
       rawLeads: actual.rawLeads ?? d.rawLeads ?? 0,
       mqlActual: actual.mql ?? d.mql ?? d.mqlActual ?? 0,
       sqlActual: actual.sql ?? d.sql ?? d.sqlActual ?? 0,
@@ -814,6 +807,7 @@ export const saveActuals = async (data) => {
   const payload = {
     year,
     week: weekNum,
+    projectId: data.projectId || undefined,
     rawLeads: Number(data.rawLeads) || 0,
     mql: Number(data.mqlActual) || 0,
     sql: Number(data.sqlActual) || 0,
@@ -919,6 +913,44 @@ export const updateClosedDeal = async (id, data) => {
 
 export const deleteClosedDeal = async (id) => {
   const res = await api.delete(`/v1/leads-kpis/closed-deals/${id}`);
+  return { data: res.data };
+};
+
+// ===================== EVENTS =====================
+
+function mapEventFromBE(e) {
+  return {
+    id: e.id,
+    projectId: e.projectId || '',
+    week: e.week,
+    year: e.year,
+    name: e.name || '',
+    date: e.date || '',
+    description: e.description || '',
+    rawLeads: Number(e.rawLeads ?? e.raw_leads) || 0,
+    mql: Number(e.mql) || 0,
+    sql: Number(e.sql) || 0,
+  };
+}
+
+export const getEvents = async (projectId, week, year) => {
+  const res = await api.get('/v1/leads-kpis/events', { params: { projectId, week, year } });
+  const list = res.data?.data ?? res.data ?? [];
+  return { data: Array.isArray(list) ? list.map(mapEventFromBE) : [] };
+};
+
+export const addEvent = async (data) => {
+  const res = await api.post('/v1/leads-kpis/events', data);
+  return { data: mapEventFromBE(res.data?.data ?? res.data) };
+};
+
+export const updateEvent = async (id, data) => {
+  const res = await api.patch(`/v1/leads-kpis/events/${id}`, data);
+  return { data: mapEventFromBE(res.data?.data ?? res.data) };
+};
+
+export const deleteEvent = async (id) => {
+  const res = await api.delete(`/v1/leads-kpis/events/${id}`);
   return { data: res.data };
 };
 
@@ -1138,7 +1170,8 @@ export const downloadTemplate = async (type) => {
     return { success: true };
   }
   try {
-    const endpoint = type === 'tasks' ? '/v1/tasks/import/template' : `/v1/data-management/import/template?type=${type}`;
+    const backendType = type === 'deals' ? 'deal' : type;
+    const endpoint = type === 'tasks' ? '/v1/tasks/import/template' : `/v1/data-management/import/template?type=${backendType}`;
     const res = await api.get(endpoint, { responseType: 'blob' });
     const contentType = res.headers?.['content-type'] || '';
     const ext = contentType.includes('spreadsheetml') || contentType.includes('officedocument') ? 'xlsx' : 'csv';

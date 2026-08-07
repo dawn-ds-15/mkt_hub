@@ -3,7 +3,8 @@ import { useDashboard } from '../../contexts/DashboardContext';
 
 const navItems = [
   { vi: 'Tổng quan', en: 'Dashboard', href: '/' },
-  { vi: 'Dự án & Task', en: 'Projects & Tasks', href: '/projects' },
+  { vi: 'Dự án', en: 'Projects', href: '/projects' },
+  { vi: 'Task', en: 'Tasks', href: '/tasks' },
   { vi: 'Leads & KPIs', en: 'Leads & KPIs', href: '/leads' },
   { vi: 'Quản lý Chi phí', en: 'Expense Management', href: '/expense' },
   { vi: 'Quản lý Dữ liệu', en: 'Data Management', href: '/data' },

@@ -7,7 +7,8 @@ import { DashboardProvider, useDashboard } from './contexts/DashboardContext';
 import { ToastProvider } from './contexts/ToastContext';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
-const ProjectsTasks = lazy(() => import('./pages/ProjectsTasks'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const ProjectsModule = lazy(() => import('./pages/ProjectsModule'));
 const LeadsKPIs = lazy(() => import('./pages/LeadsKPIs'));
 const ExpenseManagement = lazy(() => import('./pages/ExpenseManagement'));
 const DataManagementPage = lazy(() => import('./pages/DataManagement'));
@@ -48,7 +49,12 @@ function App() {
         } />
         <Route path="/projects" element={
           <ProtectedRoute>
-            <ProjectsTasks />
+            <ProjectsModule />
+          </ProtectedRoute>
+        } />
+        <Route path="/tasks" element={
+          <ProtectedRoute>
+            <Tasks />
           </ProtectedRoute>
         } />
         <Route path="/leads" element={

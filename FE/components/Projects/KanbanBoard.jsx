@@ -113,6 +113,7 @@ function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, on
   const { locale } = useDashboard();
   const bg = columnBg[column.id] || 'bg-gray-50';
   const accent = columnHeaderAccent[column.id] || 'bg-gray-200 text-gray-700';
+  const title = COLUMN_LABELS[column.id]?.[locale === 'vi' ? 'vi' : 'en'] || column.title;
 
   return (
     <div
@@ -124,7 +125,7 @@ function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, on
     >
       <div className="flex items-center justify-between px-3 pt-3 pb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <h3 className="text-[11px] font-bold text-gray-700 uppercase tracking-wider truncate">{column.title}</h3>
+          <h3 className="text-[11px] font-bold text-gray-700 uppercase tracking-wider truncate">{title}</h3>
           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${accent}`}>
             {column.badgeCount}
           </span>

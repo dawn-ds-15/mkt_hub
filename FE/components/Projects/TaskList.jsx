@@ -307,7 +307,7 @@ export default function TaskList() {
               {def.options.map((opt) => {
                 const statusLabels = { 'Tất cả': locale === 'vi' ? 'Tất cả' : 'All', Planning: locale === 'vi' ? 'Chưa làm' : 'To Do', Processing: locale === 'vi' ? 'Đang làm' : 'In Progress', Done: locale === 'vi' ? 'Hoàn thành' : 'Done', Backlog: locale === 'vi' ? 'Tồn đọng' : 'Backlog', Pending: locale === 'vi' ? 'Chờ xử lý' : 'Pending', overdue: locale === 'vi' ? 'Quá hạn' : 'Overdue' };
                 const priorityLabelsMap = { 'Tất cả': locale === 'vi' ? 'Tất cả' : 'All', high: locale === 'vi' ? 'Cao' : 'High', medium: locale === 'vi' ? 'Trung bình' : 'Medium', low: locale === 'vi' ? 'Thấp' : 'Low' };
-                const label = def.key === 'status' ? (statusLabels[opt] || opt) : def.key === 'priority' ? (priorityLabelsMap[opt] || opt) : opt;
+                const label = def.key === 'status' ? (statusLabels[opt] || opt) : def.key === 'priority' ? (priorityLabelsMap[opt] || opt) : (opt === 'Tất cả' ? (locale === 'vi' ? 'Tất cả' : 'All') : opt);
                 return (
                   <option key={opt} value={opt}>
                     {label}

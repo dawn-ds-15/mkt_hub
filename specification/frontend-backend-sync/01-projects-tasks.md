@@ -128,6 +128,7 @@
 | `description` | `description` | String | ✅ |
 | `assignee.initials` | computed | String | ✅ FE tự tính |
 | `assignee.name` | `assignee.name` | String | ✅ |
+| `assignee.id` / `assigneeId` | `assignee.id` **hoặc** `assigneeId` | String | ✅ FE map `t.assignee?.id \|\| t.assigneeId` (api.js:387). **Yêu cầu backend**: task payload phải trả `assignee.id` hoặc `assigneeId` để FE biết ai được giao task (dùng trong NotificationBell filter). |
 | `stakeholders` | `stakeholders` | String | ✅ |
 | `status` | `status` | mapped | ✅ FE map: `todo`→Planning, `in_progress`→Processing, `waiting`→Pending, `canceled`→Cancel |
 | `priority` | `priority` | String (lowercased) | ✅ FE gửi `High/Medium/Low`, FE render `high/medium/low` |
@@ -192,6 +193,7 @@
 | 15 | **deleteProject gọi BE API** | `api.js:deleteProject` | `DELETE /v1/projects/:id` — Backend soft-delete (set `archivedAt`). |
 | 16 | **Centralized softDelete util** | `utils/softDelete.js` | Thư viện tập trung: `markDeleted`, `filterDeleted`, `getDeletedIds`, `restoreDeleted`. |
 | 17 | **Weekly report filterDeleted tasks** | `api.js:getWeeklyReport` | 3 section `completed`, `nextWeek`, `backlog` đều dùng `filterDeleted('tasks', ...)`. |
+| 18 | **assignee.id/assigneeId trong task payload** | `api.js:getTaskList` | FE map `t.assignee?.id \|\| t.assigneeId` để xác định người được giao. **Yêu cầu backend**: trả `assignee.id` hoặc `assigneeId`. Pattern đã xác nhận qua `GET /api/v1/notifications` (`NotificationItemDto.assigneeId` + `assignee.id`), nhưng schema `GET /v1/tasks` không được document trong OpenAPI — cần xác nhận response thực tế. |
 
 ---
 

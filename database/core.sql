@@ -52,9 +52,14 @@ INSERT INTO "dropdowns" ("id", "category", "value", "sort_order", "is_active", "
 (11,	'task_priority',	'Medium',	2,	'1',	'1',	'2026-07-08 08:49:43.455966'),
 (12,	'task_priority',	'High',	3,	'1',	'1',	'2026-07-08 08:49:43.455966'),
 (13,	'task_priority',	'Critical',	4,	'1',	'1',	'2026-07-08 08:49:43.455966'),
-(14,	'project_type',	'Internal',	1,	'1',	'1',	'2026-07-08 08:49:43.455966'),
-(15,	'project_type',	'Client',	2,	'1',	'1',	'2026-07-08 08:49:43.455966'),
-(16,	'project_type',	'Research',	3,	'1',	'1',	'2026-07-08 08:49:43.455966'),
+(48,	'project_type',	'workshop',	1,	'1',	'1',	'2026-08-10 12:19:00'),
+(49,	'project_type',	'event',	2,	'1',	'1',	'2026-08-10 12:19:00'),
+(50,	'project_type',	'exhibition',	3,	'1',	'1',	'2026-08-10 12:19:00'),
+(51,	'project_type',	'webinar',	4,	'1',	'1',	'2026-08-10 12:19:00'),
+(52,	'project_type',	'Online Campaign',	5,	'1',	'1',	'2026-08-10 12:19:00'),
+(53,	'project_type',	'Lead Generation',	6,	'1',	'1',	'2026-08-10 12:19:00'),
+(54,	'project_type',	'Awards',	7,	'1',	'1',	'2026-08-10 12:19:00'),
+(55,	'project_type',	'Production',	8,	'1',	'1',	'2026-08-10 12:19:00'),
 (17,	'company_size',	'Startup',	1,	'1',	'1',	'2026-07-08 08:49:43.455966'),
 (18,	'company_size',	'SME',	2,	'1',	'1',	'2026-07-08 08:49:43.455966'),
 (19,	'company_size',	'Enterprise',	3,	'1',	'1',	'2026-07-08 08:49:43.455966'),
@@ -183,6 +188,15 @@ INSERT INTO "projects" ("id", "project_name", "project_type_id", "status_id", "o
 (28,	'Data Lakehouses Security',	16,	1,	11,	NULL,	'2026-05-01',	'2026-10-31',	NULL,	NULL,	'2026-07-13 08:45:13.319277',	'2026-07-13 08:45:13.319277',	0.00,	0.00),
 (29,	'Marketing Campaign Predictor',	15,	1,	2,	NULL,	'2026-06-01',	'2026-11-30',	NULL,	NULL,	'2026-07-13 08:45:13.320577',	'2026-07-13 08:45:13.320577',	0.00,	0.00),
 (30,	'Enterprise Service Bus v2',	14,	1,	11,	NULL,	'2026-07-01',	'2027-02-28',	NULL,	NULL,	'2026-07-13 08:45:13.321899',	'2026-07-13 08:45:13.321899',	0.00,	0.00);
+
+-- Normalize legacy project type references to the contiguous project_type ID range.
+UPDATE core.projects
+SET project_type_id = CASE project_type_id
+    WHEN 14 THEN 48
+    WHEN 15 THEN 49
+    WHEN 16 THEN 50
+END
+WHERE project_type_id IN (14, 15, 16);
 
 DROP TABLE IF EXISTS "task_stakeholders";
 CREATE TABLE "core"."task_stakeholders" (

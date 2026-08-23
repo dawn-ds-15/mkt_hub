@@ -3,7 +3,6 @@ import { getProjects, deleteProject } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import ProjectCard from './ProjectCard';
 import CreateProjectForm from './CreateProjectForm';
-import ProjectOverview from './ProjectOverview';
 
 export default function ProjectsPage({ onProjectCreated }) {
   const { locale } = useDashboard();
@@ -13,7 +12,6 @@ export default function ProjectsPage({ onProjectCreated }) {
   const [showFilter, setShowFilter] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editProject, setEditProject] = useState(null);
-  const [viewProject, setViewProject] = useState(null);
   const [filters, setFilters] = useState({ status: 'Tất cả', type: 'Tất cả' });
 
   const refreshProjects = useCallback(() => {
@@ -210,7 +208,6 @@ export default function ProjectsPage({ onProjectCreated }) {
             key={project.id}
             project={project}
             onEdit={setEditProject}
-            onViewOverview={setViewProject}
             onDelete={handleDelete}
           />
         ))}
@@ -225,7 +222,7 @@ export default function ProjectsPage({ onProjectCreated }) {
       {showCreateForm && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowCreateForm(false)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl max-h-[90vh] overflow-y-auto z-50">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-xl max-h-[90vh] overflow-y-auto z-50">
             <CreateProjectForm onClose={() => setShowCreateForm(false)} onSuccess={() => { setShowCreateForm(false); refreshProjects(); if (onProjectCreated) onProjectCreated(); }} />
           </div>
         </>
@@ -235,18 +232,8 @@ export default function ProjectsPage({ onProjectCreated }) {
       {editProject && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setEditProject(null)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl max-h-[90vh] overflow-y-auto z-50">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-xl max-h-[90vh] overflow-y-auto z-50">
             <CreateProjectForm project={editProject} onClose={() => setEditProject(null)} onSuccess={() => { setEditProject(null); refreshProjects(); }} />
-          </div>
-        </>
-      )}
-
-      {/* View Overview Popup */}
-      {viewProject && (
-        <>
-          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setViewProject(null)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl max-h-[90vh] overflow-y-auto z-50">
-            <ProjectOverview project={viewProject} onClose={() => setViewProject(null)} />
           </div>
         </>
       )}

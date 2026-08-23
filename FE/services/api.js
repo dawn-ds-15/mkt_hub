@@ -1,4 +1,4 @@
-import { filterDeleted, markDeleted, getDeletedIds } from '../utils/softDelete';
+import { filterDeleted, markDeleted, getDeletedIds, restoreDeleted } from '../utils/softDelete';
 import axios from 'axios';
 
 const TOKEN_KEY = 'mkt_hub_token';
@@ -224,12 +224,30 @@ function transformAlerts(alerts) {
 
 // ===================== DASHBOARD =====================
 
+function getIsoWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+}
+
 export const getDashboardData = async (periodType = 'year', periodValue = '2026', year = '2026') => {
   const res = await api.get('/v1/dashboard/overview', {
     params: { period_type: periodType, period_value: periodValue, year },
   });
 
   const d = res.data?.data ?? res.data ?? {};
+  const rawKpiCards = d.kpiCards ?? d.kpi_cards ?? [];
+
+  const expensePeriod = periodType === 'month'
+    ? `${year}-${String(parseInt(periodValue, 10) || 1).padStart(2, '0')}`
+    : periodType === 'quarter'
+      ? `${year}-Q${parseInt(periodValue, 10) || 1}`
+      : periodType === 'year' ? String(year) : null;
+  const expensePromise = expensePeriod
+    ? api.get('/v1/expenses/overview', { params: { period: expensePeriod } }).catch(() => null)
+    : Promise.resolve(null);
   let rawAlerts = d.alerts ?? [];
   if (Array.isArray(rawAlerts)) {
     rawAlerts = filterDeleted('tasks', rawAlerts);
@@ -249,14 +267,64 @@ export const getDashboardData = async (periodType = 'year', periodValue = '2026'
   const taskStatus = transformTaskStatus(d.taskStatus ?? d.task_status ?? {});
   taskStatus.overdue = alerts.filter(a => a.type === 'error').length;
 
+  const ovRes = await expensePromise;
+  const ov = ovRes?.data?.data ?? ovRes?.data ?? {};
+  const totalExpense = Number(ov.metrics?.totalExpense) || 0;
+
+  const wonCard = (Array.isArray(rawKpiCards) ? rawKpiCards : []).find(
+    (k) => String(k?.label || '').toLowerCase().includes('won')
+  );
+  let wonValue = null;
+  let wonCount = null;
+  try {
+    const cdRes = await api.get('/v1/leads-kpis/closed-deals');
+    const cdRaw = cdRes.data?.data ?? cdRes.data;
+    const deals = filterDeleted('closed_deals', Array.isArray(cdRaw) ? cdRaw : Array.isArray(cdRaw?.deals) ? cdRaw.deals : []);
+    const y = parseInt(year, 10);
+    const pv = parseInt(periodValue, 10);
+    const inPeriod = (dateStr) => {
+      if (!dateStr) return false;
+      const dt = new Date(dateStr);
+      if (isNaN(dt.getTime())) return false;
+      if (periodType === 'year') return dt.getFullYear() === y;
+      if (periodType === 'quarter') return dt.getFullYear() === y && Math.ceil((dt.getMonth() + 1) / 3) === pv;
+      if (periodType === 'month') return dt.getFullYear() === y && dt.getMonth() + 1 === pv;
+      if (periodType === 'week') return getIsoWeek(dt) === pv && dt.getFullYear() === y;
+      return true;
+    };
+    const periodDeals = deals.filter((deal) => inPeriod(deal.closedDate || deal.signedDate));
+    wonCount = periodDeals.length;
+    if (!wonCard) {
+      wonValue = periodDeals.reduce(
+        (sum, deal) => sum + (Number(deal.setupFee ?? deal.finalFees ?? deal.fees ?? 0) || 0),
+        0
+      );
+    }
+  } catch {
+    wonCount = null;
+  }
+  if (wonValue == null && wonCard) {
+    wonValue = Number(wonCard.actual ?? wonCard.value ?? 0) || 0;
+  }
+
   return {
-    kpis: transformKpiCards(d.kpiCards ?? d.kpi_cards ?? []),
+    kpis: transformKpiCards(rawKpiCards),
     funnel: transformFunnel(d.funnel ?? []),
     marketingActivities: transformActivities(d.activities ?? d.marketingActivities ?? d.marketing_activities ?? []),
     projectProgress: filterDeleted('projects', transformProjectProgress(d.progress ?? {}).projects),
     totalPct: d.progress?.totalPct ?? 0,
     taskStatus,
     alerts,
+    roas: {
+      ratio: totalExpense > 0 && wonValue != null ? wonValue / totalExpense : null,
+      wonValue,
+      totalExpense,
+    },
+    cac: {
+      value: totalExpense > 0 && wonCount > 0 ? totalExpense / wonCount : null,
+      totalExpense,
+      wonCount,
+    },
   };
 };
 
@@ -296,41 +364,82 @@ export const logout = async () => {
   localStorage.removeItem('mkt_hub_user');
 };
 
+// ===================== FORGOT PASSWORD =====================
+
+export const forgotPassword = async (email) => {
+  const res = await api.post('/auth/forgot-password', { email });
+  return { data: res.data?.data ?? res.data };
+};
+
+export const verifyOtp = async (email, otp) => {
+  const res = await api.post('/auth/verify-otp', { email, otp });
+  return { data: res.data?.data ?? res.data };
+};
+
+export const resetPassword = async (email, otp, newPassword) => {
+  const res = await api.post('/auth/reset-password', { email, otp, newPassword });
+  return { data: res.data?.data ?? res.data };
+};
+
 // ===================== PROJECTS =====================
+
+function mapProject(p) {
+  const kpiValue = (key, field) => (Array.isArray(p.kpis) ? p.kpis.find(k => k.key === key)?.[field] : null) || 0;
+  return {
+    id: p.id,
+    name: p.name,
+    type: p.type,
+    createdAt: p.createdAt || p.createdAtDate || null,
+    owner: p.owner?.name || 'Unknown',
+    ownerId: p.ownerId || p.owner?.id || '',
+    deadline: p.deadline ? formatDate(p.deadline) : 'No deadline',
+    deadlineRaw: p.deadline || null,
+    status: projectStatusToMock(p.status, p.deadline),
+    statusLabel: p.status,
+    tasksCompleted: p.progress?.done || 0,
+    tasksTotal: p.progress?.total || 0,
+    progress: p.progress?.percentage || 0,
+    documentsCount: p.documentsCount ?? p._count?.documents ?? 0,
+    budgetPlanDirect: Number(p.budgetPlanDirect) || 0,
+    budgetPlanOverhead: Number(p.budgetPlanOverhead) || 0,
+    actualCostDirect: Number(p.actualCostDirect) || 0,
+    actualCostOverhead: Number(p.actualCostOverhead) || 0,
+    budgetPlanTotal: Number(p.budgetPlanTotal) || 0,
+    actualCostTotal: Number(p.actualCostTotal) || 0,
+    kpiRawLeadsPlan: kpiValue('rawLeads', 'plan'),
+    kpiRawLeadsActual: kpiValue('rawLeads', 'actual'),
+    kpiMqlPlan: kpiValue('mql', 'plan'),
+    kpiMqlActual: kpiValue('mql', 'actual'),
+    kpiSqlPlan: kpiValue('sql', 'plan'),
+    kpiSqlActual: kpiValue('sql', 'actual'),
+    kpiOppPlan: kpiValue('opp', 'plan'),
+    kpiOppActual: kpiValue('opp', 'actual'),
+    kpiClosedDealPlan: kpiValue('closedDeal', 'plan'),
+    kpiClosedDealActual: kpiValue('closedDeal', 'actual'),
+    kpiPipelineValuePlan: kpiValue('pipelineValue', 'plan'),
+    tasks: (p.tasks || []).map((t) => ({
+      name: t.name,
+      assignee: t.assignee?.name || 'Unknown',
+      due: t.dueDate ? formatDate(t.dueDate) : '-',
+      dueDate: t.dueDate || null,
+      status: taskStatusToMock(t.status, t.isOverdue),
+      statusLabel: t.status,
+    })),
+  };
+}
 
 export const getProjects = async () => {
   const res = await api.get('/v1/projects');
   const projects = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
-  return {
-    data: filterDeleted('projects', projects).map((p) => ({
-      id: p.id,
-      name: p.name,
-      type: p.type,
-      owner: p.owner?.name || 'Unknown',
-      ownerId: p.ownerId || p.owner?.id || '',
-      deadline: p.deadline ? formatDate(p.deadline) : 'No deadline',
-      deadlineRaw: p.deadline || null,
-      status: projectStatusToMock(p.status, p.deadline),
-      statusLabel: p.status,
-      tasksCompleted: p.progress?.done || 0,
-      tasksTotal: p.progress?.total || 0,
-      progress: p.progress?.percentage || 0,
-      budgetPlanDirect: p.budgetPlanDirect || 0,
-      budgetPlanOverhead: p.budgetPlanOverhead || 0,
-      actualCostDirect: p.actualCostDirect || 0,
-      actualCostOverhead: p.actualCostOverhead || 0,
-      kpiRawLeadsPlan: (Array.isArray(p.kpis) ? p.kpis.find(k => k.key === 'rawLeads')?.plan : 0) || 0,
-      kpiRawLeadsActual: (Array.isArray(p.kpis) ? p.kpis.find(k => k.key === 'rawLeads')?.actual : 0) || 0,
-      tasks: (p.tasks || []).map((t) => ({
-        name: t.name,
-        assignee: t.assignee?.name || 'Unknown',
-        due: t.dueDate ? formatDate(t.dueDate) : '-',
-        dueDate: t.dueDate || null,
-        status: taskStatusToMock(t.status, t.isOverdue),
-        statusLabel: t.status,
-      })),
-    })),
-  };
+  return { data: filterDeleted('projects', projects).map(mapProject) };
+};
+
+export const getProject = async (id) => {
+  if (getDeletedIds('projects').has(String(id))) return { data: null };
+  const res = await api.get(`/v1/projects/${id}`);
+  const raw = res.data?.data ?? res.data ?? {};
+  if (!raw || !raw.id) return { data: null };
+  return { data: mapProject(raw) };
 };
 
 export const createProject = async (data) => {
@@ -346,6 +455,54 @@ export const updateProject = async (id, data) => {
 export const deleteProject = async (id) => {
   await api.delete(`/v1/projects/${id}`);
   markDeleted('projects', id);
+  return { success: true };
+};
+
+// ---- Project Documents (Hồ sơ & Hợp đồng) ----
+
+export const DOC_CATEGORY = {
+  HOSO: 'hoso',
+  HOPDONG: 'hopdong',
+};
+
+function mapDocument(d) {
+  return {
+    id: d.id,
+    projectId: d.projectId,
+    name: d.name,
+    size: d.size || 0,
+    type: d.mimeType || '',
+    category: d.category || DOC_CATEGORY.HOSO,
+    url: d.url || null,
+    uploadedAt: d.uploadedAt,
+    archivedAt: d.archivedAt || null,
+  };
+}
+
+export const getProjectDocuments = async (projectId) => {
+  const res = await api.get(`/v1/projects/${projectId}/documents`);
+  const list = res.data?.data ?? res.data ?? [];
+  return { data: (Array.isArray(list) ? list : []).map(mapDocument) };
+};
+
+export const uploadProjectDocuments = async (projectId, files, category = DOC_CATEGORY.HOSO) => {
+  const fd = new FormData();
+  fd.append('category', category);
+  for (const f of Array.isArray(files) ? files : [files]) {
+    if (f) fd.append('files', f);
+  }
+  const res = await api.post(`/v1/projects/${projectId}/documents`, fd);
+  const list = res.data?.data ?? res.data ?? [];
+  return { data: (Array.isArray(list) ? list : []).map(mapDocument) };
+};
+
+export const updateProjectDocument = async (docId, category) => {
+  const res = await api.patch(`/v1/projects/documents/${docId}`, { category });
+  return { data: mapDocument(res.data?.data ?? res.data ?? {}) };
+};
+
+export const deleteProjectDocument = async (docId) => {
+  await api.delete(`/v1/projects/documents/${docId}`);
   return { success: true };
 };
 
@@ -818,6 +975,66 @@ export const saveActuals = async (data) => {
   return { data: res.data?.data ?? res.data };
 };
 
+// Kế hoạch phân bổ theo kỳ (BE tự tính: planGoc + rollover = effectivePlan) — GET /v1/leads-kpis/weekly
+export const getPeriodPlan = async (period, projectId, monthly) => {
+  const params = { projectId: projectId || undefined };
+  if (monthly) {
+    const [y, m] = String(period || '').split('-');
+    params.year = parseInt(y, 10) || new Date().getFullYear();
+    params.month = parseInt(m, 10) || new Date().getMonth() + 1;
+  } else {
+    const { year, week } = parseWeekString(period);
+    params.year = year;
+    params.week = week;
+  }
+  const res = await api.get('/v1/leads-kpis/weekly', { params });
+  const d = res.data?.data ?? res.data ?? {};
+  return {
+    data: {
+      planGoc: d.planGoc || null,
+      rollover: d.rollover || null,
+      effectivePlan: d.effectivePlan || null,
+    },
+  };
+};
+
+// Lead Generation projects — monthly entry (BE: GET/POST /leads-kpis/weekly hỗ trợ `month`)
+export const getMonthlyActuals = async (period, projectId) => {
+  const [y, m] = String(period || '').split('-');
+  const res = await api.get('/v1/leads-kpis/weekly', {
+    params: {
+      year: parseInt(y, 10) || new Date().getFullYear(),
+      month: parseInt(m, 10) || new Date().getMonth() + 1,
+      projectId: projectId || undefined,
+    },
+  });
+  const d = res.data?.data ?? res.data ?? {};
+  const actual = d.actual ?? {};
+  return {
+    data: {
+      period,
+      projectId: projectId || d.projectId || '',
+      rawLeads: actual.rawLeads ?? 0,
+      mql: actual.mql ?? 0,
+      sql: actual.sql ?? 0,
+    },
+  };
+};
+
+export const saveMonthlyActuals = async (data) => {
+  const [y, m] = String(data.period || '').split('-');
+  const payload = {
+    year: parseInt(y, 10) || new Date().getFullYear(),
+    month: parseInt(m, 10) || new Date().getMonth() + 1,
+    projectId: data.projectId || undefined,
+    rawLeads: Number(data.rawLeads) || 0,
+    mql: Number(data.mql) || 0,
+    sql: Number(data.sql) || 0,
+  };
+  const res = await api.post('/v1/leads-kpis/weekly', payload);
+  return { data: res.data?.data ?? res.data };
+};
+
 // ===================== OPPORTUNITIES =====================
 
 function mapOppFromBE(o) {
@@ -861,6 +1078,7 @@ export const updateOpportunity = async (id, data) => {
   const res = await api.patch(`/v1/leads-kpis/opportunities/${id}`, {
     companyName: data.companyName,
     size: feToBeSize[data.size] || 'Enterprise',
+    projectId: data.projectId || undefined,
     setupFee: Number(data.fees) || 0,
     expectedCloseDate: data.expectedCloseDate || undefined,
   });
@@ -887,14 +1105,15 @@ export const getClosedDeals = async () => {
   try {
     const res = await api.get('/v1/leads-kpis/closed-deals');
     const list = res.data?.data ?? res.data ?? [];
-    return { data: Array.isArray(list) ? list.map(d => ({
+    const mapped = Array.isArray(list) ? list.map(d => ({
       id: d.id,
       customer: d.companyName || d.customer || '',
       contract: d.project?.name || d.projectName || d.contract || '',
       finalFees: d.setupFee ?? d.finalFees ?? 0,
       signedDate: d.closedDate || d.signedDate || '',
       status: 'completed',
-    })) : [] };
+    })) : [];
+    return { data: filterDeleted('closed_deals', mapped) };
   } catch {
     return { data: [] };
   }
@@ -912,7 +1131,8 @@ export const updateClosedDeal = async (id, data) => {
 };
 
 export const deleteClosedDeal = async (id) => {
-  const res = await api.delete(`/v1/leads-kpis/closed-deals/${id}`);
+  const res = await api.delete(`/v1/leads-kpis/closed-deals/${id}/delete`);
+  markDeleted('closed_deals', id);
   return { data: res.data };
 };
 
@@ -1398,7 +1618,7 @@ export const getDropdownKeys = async () => {
   if (Array.isArray(raw) && raw.length > 0) {
     dropdownCache = raw.map(d => ({
       id: d.id || d.key,
-      key: d.key,
+      key: d.key || d.id,
       label: d.label || d.key,
       values: (d.values || []).map(v => typeof v === 'string' ? { id: v, label: v } : { id: v.id || v.label, label: v.label || v }),
     }));
@@ -1425,6 +1645,17 @@ export const deleteDropdownValue = async (keyId, valueId) => {
   await api.put(`/v1/data-management/dropdowns/${entry.key}`, { values: updatedValues.map(v => v.label) });
   const entryIdx = dropdownCache.findIndex(k => k.id === keyId);
   if (entryIdx >= 0) dropdownCache[entryIdx].values = updatedValues;
+  restoreDeleted('dropdown_values', `${keyId}:${valueId}`);
+  return { success: true };
+};
+
+// Lưu lại thứ tự mới của values (kéo thả) — PUT full values array theo contract BE
+export const reorderDropdownValues = async (keyId, orderedValues) => {
+  const entry = dropdownCache.find(k => k.id === keyId);
+  if (!entry) return { success: true };
+  await api.put(`/v1/data-management/dropdowns/${entry.key}`, { values: orderedValues.map(v => v.label) });
+  const entryIdx = dropdownCache.findIndex(k => k.id === keyId);
+  if (entryIdx >= 0) dropdownCache[entryIdx].values = orderedValues;
   return { success: true };
 };
 
@@ -1459,9 +1690,103 @@ export const generateAIReport = async (params) => {
   return { data: res.data };
 };
 
+// ===================== INVENTORY (Kho vật phẩm) =====================
+
+export const getInventoryOverview = async () => {
+  const res = await api.get('/v1/inventory/overview');
+  const raw = res.data?.data ?? res.data;
+  return { data: raw ?? {} };
+};
+
+export const getInventoryItems = async (params = {}) => {
+  const res = await api.get('/v1/inventory/items', { params });
+  const raw = res.data?.data ?? res.data;
+  const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : []);
+  return { data: list, total: raw?.total ?? list.length };
+};
+
+export const getInventoryItem = async (id) => {
+  const res = await api.get(`/v1/inventory/items/${id}`);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const createInventoryItem = async (data) => {
+  const res = await api.post('/v1/inventory/items', data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const updateInventoryItem = async (id, data) => {
+  const res = await api.patch(`/v1/inventory/items/${id}`, data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const deleteInventoryItem = async (id) => {
+  const res = await api.delete(`/v1/inventory/items/${id}`);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const getItemBatches = async (itemId) => {
+  const res = await api.get(`/v1/inventory/items/${itemId}/batches`);
+  const raw = res.data?.data ?? res.data;
+  const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.batches) ? raw.batches : []);
+  return { data: list };
+};
+
+export const createBatch = async (itemId, data) => {
+  const res = await api.post(`/v1/inventory/items/${itemId}/batches`, data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const updateBatch = async (batchId, data) => {
+  const res = await api.patch(`/v1/inventory/batches/${batchId}`, data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const deleteBatch = async (batchId) => {
+  const res = await api.delete(`/v1/inventory/batches/${batchId}`);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const createInventoryEntry = async (data) => {
+  const res = await api.post('/v1/inventory/entries', data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const getInventoryTransactions = async (params = {}) => {
+  const res = await api.get('/v1/inventory/transactions', { params });
+  const raw = res.data?.data ?? res.data;
+  const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.transactions) ? raw.transactions : []);
+  return { data: list };
+};
+
+export const createInventoryTransaction = async (data) => {
+  const res = await api.post('/v1/inventory/transactions', {
+    itemId: data.itemId,
+    projectId: data.projectId,
+    type: data.type || 'out',
+    quantity: Number(data.quantity) || 0,
+    date: data.date || undefined,
+    note: data.note || undefined,
+  });
+  return { data: res.data?.data ?? res.data };
+};
+
+export const getPipelineBySegment = async (periodType, periodValue, year) => {
+  const res = await api.get('/v1/dashboard/pipeline-by-segment', {
+    params: {
+      period_type: periodType,
+      period_value: periodType === 'year' ? undefined : periodValue,
+      year,
+    },
+  });
+  const raw = res.data?.data ?? res.data ?? [];
+  return { data: Array.isArray(raw) ? raw : [] };
+};
+
 export default {
   getDashboardData,
   getProjects,
+  getProject,
   getTasks,
   getTaskList,
   getKanbanData,
@@ -1477,6 +1802,8 @@ export default {
   getPlanKPIs,
   savePlanKPIs,
   getActuals,
+  getMonthlyActuals,
+  getPeriodPlan,
   saveActuals,
   getOpportunities,
   addOpportunity,
@@ -1527,4 +1854,18 @@ export default {
   importConfirm,
   updateClosedDeal,
   deleteClosedDeal,
+  getInventoryOverview,
+  getInventoryItems,
+  getInventoryItem,
+  createInventoryItem,
+  updateInventoryItem,
+  deleteInventoryItem,
+  getItemBatches,
+  createBatch,
+  updateBatch,
+  deleteBatch,
+  createInventoryEntry,
+  getInventoryTransactions,
+  createInventoryTransaction,
+  getPipelineBySegment,
 };

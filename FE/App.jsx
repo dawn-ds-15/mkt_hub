@@ -9,9 +9,11 @@ import { ToastProvider } from './contexts/ToastContext';
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const ProjectsModule = lazy(() => import('./pages/ProjectsModule'));
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
 const LeadsKPIs = lazy(() => import('./pages/LeadsKPIs'));
 const ExpenseManagement = lazy(() => import('./pages/ExpenseManagement'));
 const DataManagementPage = lazy(() => import('./pages/DataManagement'));
+const InventoryPage = lazy(() => import('./pages/InventoryManagement'));
 const ApiDocs = lazy(() => import('./pages/ApiDocs'));
 
 function ProtectedRoute({ children }) {
@@ -52,6 +54,11 @@ function App() {
             <ProjectsModule />
           </ProtectedRoute>
         } />
+        <Route path="/projects/:id" element={
+          <ProtectedRoute>
+            <ProjectDetail />
+          </ProtectedRoute>
+        } />
         <Route path="/tasks" element={
           <ProtectedRoute>
             <Tasks />
@@ -70,6 +77,11 @@ function App() {
         <Route path="/data" element={
           <ProtectedRoute>
             <DataManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/inventory" element={
+          <ProtectedRoute>
+            <InventoryPage />
           </ProtectedRoute>
         } />
         <Route path="/api-docs" element={

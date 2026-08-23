@@ -25,7 +25,7 @@ export default function FileUploadModal({ type, onClose, onConfirm }) {
   const setFromList = (list) => {
     if (!list || !list.length) return;
     const f = list[0];
-    setFile({ name: f.name, size: f.size, dataUrl: type === 'image' ? URL.createObjectURL(f) : null });
+    setFile({ name: f.name, size: f.size, fileObj: f, dataUrl: type === 'image' ? URL.createObjectURL(f) : null });
   };
 
   const handleDrop = (e) => {
@@ -100,7 +100,18 @@ export default function FileUploadModal({ type, onClose, onConfirm }) {
             </button>
             <button
               disabled={!file}
-              onClick={() => onConfirm(file.name)}
+              onClick={() => {
+                if (!file) return;
+                const finish = (dataUrl) => onConfirm(file.name, { size: file.size, dataUrl: dataUrl || null });
+                if (type === 'image' && file.fileObj) {
+                  const reader = new FileReader();
+                  reader.onload = () => finish(reader.result);
+                  reader.onerror = () => finish(null);
+                  reader.readAsDataURL(file.fileObj);
+                } else {
+                  finish(null);
+                }
+              }}
               className="px-8 py-2.5 bg-primary text-white rounded-lg text-sm font-bold shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined text-base">check_circle</span>

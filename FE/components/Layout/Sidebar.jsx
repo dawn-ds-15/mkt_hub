@@ -7,6 +7,7 @@ const navItems = [
   { vi: 'Task', en: 'Tasks', href: '/tasks' },
   { vi: 'Leads & KPIs', en: 'Leads & KPIs', href: '/leads' },
   { vi: 'Quản lý Chi phí', en: 'Expense Management', href: '/expense' },
+  { vi: 'Kho vật phẩm', en: 'Inventory', href: '/inventory' },
   { vi: 'Quản lý Dữ liệu', en: 'Data Management', href: '/data' },
 ];
 
@@ -17,38 +18,50 @@ function t(locale, strings) {
   return strings[locale] || strings.vi;
 }
 
-export default function Sidebar() {
+export default function Sidebar({ open = false, onClose }) {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
   const { year, setYear, locale, toggleLocale } = useDashboard();
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-sidebar-width bg-sidebar-bg flex flex-col p-4 overflow-y-auto z-50">
-      <div className="mb-8 px-2 flex items-center gap-3">
-        <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-          <span className="material-symbols-outlined text-white text-lg">hub</span>
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+      <aside
+        className={`fixed left-0 top-0 h-full w-sidebar-width bg-sidebar-bg flex flex-col p-4 overflow-y-auto z-50 transition-transform duration-200 ease-out lg:translate-x-0 ${
+          open ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        }`}
+      >
+        <div className="mb-8 px-2 flex items-center gap-3">
+          <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
+            <span className="material-symbols-outlined text-white text-lg">hub</span>
+          </div>
+          <div>
+            <h1 className="text-headline-md font-headline-md font-bold text-white">MKT Hub</h1>
+            <p className="text-[10px] text-outline-variant font-medium tracking-wider uppercase">{t(locale, { vi: 'Vận hành Marketing', en: 'Marketing Operations' })}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-headline-md font-headline-md font-bold text-white">MKT Hub</h1>
-          <p className="text-[10px] text-outline-variant font-medium tracking-wider uppercase">{t(locale, { vi: 'Vận hành Marketing', en: 'Marketing Operations' })}</p>
-        </div>
-      </div>
 
-      <nav className="flex-1 space-y-1">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            to={item.href}
-            className={currentPath === item.href || (item.href !== '/' && currentPath.startsWith(item.href))
-              ? 'sidebar-active flex items-center gap-3 px-3 py-2.5 transition-colors'
-              : 'text-outline-variant hover:text-white flex items-center gap-3 px-3 py-2.5 transition-colors group'
-            }
-          >
-            <span className="font-body-md text-body-md">{item[locale]}</span>
-          </Link>
-        ))}
-      </nav>
+        <nav className="flex-1 space-y-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              onClick={onClose}
+              className={currentPath === item.href || (item.href !== '/' && currentPath.startsWith(item.href))
+                ? 'sidebar-active flex items-center gap-3 px-3 py-2.5 transition-colors'
+                : 'text-outline-variant hover:text-white flex items-center gap-3 px-3 py-2.5 transition-colors group'
+              }
+            >
+              <span className="font-body-md text-body-md">{item[locale]}</span>
+            </Link>
+          ))}
+        </nav>
 
       <div className="mt-8 border-t border-slate-700 pt-6">
         <h3 className="px-3 text-[10px] text-outline-variant font-bold uppercase mb-4 tracking-widest">{t(locale, { vi: 'Bộ lọc chung', en: 'Global Filters' })}</h3>
@@ -89,6 +102,7 @@ export default function Sidebar() {
           <span className="font-body-md text-body-md">{t(locale, { vi: 'Đăng xuất', en: 'Logout' })}</span>
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

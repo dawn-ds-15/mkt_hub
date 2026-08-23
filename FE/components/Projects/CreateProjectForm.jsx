@@ -1,29 +1,63 @@
 import { useEffect, useState } from 'react';
-import { createProject, updateProject, getMembers } from '../../services/api';
+import { createProject, updateProject, getMembers, getDropdownKeys, createTask } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import NumberInput from '../common/NumberInput';
 
-const typeMap = {
-  'Nội bộ': 'Internal', 'Khách hàng': 'Client', 'Nghiên cứu': 'Research',
-};
-const statusMap = { 'Lên kế hoạch': 'Planning', 'Đang thực hiện': 'Active', 'Tạm dừng': 'On Hold', 'Hoàn thành': 'Completed', 'Đã huỷ': 'Cancelled' };
+const FALLBACK_TYPES = ['Internal', 'Client', 'Research', 'Workshop', 'Event', 'Exhibition', 'Webinar'];
+const FALLBACK_STATUSES = ['Planning', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 
-const reverseTypeMap = Object.fromEntries(Object.entries(typeMap).map(([k, v]) => [v, k]));
-const reverseStatusMap = Object.fromEntries(Object.entries(statusMap).map(([k, v]) => [v, k]));
+const PROJECT_TEMPLATES = {
+  Workshop: {
+    tasks: [
+      { name: 'Xác định mục tiêu & đối tượng workshop', description: 'Xác định mục tiêu, đối tượng tham gia và phạm vi nội dung workshop', priority: 'High', dayOffset: 0.1 },
+      { name: 'Xây dựng nội dung & chương trình', description: 'Soạn nội dung, kịch bản và tài liệu cho workshop', priority: 'High', dayOffset: 0.3 },
+      { name: 'Chuẩn bị địa điểm & vật phẩm', description: 'Đặt địa điểm, chuẩn bị vật phẩm, banner và thiết bị', priority: 'Medium', dayOffset: 0.5 },
+      { name: 'Gửi thư mời & theo dõi RSVP', description: 'Gửi thư mời, theo dõi xác nhận tham gia và nhắc lịch', priority: 'Medium', dayOffset: 0.7 },
+      { name: 'Tổ chức workshop', description: 'Điều phối ngày diễn ra workshop', priority: 'High', dayOffset: 0.95 },
+      { name: 'Tổng kết & báo cáo sau sự kiện', description: 'Tổng hợp feedback, hình ảnh và báo cáo kết quả', priority: 'Low', dayOffset: 1.1 },
+    ],
+  },
+  Webinar: {
+    tasks: [
+      { name: 'Xác định chủ đề & khách mời', description: 'Chốt chủ đề, diễn giả và khách mời của webinar', priority: 'High', dayOffset: 0.1 },
+      { name: 'Soạn kịch bản & slide', description: 'Xây dựng kịch bản, slide và nội dung trình bày', priority: 'High', dayOffset: 0.3 },
+      { name: 'Chuẩn bị nền tảng & kỹ thuật', description: 'Setup phòng phát sóng, link đăng ký và kiểm tra kỹ thuật', priority: 'High', dayOffset: 0.5 },
+      { name: 'Marketing & thu hút người đăng ký', description: 'Chạy kênh truyền thông, nhắc lịch và xử lý đăng ký', priority: 'Medium', dayOffset: 0.7 },
+      { name: 'Tổ chức webinar', description: 'Dẫn dắt và vận hành buổi phát sóng trực tiếp', priority: 'High', dayOffset: 0.95 },
+      { name: 'Follow-up & báo cáo', description: 'Gửi lại video, khảo sát và tổng hợp báo cáo', priority: 'Low', dayOffset: 1.1 },
+    ],
+  },
+  Event: {
+    tasks: [
+      { name: 'Lập kế hoạch & ngân sách sự kiện', description: 'Chốt mục tiêu, ngân sách và quy mô sự kiện', priority: 'High', dayOffset: 0.1 },
+      { name: 'Ký hợp đồng địa điểm & nhà cung cấp', description: 'Đặt địa điểm, ký hợp đồng nhà cung cấp và dịch vụ', priority: 'High', dayOffset: 0.25 },
+      { name: 'Xây dựng nội dung & kịch bản', description: 'Soạn nội dung, kịch bản và chương trình chi tiết', priority: 'High', dayOffset: 0.4 },
+      { name: 'Marketing & mời khách', description: 'Truyền thông sự kiện, gửi thư mời và theo dõi khách mời', priority: 'Medium', dayOffset: 0.6 },
+      { name: 'Chuẩn bị logistics & vật phẩm', description: 'Chuẩn bị nhân sự, vật phẩm, trang thiết bị và check-in', priority: 'Medium', dayOffset: 0.8 },
+      { name: 'Tổ chức sự kiện', description: 'Vận hành và điều phối ngày diễn ra sự kiện', priority: 'High', dayOffset: 0.95 },
+      { name: 'Tổng kết & báo cáo', description: 'Tổng hợp feedback, số liệu và báo cáo tổng kết', priority: 'Low', dayOffset: 1.1 },
+    ],
+  },
+};
 
 export default function CreateProjectForm({ project, onClose, onSuccess }) {
   const { locale } = useDashboard();
   const isEditing = !!project;
   const [members, setMembers] = useState([]);
+  const [typeOptions, setTypeOptions] = useState([]);
+  const [statusOptions, setStatusOptions] = useState([]);
+  const [dropdownLoading, setDropdownLoading] = useState(true);
   const [name, setName] = useState('');
-  const [type, setType] = useState('Nội bộ');
-  const [status, setStatus] = useState('Lên kế hoạch');
+  const [type, setType] = useState('');
+  const [status, setStatus] = useState('');
   const [ownerId, setOwnerId] = useState('');
   const [deadline, setDeadline] = useState('');
   const [budget, setBudget] = useState('');
   const [overhead, setOverhead] = useState('');
   const [kpiPlan, setKpiPlan] = useState('');
   const [kpiActual, setKpiActual] = useState('');
+  const [template, setTemplate] = useState('');
+  const [creatingTasks, setCreatingTasks] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [errorField, setErrorField] = useState('');
@@ -41,10 +75,33 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const initDropdowns = (types, statuses) => {
+      if (cancelled) return;
+      if (project && project.type && !types.includes(project.type)) types = [...types, project.type];
+      if (project && project.statusLabel && !statuses.includes(project.statusLabel)) statuses = [...statuses, project.statusLabel];
+      setTypeOptions(types);
+      setStatusOptions(statuses);
+      setDropdownLoading(false);
+      setType(project ? (types.includes(project.type) ? project.type : types[0] || '') : types[0] || '');
+      setStatus(project ? (statuses.includes(project.statusLabel) ? project.statusLabel : statuses[0] || '') : statuses[0] || '');
+    };
+    getDropdownKeys().then(res => {
+      const keys = res.data || [];
+      const findValues = (key) => {
+        const entry = keys.find(k => k.key === key);
+        return (entry?.values || []).map(v => v.label).filter(Boolean);
+      };
+      const types = findValues('project_type');
+      const statuses = findValues('project_status');
+      initDropdowns(types.length ? types : FALLBACK_TYPES, statuses.length ? statuses : FALLBACK_STATUSES);
+    }).catch(() => initDropdowns(FALLBACK_TYPES, FALLBACK_STATUSES));
+    return () => { cancelled = true; };
+  }, [project]);
+
+  useEffect(() => {
     if (project && !initialized) {
       setName(project.name || '');
-      setType(reverseTypeMap[project.type] || 'Nội bộ');
-      setStatus(reverseStatusMap[project.statusLabel] || 'Lên kế hoạch');
       setOwnerId(project.ownerId || '');
       const rawDeadline = project.deadlineRaw || project.deadline;
       setDeadline(rawDeadline ? rawDeadline.split('T')[0] : '');
@@ -79,8 +136,8 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
     try {
       const payload = {
         name: name.trim(),
-        type: typeMap[type],
-        status: statusMap[status],
+        type,
+        status,
         ownerId,
         deadline: deadline || undefined,
         budgetPlanDirect: parseFloat(budget) || 0,
@@ -91,7 +148,30 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
       if (isEditing) {
         await updateProject(project.id, payload);
       } else {
-        await createProject(payload);
+        const created = await createProject(payload);
+        const raw = created?.data?.data ?? created?.data ?? {};
+        const templateTasks = PROJECT_TEMPLATES[type];
+        if (template && templateTasks && raw?.id) {
+          setCreatingTasks(true);
+          const projectId = raw.id;
+          const start = new Date();
+          const end = deadline ? new Date(deadline) : null;
+          const spanDays = end && end > start ? Math.max(1, Math.round((end - start) / 86400000)) : null;
+          await Promise.all(
+            templateTasks.tasks.map((t) => {
+              const dueDate = spanDays ? new Date(start.getTime() + t.dayOffset * spanDays * 86400000) : null;
+              return createTask({
+                title: t.name,
+                description: t.description,
+                priority: t.priority,
+                projectId,
+                assigneeId: ownerId,
+                startDate: dueDate ? dueDate.toISOString() : undefined,
+                dueDate: dueDate ? dueDate.toISOString() : undefined,
+              });
+            })
+          );
+        }
       }
       if (onSuccess) onSuccess();
       if (onClose) onClose();
@@ -132,17 +212,61 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Loại' : 'Type'}</label>
-            <select className="w-full px-3 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none" value={type} onChange={(e) => setType(e.target.value)}>
-              {Object.keys(typeMap).map((k) => <option key={k} value={k}>{locale === 'vi' ? k : ({ 'Nội bộ': 'Internal', 'Khách hàng': 'Client', 'Nghiên cứu': 'Research' })[k]}</option>)}
+            <select className="w-full px-3 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none" value={type} onChange={(e) => { setType(e.target.value); setTemplate(''); }}>
+              {dropdownLoading ? (
+                <option value="">{locale === 'vi' ? 'Đang tải...' : 'Loading...'}</option>
+              ) : (
+                typeOptions.map((label) => <option key={label} value={label}>{label}</option>)
+              )}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Trạng thái' : 'Status'}</label>
             <select className="w-full px-3 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none" value={status} onChange={(e) => setStatus(e.target.value)}>
-              {Object.keys(statusMap).map((k) => <option key={k} value={k}>{locale === 'vi' ? k : ({ 'Lên kế hoạch': 'Planning', 'Đang thực hiện': 'Active', 'Tạm dừng': 'On Hold', 'Hoàn thành': 'Completed', 'Đã huỷ': 'Cancelled' })[k]}</option>)}
+              {dropdownLoading ? (
+                <option value="">{locale === 'vi' ? 'Đang tải...' : 'Loading...'}</option>
+              ) : (
+                statusOptions.map((label) => <option key={label} value={label}>{label}</option>)
+              )}
             </select>
           </div>
         </div>
+        {!isEditing && PROJECT_TEMPLATES[type] && (
+          <div className="border border-outline-variant rounded-lg p-3 bg-surface-container-low/40">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Template & tự tạo Task' : 'Template & auto-create Tasks'}</label>
+              <span className="text-[11px] leading-[14px] text-on-surface-variant italic">
+                {locale === 'vi' ? 'Chọn template để hệ thống tự tạo task cơ bản' : 'Pick a template to auto-create base tasks'}
+              </span>
+            </div>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">auto_awesome</span>
+              <select
+                className="w-full pl-10 pr-4 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
+                value={template}
+                onChange={(e) => setTemplate(e.target.value)}
+              >
+                <option value="">{locale === 'vi' ? 'Không dùng template' : 'No template'}</option>
+                <option value="default">{locale === 'vi' ? `${type} — mặc định` : `${type} — default`}</option>
+              </select>
+            </div>
+            {template && (
+              <div className="mt-2">
+                <p className="text-[12px] leading-[16px] font-semibold text-on-surface mb-1">
+                  {locale === 'vi' ? 'Các task sẽ được tạo:' : 'Tasks that will be created:'}
+                </p>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                  {PROJECT_TEMPLATES[type].tasks.map((t, i) => (
+                    <li key={i} className="flex items-center gap-1.5 text-[12px] leading-[16px] text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[14px] text-primary">task_alt</span>
+                      <span className="truncate">{t.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
         <div className="space-y-1">
           <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Chủ sở hữu' : 'Owner'}</label>
           <div className="relative">
@@ -209,7 +333,11 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
           </div>
         )}
         <button className="w-full py-3 bg-primary text-on-primary rounded font-bold text-label-md mt-6 hover:shadow-lg transition-all active:scale-[0.98]" type="submit" disabled={saving}>
-          {locale === 'vi' ? (saving ? 'Đang lưu...' : (isEditing ? 'Cập nhật dự án' : 'Tạo dự án')) : (saving ? 'Saving...' : (isEditing ? 'Update Project' : 'Create Project'))}
+          {saving
+            ? (creatingTasks
+              ? (locale === 'vi' ? 'Đang tạo task từ template...' : 'Creating tasks from template...')
+              : (locale === 'vi' ? 'Đang lưu...' : 'Saving...'))
+            : (locale === 'vi' ? (isEditing ? 'Cập nhật dự án' : 'Tạo dự án') : (isEditing ? 'Update Project' : 'Create Project'))}
         </button>
       </form>
     </div>

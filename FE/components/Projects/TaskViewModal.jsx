@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { useToast } from '../../contexts/ToastContext';
 import { updateTask } from '../../services/api';
 
 const statusBadge = (locale) => ({
@@ -14,11 +15,17 @@ const statusBadge = (locale) => ({
 
 const priorityLabel = (locale) => ({ high: locale === 'vi' ? 'Cao' : 'High', medium: locale === 'vi' ? 'Trung bình' : 'Medium', low: locale === 'vi' ? 'Thấp' : 'Low' });
 
+function toDateInput(v) {
+  if (!v || typeof v !== 'string') return '';
+  return v.length >= 10 ? v.slice(0, 10) : '';
+}
+
 export default function TaskViewModal({ task, onClose, onEdit, onSaved }) {
   const { locale } = useDashboard();
-  const [startDate, setStartDate] = useState(task.startDate || '');
-  const [dueDate, setDueDate] = useState(task.dueDate || '');
-  const [completedDate, setCompletedDate] = useState(task.completedDate || '');
+  const addToast = useToast();
+  const [startDate, setStartDate] = useState(toDateInput(task.startDate));
+  const [dueDate, setDueDate] = useState(toDateInput(task.dueDate));
+  const [completedDate, setCompletedDate] = useState(toDateInput(task.completedDate));
   const [saving, setSaving] = useState(false);
 
   if (!task) return null;
@@ -29,11 +36,17 @@ export default function TaskViewModal({ task, onClose, onEdit, onSaved }) {
     try {
       const payload = { [field]: value || null };
       await updateTask(task.id, payload);
-      if (onSaved) onSaved();
-    } catch {
-      if (field === 'startDate') setStartDate(task.startDate || '');
-      else if (field === 'dueDate') setDueDate(task.dueDate || '');
-      else if (field === 'completedDate') setCompletedDate(task.completedDate || '');
+      if (onSaved) onSaved({ ...task, ...payload });
+    } catch (e) {
+      console.error('[TaskViewModal] updateTask failed:', e, e?.response?.data);
+      const beMsg = e?.response?.data?.message;
+      addToast(
+        `${locale === 'vi' ? 'Lưu ngày thất bại' : 'Failed to save date'}${beMsg ? `: ${Array.isArray(beMsg) ? beMsg.join(', ') : beMsg}` : ''}`,
+        'error'
+      );
+      if (field === 'startDate') setStartDate(toDateInput(task.startDate));
+      else if (field === 'dueDate') setDueDate(toDateInput(task.dueDate));
+      else if (field === 'completedDate') setCompletedDate(toDateInput(task.completedDate));
     } finally {
       setSaving(false);
     }
@@ -136,6 +149,14 @@ export default function TaskViewModal({ task, onClose, onEdit, onSaved }) {
                   disabled={saving}
                   className="mt-1 w-full px-2 py-1 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
                 />
+                {task.status !== 'Done' && (
+                  <p className="mt-1 text-[11px] leading-[15px] text-amber-600 flex items-start gap-0.5">
+                    <span className="material-symbols-outlined text-[13px] mt-[1px]">info</span>
+                    {locale === 'vi'
+                      ? 'Chuyển trạng thái sang "Hoàn thành" thì ô này mới có hiệu lực.'
+                      : 'Switch status to "Done" for this field to take effect.'}
+                  </p>
+                )}
               </div>
             </div>
 

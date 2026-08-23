@@ -13,7 +13,7 @@ function getInitials(name) {
     .toUpperCase();
 }
 
-export default function Topbar({ title = 'Tổng quan', tabs, activeTab, onTabChange }) {
+export default function Topbar({ title = 'Tổng quan', tabs, activeTab, onTabChange, onMenuClick }) {
   const [open, setOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const navigate = useNavigate();
@@ -39,12 +39,19 @@ export default function Topbar({ title = 'Tổng quan', tabs, activeTab, onTabCh
   };
 
   return (
-    <header className="fixed top-0 right-0 h-topbar-height bg-[#CCD3E2] flex justify-between items-center px-container-margin w-[calc(100%-260px)] ml-auto z-40 shadow-md border-b border-gray-300">
-      <div className="flex items-center gap-4">
-        <div className="w-1 h-6 bg-primary rounded-full" />
-        <h2 className="font-headline-sm text-headline-sm text-gray-800 font-bold tracking-wide">{title}</h2>
+    <header className="fixed top-0 right-0 h-topbar-height bg-[#CCD3E2] flex justify-between items-center px-4 sm:px-container-margin w-full lg:w-[calc(100%-260px)] lg:ml-auto z-40 shadow-md border-b border-gray-300">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden w-10 h-10 -ml-1 flex items-center justify-center rounded-lg text-gray-700 hover:bg-white/50 transition-colors"
+          title={locale === 'vi' ? 'Mở menu' : 'Open menu'}
+        >
+          <span className="material-symbols-outlined text-[24px]">menu</span>
+        </button>
+        <div className="w-1 h-6 bg-primary rounded-full hidden sm:block" />
+        <h2 className="font-headline-sm text-headline-sm text-gray-800 font-bold tracking-wide truncate">{title}</h2>
         {tabs && tabs.length > 0 && (
-          <nav className="flex items-center gap-1 ml-8 pl-8 border-l border-gray-400/30">
+          <nav className="hidden md:flex items-center gap-1 ml-8 pl-8 border-l border-gray-400/30 overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -61,19 +68,19 @@ export default function Topbar({ title = 'Tổng quan', tabs, activeTab, onTabCh
           </nav>
         )}
       </div>
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
         <NotificationBell />
         <div className="h-8 w-[1px] bg-gray-400" />
         <div className="relative">
           <div
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer group"
             onClick={() => setOpen(!open)}
           >
-            <div className="text-right">
+            <div className="text-right hidden sm:block">
               <p className="text-body-sm font-bold text-gray-800">{userName}</p>
               <p className="text-[10px] text-gray-600">{userRole}</p>
             </div>
-            <div className="w-10 h-10 bg-primary/15 text-primary rounded-full flex items-center justify-center font-bold">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary/15 text-primary rounded-full flex items-center justify-center font-bold">
               {getInitials(userName)}
             </div>
           </div>

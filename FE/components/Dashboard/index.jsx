@@ -64,6 +64,14 @@ const STATUS_COLORS = {
   overdue: '#EF4444',
 };
 
+function formatCompactMoney(n) {
+  n = Number(n) || 0;
+  if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'B';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+
 export default function Dashboard() {
   const { year, periodType, periodValue, setPeriodType, setPeriodValue, locale } = useDashboard();
   const [data, setData] = useState(null);
@@ -320,6 +328,28 @@ export default function Dashboard() {
         {data.kpis.map((kpi) => (
           <KPICard key={kpi.id || kpi.label} {...kpi} />
         ))}
+        <KPICard
+          key="roas"
+          emoji="📈"
+          label={({ vi: 'ROAS', en: 'ROAS' })[locale]}
+          accent="green"
+          value={data.roas?.ratio != null ? `${data.roas.ratio.toFixed(2)}x` : '—'}
+          planLabel={({ vi: 'Tổng chi phí', en: 'Total cost' })[locale]}
+          planValue={data.roas?.totalExpense ? formatCompactMoney(data.roas.totalExpense) : '—'}
+        />
+        <KPICard
+          key="cac"
+          emoji="💸"
+          label={({ vi: 'CAC', en: 'CAC' })[locale]}
+          accent="purple"
+          value={data.cac?.value != null ? formatCompactMoney(data.cac.value) : '—'}
+          planLabel={({ vi: 'Chi phí / Won deal', en: 'Cost / Won deals' })[locale]}
+          planValue={
+            data.cac?.totalExpense != null && data.cac?.wonCount != null
+              ? `${formatCompactMoney(data.cac.totalExpense)} / ${data.cac.wonCount}`
+              : '—'
+          }
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
@@ -522,7 +552,7 @@ export default function Dashboard() {
       {showAllAlerts && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowAllAlerts(false)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl z-50 p-5 max-h-[70vh] flex flex-col">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md bg-white rounded-xl shadow-2xl z-50 p-5 max-h-[70vh] flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold">🔔 {{ vi: 'Tất cả cảnh báo', en: 'All Alerts' }[locale]}</h3>
               <button onClick={() => setShowAllAlerts(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>

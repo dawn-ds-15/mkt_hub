@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 const statusConfig = {
@@ -14,7 +15,8 @@ const taskStatusConfig = {
   overdue: { label: 'Quá hạn', bg: 'bg-red-100', text: 'text-red-700' },
 };
 
-export default function ProjectCard({ project, onEdit, onViewOverview, onDelete }) {
+export default function ProjectCard({ project, onEdit, onDelete }) {
+  const navigate = useNavigate();
   const { locale } = useDashboard();
   const [open, setOpen] = useState(project.id === 1);
   const status = statusConfig[project.status] || statusConfig.on_track;
@@ -65,11 +67,11 @@ export default function ProjectCard({ project, onEdit, onViewOverview, onDelete 
           </div>
           <div className="col-span-2 flex justify-end gap-2">
             <button
-              onClick={(e) => { e.stopPropagation(); if (onViewOverview) onViewOverview(project); }}
+              onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`); }}
               className="p-2 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant hover:text-primary"
-              title={locale === 'vi' ? 'Xem overview' : 'View Overview'}
+              title={locale === 'vi' ? 'Xem chi tiết' : 'View Details'}
             >
-              <span className="material-symbols-outlined text-[20px]">add_task</span>
+              <span className="material-symbols-outlined text-[20px]">visibility</span>
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); if (onEdit) onEdit(project); }}

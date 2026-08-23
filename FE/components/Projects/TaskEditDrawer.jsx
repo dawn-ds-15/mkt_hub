@@ -20,6 +20,11 @@ const priorityOptions = (locale) => [
 
 const stakeholderOptions = ['BOD', 'Sales Team', 'Dev Team', 'CS Team', 'Partner'];
 
+function toDateInput(v) {
+  if (!v || typeof v !== 'string') return '';
+  return v.length >= 10 ? v.slice(0, 10) : '';
+}
+
 function getUserRole() {
   try {
     const raw = localStorage.getItem('mkt_hub_user');
@@ -41,9 +46,9 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
     return 'Planning';
   });
   const [priority, setPriority] = useState(task.priority ? task.priority.charAt(0).toUpperCase() + task.priority.slice(1) : 'Medium');
-  const [startDate, setStartDate] = useState(task.startDate || '');
-  const [dueDate, setDueDate] = useState(task.dueDate || '');
-  const [completedDate, setCompletedDate] = useState(task.completedDate || '');
+  const [startDate, setStartDate] = useState(toDateInput(task.startDate));
+  const [dueDate, setDueDate] = useState(toDateInput(task.dueDate));
+  const [completedDate, setCompletedDate] = useState(toDateInput(task.completedDate));
   const [execWeek, setExecWeek] = useState(task.execWeek || '');
   const [link, setLink] = useState(() => {
     if (!task.link) return '';
@@ -271,6 +276,14 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Ngày hoàn thành' : 'Completed Date'}</label>
               <input type="date" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={completedDate} onChange={(e) => setCompletedDate(e.target.value)} disabled={readOnly} />
+              {status !== 'Done' && (
+                <div className="text-[11px] leading-[15px] text-amber-600 flex items-start gap-0.5 mt-0.5">
+                  <span className="material-symbols-outlined text-[13px] mt-[1px]">info</span>
+                  <span>{locale === 'vi'
+                    ? 'Chuyển trạng thái sang "Hoàn thành" thì ô này mới có hiệu lực.'
+                    : 'Switch status to "Done" for this field to take effect.'}</span>
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Tuần thực hiện' : 'Exec Week'}</label>

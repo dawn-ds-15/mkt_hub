@@ -83,6 +83,8 @@ export default function TaskList() {
 
   const [showQuickAddPopup, setShowQuickAddPopup] = useState(false);
   const [quickAddError, setQuickAddError] = useState('');
+  const [selected, setSelected] = useState([]);
+  const [deleting, setDeleting] = useState(false);
   const [quickTask, setQuickTask] = useState({
     name: '',
     projectId: '',
@@ -246,6 +248,34 @@ export default function TaskList() {
     }
   };
 
+  const toggleSelect = (id) => {
+    setSelected(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+  };
+
+  const toggleSelectAll = () => {
+    const pageIds = pagedTasks.map(t => t.id);
+    const allSelected = pageIds.length > 0 && pageIds.every(id => selected.includes(id));
+    setSelected(prev => allSelected ? prev.filter(id => !pageIds.includes(id)) : [...new Set([...prev, ...pageIds])]);
+  };
+
+  const selectedNames = filteredTasks.filter(t => selected.includes(t.id)).map(t => t.taskName);
+
+  const handleBulkDelete = async () => {
+    if (selected.length === 0) return;
+    if (!window.confirm(locale === 'vi' ? `Xác nhận xóa ${selected.length} task đã chọn?` : `Delete ${selected.length} selected tasks?`)) return;
+    setDeleting(true);
+    try {
+      await Promise.all(selected.map(id => deleteTask(id)));
+      setSelected([]);
+      setTasks(prev => prev.filter(t => !selected.includes(t.id)));
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || (locale === 'vi' ? 'Xóa task thất bại' : 'Delete task failed');
+      alert(msg);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -373,7 +403,7 @@ export default function TaskList() {
       {showQuickAddPopup && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowQuickAddPopup(false)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold">{locale === 'vi' ? 'Thêm task mới' : 'New Task'}</h3>
               <button onClick={() => setShowQuickAddPopup(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
@@ -478,12 +508,52 @@ export default function TaskList() {
         </>
       )}
 
+      {selected.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="material-symbols-outlined text-primary text-[20px]">checklist</span>
+            <span className="text-sm font-semibold text-on-surface">
+              {locale === 'vi' ? `Đã chọn ${selected.length} task` : `${selected.length} tasks selected`}
+            </span>
+            <span className="text-xs text-on-surface-variant truncate hidden md:inline">
+              {selectedNames.slice(0, 2).join(', ')}{selectedNames.length > 2 ? ` +${selectedNames.length - 2}` : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelected([])}
+              className="px-3 py-1.5 rounded-lg border border-outline-variant bg-white text-xs font-semibold text-gray-500 hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              {locale === 'vi' ? 'Bỏ chọn' : 'Clear'}
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={deleting}
+              className="px-4 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-[18px]">{deleting ? 'sync' : 'delete'}</span>
+              {deleting
+                ? (locale === 'vi' ? 'Đang xóa...' : 'Deleting...')
+                : (locale === 'vi' ? 'Xóa hàng loạt' : 'Delete selected')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Task Table */}
       <div className="bg-white border border-outline-variant rounded-lg overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low border-b border-outline-variant">
+                <th className="w-12 p-3">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-outline-variant/50 text-primary focus:ring-primary/40 cursor-pointer"
+                    checked={pagedTasks.length > 0 && pagedTasks.every(t => selected.includes(t.id))}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="w-12 p-3"><span className="material-symbols-outlined text-outline">warning</span></th>
                 <th className="p-3 text-label-sm text-outline uppercase whitespace-nowrap">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase min-w-[250px]">{locale === 'vi' ? 'Tên Task' : 'Task Name'}</th>
@@ -502,13 +572,21 @@ export default function TaskList() {
             <tbody className="divide-y divide-outline-variant">
               {pagedTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="p-10 text-center text-outline">{locale === 'vi' ? 'Không tìm thấy task' : 'No tasks found'}</td>
+                  <td colSpan={14} className="p-10 text-center text-outline">{locale === 'vi' ? 'Không tìm thấy task' : 'No tasks found'}</td>
                 </tr>
               ) : (
                 pagedTasks.map((task) => {
                   const st = statusStyles[task.status] || statusStyles.todo;
                   return (
                     <tr key={task.id} className={`${st.row} transition-colors`}>
+                      <td className="p-3 text-center align-middle">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-outline-variant/50 text-primary focus:ring-primary/40 cursor-pointer"
+                          checked={selected.includes(task.id)}
+                          onChange={() => toggleSelect(task.id)}
+                        />
+                      </td>
                       <td className="p-3 text-center align-middle">
                         {st.icon ? (
                           <span
@@ -642,6 +720,11 @@ export default function TaskList() {
         <TaskViewModal
           task={viewTask}
           onClose={() => setViewTask(null)}
+          onSaved={(updated) => {
+            setTasks(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+            setViewTask(updated);
+            fetchTasks();
+          }}
         />
       )}
       {editTask && (
@@ -662,7 +745,7 @@ export default function TaskList() {
       {showPageJump && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowPageJump(false)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xs bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-xs bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold">{locale === 'vi' ? 'Nhập số trang' : 'Enter page number'}</h3>
               <button onClick={() => setShowPageJump(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>

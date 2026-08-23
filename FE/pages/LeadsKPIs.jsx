@@ -6,9 +6,11 @@ import ActualsForm from '../components/LeadsKPIs/ActualsForm';
 import LeadsKPIsFooter from '../components/LeadsKPIs/LeadsKPIsFooter';
 import ViewAnalytics from '../components/LeadsKPIs/ViewAnalytics';
 import ComparePeriods from '../components/LeadsKPIs/ComparePeriods';
+import PerformanceDashboard from '../components/LeadsKPIs/PerformanceDashboard';
 import { useDashboard } from '../contexts/DashboardContext';
 
 const tabs = [
+  { vi: 'Hiệu suất', en: 'Performance', key: 'performance' },
   { vi: 'Xem & Phân tích', en: 'View & Analytics', key: 'view' },
   { vi: 'Nhập số liệu', en: 'Input Data', key: 'input' },
   { vi: 'So sánh kỳ', en: 'Compare Periods', key: 'compare' },
@@ -17,7 +19,7 @@ const tabs = [
 export default function LeadsKPIs() {
   const { locale } = useDashboard();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'view';
+  const activeTab = searchParams.get('tab') || 'performance';
 
   const setActiveTab = (key) => {
     setSearchParams({ tab: key }, { replace: true });
@@ -27,10 +29,12 @@ export default function LeadsKPIs() {
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'performance':
+        return <PerformanceDashboard onViewAll={() => setActiveTab('view')} />;
       case 'input':
         return (
           <>
-            <div className="flex gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               <PlanKPIsForm />
               <ActualsForm />
             </div>

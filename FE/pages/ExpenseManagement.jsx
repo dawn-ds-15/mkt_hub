@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
-import SystemParameters from '../components/ExpenseManagement/SystemParameters';
 import ExpenseEntryForm from '../components/ExpenseManagement/ExpenseEntryForm';
 import ExpenseHistory from '../components/ExpenseManagement/ExpenseHistory';
 import ExpenseReports from '../components/ExpenseManagement/ExpenseReports';
 import ExpenseOverview from '../components/ExpenseManagement/ExpenseOverview';
+import ExpenseBudget from '../components/ExpenseManagement/ExpenseBudget';
 import { useDashboard } from '../contexts/DashboardContext';
 
 const tabs = [
   { vi: 'Tổng quan', en: 'Overview', key: 'overview' },
+  { vi: 'Ngân sách', en: 'Budget', key: 'budget' },
   { vi: 'Nhập chi phí', en: 'Input Expense', key: 'input' },
   { vi: 'Báo cáo', en: 'Reports', key: 'reports' },
 ];
@@ -17,7 +18,7 @@ const tabs = [
 export default function ExpenseManagement() {
   const { locale } = useDashboard();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'input';
+  const activeTab = searchParams.get('tab') || 'budget';
   const [refreshKey, setRefreshKey] = useState(0);
 
   const setActiveTab = (key) => {
@@ -32,18 +33,15 @@ export default function ExpenseManagement() {
     switch (activeTab) {
       case 'input':
         return (
-          <div className="grid grid-cols-12 gap-gutter">
-            <section className="col-span-12 lg:col-span-4 space-y-6">
-              <SystemParameters />
-            </section>
-            <section className="col-span-12 lg:col-span-8 space-y-6">
-              <ExpenseEntryForm onSaved={handleSaved} />
-              <ExpenseHistory refreshKey={refreshKey} onSaved={handleSaved} />
-            </section>
+          <div className="space-y-6">
+            <ExpenseEntryForm onSaved={handleSaved} />
+            <ExpenseHistory refreshKey={refreshKey} onSaved={handleSaved} />
           </div>
         );
       case 'overview':
         return <ExpenseOverview refreshKey={refreshKey} />;
+      case 'budget':
+        return <ExpenseBudget refreshKey={refreshKey} onAddExpense={() => setActiveTab('input')} />;
       case 'reports':
         return <ExpenseReports refreshKey={refreshKey} />;
       default:

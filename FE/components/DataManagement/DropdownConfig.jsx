@@ -1,13 +1,120 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { getDropdownKeys, addDropdownValue, deleteDropdownValue } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
+import { getDropdownKeys, addDropdownValue, reorderDropdownValues } from '../../services/api';
+import { markDeleted, restoreDeleted, getDeletedIds } from '../../utils/softDelete';
+
+// Bản dịch tên khóa dropdown — BE có thể trả label thiếu hoặc dạng key raw (chứa "_")
+const KEY_LABELS = {
+  project_type: { vi: 'Loại Project', en: 'Project Type' },
+  project_status: { vi: 'Trạng thái Project', en: 'Project Status' },
+  task_status: { vi: 'Trạng thái Task', en: 'Task Status' },
+  task_priority: { vi: 'Độ ưu tiên Task', en: 'Task Priority' },
+  company_size: { vi: 'Phân khúc Khách hàng', en: 'Customer Segment' },
+  customer_segment: { vi: 'Phân khúc Khách hàng', en: 'Customer Segment' },
+  stakeholder: { vi: 'Stakeholders', en: 'Stakeholders' },
+  contract_status: { vi: 'Trạng thái Hợp đồng', en: 'Contract Status' },
+  currency: { vi: 'Tiền tệ', en: 'Currency' },
+  lead_source: { vi: 'Nguồn Leads', en: 'Lead Source' },
+  opportunity_status: { vi: 'Trạng thái Cơ hội', en: 'Opportunity Status' },
+};
+
+// Bản dịch giá trị hiển thị (chỉ áp dụng khi locale = vi, không đổi dữ liệu gửi lên BE)
+const VALUE_LABELS = {
+  // Trạng thái chung
+  draft: 'Nháp',
+  signed: 'Đã ký',
+  expired: 'Hết hạn',
+  terminated: 'Đã chấm dứt',
+  active: 'Đang hoạt động',
+  inactive: 'Ngừng hoạt động',
+  pending: 'Chờ xử lý',
+  completed: 'Hoàn thành',
+  cancelled: 'Đã hủy',
+  canceled: 'Đã hủy',
+  planning: 'Lên kế hoạch',
+  processing: 'Đang thực hiện',
+  done: 'Hoàn thành',
+  backlog: 'Tồn đọng',
+  'on hold': 'Tạm dừng',
+  // Tiền tệ
+  usd: 'USD (Đô la Mỹ)',
+  vnd: 'VND (Việt Nam Đồng)',
+  eur: 'EUR (Euro)',
+  jpy: 'JPY (Yên Nhật)',
+  gbp: 'GBP (Bảng Anh)',
+  sgd: 'SGD (Đô la Singapore)',
+  dollar: 'Đô la Mỹ',
+  euro: 'Euro',
+  yen: 'Yên Nhật',
+  dong: 'Việt Nam Đồng',
+  // Nguồn Leads
+  website: 'Website',
+  facebook: 'Facebook',
+  linkedin: 'LinkedIn',
+  event: 'Sự kiện',
+  exhibition: 'Triển lãm',
+  webinar: 'Webinar',
+  referral: 'Giới thiệu',
+  'cold call': 'Gọi điện tư vấn',
+  email: 'Email',
+  'email campaign': 'Chiến dịch Email',
+  advertisement: 'Quảng cáo',
+  ads: 'Quảng cáo',
+  workshop: 'Workshop',
+  'online campaign': 'Chiến dịch Online',
+  'lead generation': 'Tìm kiếm Leads',
+  awards: 'Giải thưởng',
+  production: 'Sản xuất',
+  // Trạng thái cơ hội
+  open: 'Đang mở',
+  won: 'Đã chốt',
+  lost: 'Đã mất',
+  negotiation: 'Đang đàm phán',
+  'in progress': 'Đang tiến hành',
+  prospecting: 'Tiếp cận ban đầu',
+  qualification: 'Đánh giá nhu cầu',
+  proposal: 'Báo giá',
+};
+
+function prettifyKey(raw) {
+  return String(raw)
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function keyDisplayLabel(k, locale) {
+  const known = KEY_LABELS[k.key] || KEY_LABELS[String(k.label || '').trim().toLowerCase().replace(/\s+/g, '_')];
+  if (known) return known[locale] || known.vi;
+  const label = k.label || k.key || '';
+  return label.includes('_') ? prettifyKey(label) : label;
+}
+
+function valueDisplayLabel(val, locale) {
+  if (locale !== 'vi') return val.label;
+  const key = String(val.label || '').trim().toLowerCase();
+  return VALUE_LABELS[key] || val.label;
+}
 
 export default function DropdownConfig() {
   const { locale } = useDashboard();
+  const addToast = useToast();
   const [keys, setKeys] = useState([]);
   const [activeKey, setActiveKey] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newValue, setNewValue] = useState('');
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const dragIndexRef = useRef(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  // Soft-delete markers dùng composite id `${keyId}:${valueId}` để tránh trùng value id giữa các khóa
+  // Giữ làm state để UI tự cập nhật ngay khi xóa/khôi phục
+  const [deletedIds, setDeletedIds] = useState(() => getDeletedIds('dropdown_values'));
+
+  const syncDeletedIds = () => setDeletedIds(getDeletedIds('dropdown_values'));
 
   useEffect(() => {
     getDropdownKeys().then((res) => {
@@ -16,19 +123,117 @@ export default function DropdownConfig() {
     }).catch(e => console.error('[DropdownConfig] getDropdownKeys:', e)).finally(() => setLoading(false));
   }, []);
 
+  const deletedSet = deletedIds;
+  const visibleValues = activeKey ? activeKey.values.filter(v => !deletedSet.has(`${activeKey.id}:${v.id}`)) : [];
+  const deletedValues = activeKey ? activeKey.values.filter(v => deletedSet.has(`${activeKey.id}:${v.id}`)) : [];
+  const visibleCountOf = (k) => k.values.filter(v => !deletedSet.has(`${k.id}:${v.id}`)).length;
+
+  const updateKeyValues = (keyId, newValues) => {
+    setKeys(prev => prev.map(k => k.id === keyId ? { ...k, values: newValues } : k));
+    setActiveKey(prev => prev?.id === keyId ? { ...prev, values: newValues } : prev);
+  };
+
   const handleAdd = () => {
     if (!newValue.trim()) return;
     addDropdownValue(activeKey.id, newValue).then((res) => {
-      setKeys(prev => prev.map(k => k.id === activeKey.id ? { ...k, values: [...k.values, res.data] } : k));
-      setActiveKey(prev => ({ ...prev, values: [...prev.values, res.data] }));
+      updateKeyValues(activeKey.id, [...activeKey.values, res.data]);
       setNewValue('');
+      addToast(locale === 'vi' ? 'Đã thêm giá trị mới' : 'Value added');
+    }).catch(() => {
+      addToast(locale === 'vi' ? 'Thêm giá trị thất bại' : 'Failed to add value', 'error');
     });
   };
 
-  const handleDelete = (valueId) => {
-    deleteDropdownValue(activeKey.id, valueId).then(() => {
-      setKeys(prev => prev.map(k => k.id === activeKey.id ? { ...k, values: k.values.filter(v => v.id !== valueId) } : k));
-      setActiveKey(prev => ({ ...prev, values: prev.values.filter(v => v.id !== valueId) }));
+  // Xóa (mềm): chỉ ẩn khỏi UI (localStorage), giữ nguyên trên backend — có thể khôi phục
+  const handleSoftDelete = (val) => {
+    markDeleted('dropdown_values', `${activeKey.id}:${val.id}`);
+    syncDeletedIds();
+    addToast(locale === 'vi' ? `Đã xóa "${val.label}" (có thể khôi phục)` : `Deleted "${val.label}" (restorable)`);
+  };
+
+  // Khôi phục giá trị đã xóa
+  const handleRestore = (val) => {
+    restoreDeleted('dropdown_values', `${activeKey.id}:${val.id}`);
+    syncDeletedIds();
+    addToast(locale === 'vi' ? `Đã khôi phục "${val.label}"` : `Restored "${val.label}"`);
+  };
+
+  // Đặt lại: tải lại dữ liệu gốc từ BE cho khóa hiện tại + gỡ marker xóa mềm của khóa đó
+  const handleReset = async () => {
+    if (!activeKey || resetting) return;
+    const msg = locale === 'vi'
+      ? 'Đặt lại khóa này về dữ liệu gốc trên máy chủ? Các thay đổi chưa lưu sẽ bị mất.'
+      : 'Reset this key to server data? Unsaved changes will be lost.';
+    if (!window.confirm(msg)) return;
+    setResetting(true);
+    try {
+      const res = await getDropdownKeys();
+      const list = res.data || [];
+      setKeys(list);
+      const fresh = list.find(k => k.id === activeKey.id) || null;
+      ((fresh && fresh.values) || []).forEach(v => restoreDeleted('dropdown_values', `${activeKey.id}:${v.id}`));
+      setActiveKey(fresh);
+      setShowDeleted(false);
+      syncDeletedIds();
+      addToast(locale === 'vi' ? 'Đã đặt lại về dữ liệu gốc' : 'Reset to server data');
+    } catch (e) {
+      console.error('[DropdownConfig] reset:', e);
+      addToast(locale === 'vi' ? 'Đặt lại thất bại. Vui lòng thử lại.' : 'Reset failed. Please try again.', 'error');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  // Lưu thay đổi: PUT full values array của khóa hiện tại lên BE (thứ tự + danh sách hiện tại)
+  const handleSave = async () => {
+    if (!activeKey || saving) return;
+    setSaving(true);
+    try {
+      await reorderDropdownValues(activeKey.id, activeKey.values);
+      addToast(locale === 'vi' ? 'Đã lưu thay đổi' : 'Changes saved');
+    } catch (e) {
+      console.error('[DropdownConfig] save:', e);
+      addToast(locale === 'vi' ? 'Lưu thay đổi thất bại. Vui lòng thử lại.' : 'Failed to save changes. Please try again.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Kéo thả sắp xếp lại thứ tự values
+  const handleDragStart = (index) => {
+    dragIndexRef.current = index;
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (dragIndexRef.current == null || dragIndexRef.current === index) return;
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    dragIndexRef.current = null;
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (index) => {
+    const from = dragIndexRef.current;
+    handleDragEnd();
+    if (from == null || from === index) return;
+    const reordered = [...visibleValues];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(index, 0, moved);
+    // Giữ nguyên slot của các giá trị đang bị xóa mềm trong mảng full
+    const visibleIds = new Set(visibleValues.map(v => v.id));
+    const slots = [];
+    activeKey.values.forEach((v, i) => { if (visibleIds.has(v.id)) slots.push(i); });
+    const full = [...activeKey.values];
+    reordered.forEach((v, j) => { full[slots[j]] = v; });
+    const prevValues = activeKey.values;
+    updateKeyValues(activeKey.id, full);
+    reorderDropdownValues(activeKey.id, full).catch((e) => {
+      console.error('[DropdownConfig] reorder:', e);
+      updateKeyValues(activeKey.id, prevValues);
+      addToast(locale === 'vi' ? 'Lưu thứ tự thất bại' : 'Failed to save order', 'error');
     });
   };
 
@@ -59,7 +264,7 @@ export default function DropdownConfig() {
             {keys.map((key) => (
               <button
                 key={key.id}
-                onClick={() => setActiveKey(key)}
+                onClick={() => { setActiveKey(key); setShowDeleted(false); syncDeletedIds(); }}
                 className={`w-full text-left p-4 rounded-lg flex items-center justify-between group transition-all ${
                   activeKey?.id === key.id
                     ? 'bg-primary-fixed/20 border border-primary/30 text-primary'
@@ -67,8 +272,8 @@ export default function DropdownConfig() {
                 }`}
               >
                 <div className="flex flex-col">
-                  <span className="font-title-md">{key.label}</span>
-                  <span className="text-xs opacity-60">{key.values.length} {locale === 'vi' ? 'giá trị đã định nghĩa' : 'defined values'}</span>
+                  <span className="font-title-md">{keyDisplayLabel(key, locale)}</span>
+                  <span className="text-xs opacity-60">{visibleCountOf(key)} {locale === 'vi' ? 'giá trị đã định nghĩa' : 'defined values'}</span>
                 </div>
                 <span className="material-symbols-outlined opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
               </button>
@@ -81,16 +286,24 @@ export default function DropdownConfig() {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h3 className="font-headline-md text-headline-md text-on-surface">{activeKey?.label}</h3>
-                <p className="text-body-md text-on-surface-variant">{locale === 'vi' ? 'Nhấp để sửa. Xóa để loại khỏi danh sách toàn cục.' : 'Click to edit. Delete to remove from global list.'}</p>
+                <h3 className="font-headline-md text-headline-md text-on-surface">{activeKey ? keyDisplayLabel(activeKey, locale) : ''}</h3>
+                <p className="text-body-md text-on-surface-variant">{locale === 'vi' ? 'Kéo thả để sắp xếp thứ tự. Xóa mềm có thể khôi phục.' : 'Drag & drop to reorder. Soft-deleted values can be restored.'}</p>
               </div>
               <div className="flex gap-2">
-                <button className="flex items-center gap-2 px-4 py-2 bg-surface-container-high hover:bg-surface-container text-on-surface rounded-lg transition-all border border-outline-variant">
-                  <span className="material-symbols-outlined text-sm">undo</span>
+                <button
+                  onClick={handleReset}
+                  disabled={resetting}
+                  className="flex items-center gap-2 px-4 py-2 bg-surface-container-high hover:bg-surface-container text-on-surface rounded-lg transition-all border border-outline-variant disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <span className={`material-symbols-outlined text-sm ${resetting ? 'animate-spin' : ''}`}>{resetting ? 'sync' : 'undo'}</span>
                   <span className="text-body-md">{locale === 'vi' ? 'Đặt lại' : 'Reset'}</span>
                 </button>
-                <button className="flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg transition-all font-bold shadow-lg shadow-primary/10 active:scale-95">
-                  <span className="material-symbols-outlined text-sm">save</span>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg transition-all font-bold shadow-lg shadow-primary/10 active:scale-95 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <span className={`material-symbols-outlined text-sm ${saving ? 'animate-spin' : ''}`}>{saving ? 'sync' : 'save'}</span>
                   <span className="text-body-md">{locale === 'vi' ? 'Lưu thay đổi' : 'Save Changes'}</span>
                 </button>
               </div>
@@ -98,25 +311,67 @@ export default function DropdownConfig() {
 
             {/* Values List */}
             <div className="space-y-2 mb-8">
-              {activeKey?.values.map((val) => (
-                <div key={val.id} className="flex items-center gap-3 p-3 bg-surface-container-low border border-outline-variant rounded-xl group hover:border-primary/30 transition-all">
-                  <span className="material-symbols-outlined text-on-surface-variant/40 cursor-grab active:cursor-grabbing">drag_indicator</span>
-                  <div className="flex-1 text-body-md text-on-surface">{val.label}</div>
+              {visibleValues.map((val, index) => (
+                <div
+                  key={val.id}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={() => handleDrop(index)}
+                  onDragEnd={handleDragEnd}
+                  className={`flex items-center gap-3 p-3 bg-surface-container-low border rounded-xl group hover:border-primary/30 transition-all ${
+                    dragOverIndex === index ? 'border-primary bg-primary/5' : 'border-outline-variant'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-on-surface-variant/40 cursor-grab active:cursor-grabbing" title={locale === 'vi' ? 'Kéo để di chuyển' : 'Drag to move'}>drag_indicator</span>
+                  <div className="flex-1 text-body-md text-on-surface">{valueDisplayLabel(val, locale)}</div>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-1.5 hover:bg-surface-container-high rounded-lg text-on-surface-variant" title="Edit">
-                      <span className="material-symbols-outlined text-lg">edit</span>
-                    </button>
                     <button
-                      onClick={() => handleDelete(val.id)}
+                      onClick={() => handleSoftDelete(val)}
                       className="p-1.5 hover:bg-error/10 rounded-lg text-error"
-                      title="Delete"
+                      title={locale === 'vi' ? 'Xóa (có thể khôi phục)' : 'Delete (restorable)'}
                     >
                       <span className="material-symbols-outlined text-lg">delete</span>
                     </button>
                   </div>
                 </div>
               ))}
+              {visibleValues.length === 0 && (
+                <div className="py-6 text-center text-body-md text-on-surface-variant italic">
+                  {locale === 'vi' ? 'Chưa có giá trị nào.' : 'No values yet.'}
+                </div>
+              )}
             </div>
+
+            {/* Deleted (soft) Values */}
+            {deletedValues.length > 0 && (
+              <div className="mb-8 pt-4 border-t border-dashed border-outline-variant">
+                <button
+                  onClick={() => setShowDeleted(!showDeleted)}
+                  className="flex items-center gap-2 text-body-md text-on-surface-variant hover:text-on-surface transition-colors"
+                >
+                  <span className={`material-symbols-outlined text-lg transition-transform ${showDeleted ? 'rotate-90' : ''}`}>chevron_right</span>
+                  {locale === 'vi' ? `Giá trị đã xóa (${deletedValues.length})` : `Deleted values (${deletedValues.length})`}
+                </button>
+                {showDeleted && (
+                  <div className="mt-3 space-y-2">
+                    {deletedValues.map((val) => (
+                      <div key={val.id} className="flex items-center gap-3 p-3 bg-surface-container-low border border-outline-variant/60 rounded-xl opacity-75">
+                        <span className="material-symbols-outlined text-on-surface-variant">archive</span>
+                        <div className="flex-1 text-body-md text-on-surface line-through">{valueDisplayLabel(val, locale)}</div>
+                        <button
+                          onClick={() => handleRestore(val)}
+                          className="p-1.5 hover:bg-surface-container-high rounded-lg text-secondary"
+                          title={locale === 'vi' ? 'Khôi phục' : 'Restore'}
+                        >
+                          <span className="material-symbols-outlined text-lg">undo</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Add Value */}
             <div className="pt-6 border-t border-outline-variant">

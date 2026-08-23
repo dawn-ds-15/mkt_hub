@@ -428,7 +428,7 @@ export default function KanbanBoard() {
       {reasonPopup && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => { setReasonPopup(null); setDraggedTaskId(null); setDraggedFromCol(null); }} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
             <h3 className="text-base font-bold">{locale === 'vi' ? 'Nhập lý do' : 'Enter Reason'}</h3>
             <p className="text-sm text-gray-500">{locale === 'vi' ? 'Vui lòng nhập lý do khi chuyển task sang trạng thái này' : 'Please enter a reason when moving task to this status'}</p>
             <textarea

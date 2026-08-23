@@ -22,7 +22,7 @@
 | Danh sách Task | `tasks` | TaskList.jsx | Bảng task có filter, sort, phân trang, quick-add |
 | Kanban | `kanban` | KanbanBoard.jsx | Board kéo-thả, 6 cột: Planning, Processing, Done, Pending, Backlog, Cancel |
 | Báo cáo Tuần | `weekly` | WeeklyReport.jsx | Báo cáo tuần với log notes, export TXT |
-| Dự án | `projects` | Projects/index.jsx | Danh sách project dạng card + summary sidebar |
+| Dự án | `projects` | ProjectListTable.jsx | Danh sách project dạng bảng (tab "Thẻ"/cards đã gỡ bỏ do trùng chức năng) |
 
 ---
 
@@ -203,7 +203,8 @@
 - `DELETE /v1/tasks/:id` → `tasks.service.ts::remove()` → set `archivedAt = new Date()`, `archivedBy = userId`
 - `DELETE /v1/projects/:id` → `projects.service.ts::remove()` → set `archivedAt`
 - Các query `findAll`/`findOne` filter `where: { archivedAt: null }`
-- ⚠️ **Lưu ý:** `weekly-reports.service.ts::scope()` **THIẾU** filter `archivedAt: null` — cần BE fix
+- ✅ **Đã fix (21/08/2026):** `weekly-reports.service.ts::scope()` đã thêm filter `archivedAt: null`
+  — đã kiểm thử production: task xóa mềm không còn lọt vào báo cáo tuần.
 
 ### Frontend (FE — localStorage)
 - `utils/softDelete.js` — key `mkt_hub_deleted`
@@ -221,4 +222,5 @@
 - `deleteTask` gọi BE API (`DELETE /v1/tasks/:id`) — backend soft-delete via `archivedAt`.
 - `deleteProject` gọi BE API (`DELETE /v1/projects/:id`) — backend soft-delete.
 - FE áp dụng `filterDeleted('tasks', ...)` trong weekly report, kanban, dashboard.
-- **Cần BE fix:** thêm `archivedAt: null` vào `WeeklyReportsService.scope()`.
+- ✅ **Đã fix (21/08/2026):** `WeeklyReportsService.scope()` đã có filter `archivedAt: null`
+  (chi tiết kiểm thử: `backend-missing-apis.md`).

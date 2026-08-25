@@ -39,7 +39,7 @@ export default function Topbar({ title = 'Tổng quan', tabs, activeTab, onTabCh
   };
 
   return (
-    <header className="fixed top-0 left-0 lg:left-sidebar-width right-0 h-topbar-height bg-[#CCD3E2] flex justify-between items-center px-4 sm:px-container-margin w-full z-40 shadow-md border-b border-gray-300">
+    <header className="fixed top-0 left-0 right-0 lg:left-sidebar-width h-topbar-height bg-[#CCD3E2] flex justify-between items-center px-4 sm:px-container-margin z-40 shadow-md border-b border-gray-300">
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <button
           onClick={onMenuClick}

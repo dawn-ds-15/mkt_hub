@@ -19,7 +19,14 @@ const emptyRow = () => {
   return { id: rowSeq, expenseId: null, event: '', expenseCategory: '', planned: '', actual: '', inventoryItemId: '', plannedQty: '', actualQty: '', unitPriceBeforeVat: 0, vatRate: 0, unitPriceAfterVat: 0, unit: '', isOther: false, otherName: '', otherUnit: '', contractFile: '', contractDataUrl: null, contractDocId: null, note: '' };
 };
 
-const lineTotalOf = (r) => (parseFloat(r.actual) || 0);
+const lineTotalOf = (r, items) => {
+  if (r.isOther || r.expenseCategory === '__other__') {
+    return (Number(r.unitPriceAfterVat) || 0) * (Number(r.actualQty) || 0);
+  }
+  const item = items?.find(i => i.id === r.inventoryItemId);
+  const price = item ? Number(item.unitPriceAfterVat || item.unitPrice || 0) : 0;
+  return price * (Number(r.actualQty) || 0);
+};
 
 // Bản ghi cũ lưu actual = ĐƠN GIÁ kèm "SL: N" → quy đổi thành thành tiền; bản ghi mới đã là tổng
 const lineActualToTotal = (l) => {
@@ -157,7 +164,7 @@ export default function ExpenseEntryForm({ onSaved }) {
     return price * (Number(r.plannedQty) || 0);
   };
   const totalPlanned = rows.reduce((s, r) => s + calcRowPlanned(r), 0);
-  const totalActual = rows.reduce((s, r) => s + lineTotalOf(r), 0);
+  const totalActual = rows.reduce((s, r) => s + lineTotalOf(r, inventoryItems), 0);
   const grandTotal = totalPlanned + totalActual;
 
   const showToast = (msg, type = 'success') => {
@@ -275,7 +282,7 @@ export default function ExpenseEntryForm({ onSaved }) {
     try {
       // BE hiện upsert theo (Dự án + Kỳ) — gộp các dòng thành MỘT bản ghi để không mất dữ liệu (BUG-C02)
       // fix_ui_cn: "Chi phí thực tế" mỗi dòng là THÀNH TIỀN (không nhân SL nữa)
-      const totalActual = validRows.reduce((s, r) => s + lineTotalOf(r), 0);
+      const totalActual = validRows.reduce((s, r) => s + lineTotalOf(r, inventoryItems), 0);
       const aggNote = validRows
         .map((r, i) => `${validRows.length > 1 ? `${i + 1}. ` : ''}${buildNote(r)}`.trim())
         .filter(Boolean)
@@ -426,27 +433,25 @@ export default function ExpenseEntryForm({ onSaved }) {
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-border-light shadow-sm mb-6">
-            <table className="w-full min-w-[1200px] table-fixed divide-y divide-border-light">
+            <table className="w-full min-w-[900px] table-fixed divide-y divide-border-light">
               <colgroup>
                 <col className="w-[12%]" />
-                <col className="w-[10%]" />
-                <col className="w-[15%]" />
-                <col className="w-[10%]" />
-                <col className="w-[13%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
+                <col className="w-[16%]" />
+                <col className="w-[12%]" />
+                <col className="w-[14%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
                 <col className="w-auto" />
                 <col className="w-[48px]" />
               </colgroup>
               <thead className="bg-background-subtle">
                 <tr>
-                  <th className="py-3 pl-4 pr-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Tên hạng mục', 'Item Name')}</th>
-                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Danh mục kho', 'Inventory Category')}</th>
-                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Vật phẩm kho', 'Inventory Item')}</th>
-                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn vị', 'Unit')}</th>
+                  <th className="py-3 pl-4 pr-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Danh mục', 'Category')}</th>
+                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Vật phẩm', 'Item')}</th>
                   <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá (sau VAT)', 'Unit Price (post-VAT)')}</th>
-                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('SL KDH / SL Thực', 'Plan Qty / Actual Qty')}</th>
-                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Thành tiền KDH', 'Planned Cost')}</th>
+                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('SL KH / SL Thực', 'Plan Qty / Actual Qty')}</th>
+                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Thành tiền KH', 'Planned Cost')}</th>
                   <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Thành tiền Thực tế', 'Actual Cost')}</th>
                   <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ghi chú', 'Notes')}</th>
                   <th className="px-3 py-3"></th>
@@ -471,15 +476,12 @@ export default function ExpenseEntryForm({ onSaved }) {
                   return (
                     <tr key={row.id} className="align-top">
                       <td className="py-3 pl-4 pr-3">
-                        <input className={inputCls} placeholder={t('Tên hạng mục...', 'Item name...')} value={row.event} onChange={(e) => updateRow(row.id, 'event', e.target.value)} />
-                      </td>
-                      <td className="py-3 px-3">
                         <select className={`${inputCls} text-[12px]`} value={row.expenseCategory} onChange={(e) => {
                           const cat = e.target.value;
                           const isOtherCat = cat === '__other__';
-                          updateRow(row.id, { expenseCategory: cat, isOther: isOtherCat, inventoryItemId: '', unitPriceAfterVat: isOtherCat ? 0 : undefined, unit: isOtherCat ? '' : undefined, otherName: isOtherCat ? '' : undefined, otherUnit: isOtherCat ? '' : undefined });
+                          updateRow(row.id, { expenseCategory: cat, isOther: isOtherCat, inventoryItemId: '', unitPriceAfterVat: isOtherCat ? 0 : undefined, otherName: isOtherCat ? '' : undefined, otherUnit: isOtherCat ? '' : undefined });
                         }}>
-                          <option value="">{t('— Chọn danh mục —', '— Select category —')}</option>
+                          <option value="">{t('— Chọn —', '— Select —')}</option>
                           {EXPENSE_CATEGORIES.map(c => (
                             <option key={c.key} value={c.key}>{t(c.vi, c.en)}</option>
                           ))}
@@ -492,7 +494,7 @@ export default function ExpenseEntryForm({ onSaved }) {
                           <>
                             <select className={`${inputCls} text-[12px]`} value={row.inventoryItemId} onChange={(e) => {
                               const item = inventoryItems.find(i => i.id === e.target.value);
-                              updateRow(row.id, { inventoryItemId: e.target.value, unitPriceBeforeVat: item ? Number(item.unitPriceBeforeVat || 0) : 0, vatRate: item ? Number(item.vatRate || 0) : 0, unitPriceAfterVat: item ? Number(item.unitPriceAfterVat || item.unitPrice || 0) : 0, unit: item?.unit || '' });
+                              updateRow(row.id, { inventoryItemId: e.target.value, unitPriceBeforeVat: item ? Number(item.unitPriceBeforeVat || 0) : 0, vatRate: item ? Number(item.vatRate || 0) : 0, unitPriceAfterVat: item ? Number(item.unitPriceAfterVat || item.unitPrice || 0) : 0 });
                             }}>
                               <option value="">{t('— Chọn —', '— Select —')}</option>
                               {filteredItems.map((item) => (
@@ -510,13 +512,6 @@ export default function ExpenseEntryForm({ onSaved }) {
                       </td>
                       <td className="py-3 px-3">
                         {isOther ? (
-                          <input className={inputCls} placeholder={t('cái, hộp...', 'pcs, box...')} value={row.otherUnit || ''} onChange={(e) => updateRow(row.id, 'otherUnit', e.target.value)} />
-                        ) : (
-                          <input readOnly className={`${inputCls} bg-surface-container-low cursor-not-allowed`} value={selectedItem?.unit || '—'} />
-                        )}
-                      </td>
-                      <td className="py-3 px-3">
-                        {isOther ? (
                           <NumberInput className={`${inputCls} text-right`} placeholder="0" value={row.unitPriceAfterVat || ''} onChange={(e) => updateRow(row.id, 'unitPriceAfterVat', e.target.value)} />
                         ) : (
                           <input readOnly className={`${inputCls} text-right bg-surface-container-low cursor-not-allowed`} value={unitPrice ? unitPrice.toLocaleString('vi-VN') : '—'} />
@@ -524,7 +519,7 @@ export default function ExpenseEntryForm({ onSaved }) {
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex gap-1">
-                          <NumberInput className={`${inputCls} text-right w-1/2`} placeholder={t('KDH', 'Plan')} value={row.plannedQty} onChange={(e) => updateRow(row.id, 'plannedQty', e.target.value)} />
+                          <NumberInput className={`${inputCls} text-right w-1/2`} placeholder={t('KH', 'Plan')} value={row.plannedQty} onChange={(e) => updateRow(row.id, 'plannedQty', e.target.value)} />
                           <NumberInput className={`${inputCls} text-right w-1/2`} placeholder={t('Thực', 'Actual')} value={row.actualQty} onChange={(e) => updateRow(row.id, 'actualQty', e.target.value)} />
                         </div>
                       </td>
@@ -532,7 +527,7 @@ export default function ExpenseEntryForm({ onSaved }) {
                         <input readOnly className={`${inputCls} text-right bg-surface-container-low cursor-not-allowed`} value={planAmount ? planAmount.toLocaleString('vi-VN') : '—'} />
                       </td>
                       <td className="px-3 py-3">
-                        <NumberInput className={`${inputCls} text-right`} placeholder="0" value={row.actual} onChange={(e) => updateRow(row.id, 'actual', e.target.value)} />
+                        <input readOnly className={`${inputCls} text-right bg-surface-container-low cursor-not-allowed`} value={actAmount ? actAmount.toLocaleString('vi-VN') : '—'} />
                       </td>
                       <td className="px-3 py-3">
                         <textarea className={`${inputCls} h-16 resize-none`} placeholder={t('Nhập ghi chú...', 'Enter notes...')} rows={2} value={row.note} onChange={(e) => updateRow(row.id, 'note', e.target.value)} />
@@ -554,13 +549,13 @@ export default function ExpenseEntryForm({ onSaved }) {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-primary bg-primary/10 font-bold">
-                  <td colSpan={6} className="px-4 py-3 text-on-surface">{t('Tổng cộng', 'Total')}</td>
+                  <td colSpan={4} className="px-4 py-3 text-on-surface">{t('Tổng cộng', 'Total')}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(totalPlanned)}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(totalActual)}</td>
                   <td colSpan={2}></td>
                 </tr>
                 <tr className="border-t border-border-light bg-surface-container-lowest">
-                  <td colSpan={10} className="px-4 py-3">
+                  <td colSpan={8} className="px-4 py-3">
                     <button
                       type="button"
                       onClick={addRow}

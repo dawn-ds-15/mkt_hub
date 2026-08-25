@@ -37,15 +37,42 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
 
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [missingFields, setMissingFields] = useState({});
 
   const title = isCreate ? t('Nhập kho mới', 'New inventory item')
     : t(`Sửa vật phẩm — ${item.name}`, `Edit item — ${item.name}`);
 
   const handleSubmit = async () => {
     setFormError(null);
+    setMissingFields({});
 
-    if (!name.trim()) {
-      setFormError(t('Vui lòng nhập tên vật phẩm.', 'Item name is required.'));
+    const missing = {};
+    if (!name.trim()) missing.name = true;
+    if (!unit.trim()) missing.unit = true;
+
+    if (isCreate) {
+      if (!batchCode.trim()) missing.batchCode = true;
+      if (!receivedDate) missing.receivedDate = true;
+      if (!quantity && quantity !== '0') missing.quantity = true;
+      if (!unitPriceBeforeVat && unitPriceBeforeVat !== '0') missing.unitPriceBeforeVat = true;
+      if (!supplier.trim()) missing.supplier = true;
+      if (!contractCode.trim()) missing.contractCode = true;
+    }
+
+    if (Object.keys(missing).length > 0) {
+      setMissingFields(missing);
+      const fieldNames = {
+        name: t('Tên vật phẩm', 'Item name'),
+        unit: t('Đơn vị tính', 'Unit'),
+        batchCode: t('Mã', 'Code'),
+        receivedDate: t('Ngày nhập', 'Received date'),
+        quantity: t('Số lượng', 'Quantity'),
+        unitPriceBeforeVat: t('Đơn giá trước VAT', 'Unit price (pre-VAT)'),
+        supplier: t('Nhà cung cấp', 'Supplier'),
+        contractCode: t('Hợp đồng', 'Contract'),
+      };
+      const labels = Object.keys(missing).map(k => fieldNames[k] || k).join(', ');
+      setFormError(t(`Vui lòng nhập: ${labels}`, `Please fill in: ${labels}`));
       return;
     }
 
@@ -102,6 +129,7 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
   };
 
   const inputCls = "w-full px-3 py-2.5 border border-border-light rounded-lg text-body-sm text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary outline-none bg-surface-container-lowest";
+  const errCls = "border-danger focus:border-danger focus:ring-danger";
 
   return (
     <>
@@ -116,7 +144,7 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
           <div className="space-y-4">
             <div>
               <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Tên vật phẩm', 'Item name')}</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder={t('Ví dụ: Mascot MKT Hub', 'e.g. MKT Hub Mascot')} />
+              <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputCls} ${missingFields.name ? errCls : ''}`} placeholder={t('Ví dụ: Mascot MKT Hub', 'e.g. MKT Hub Mascot')} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -129,7 +157,7 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
               </div>
               <div>
                 <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn vị tính', 'Unit')}</label>
-                <input value={unit} onChange={(e) => setUnit(e.target.value)} className={inputCls} placeholder={t('con, bộ, tờ...', 'pcs, set, sheet...')} />
+                <input value={unit} onChange={(e) => setUnit(e.target.value)} className={`${inputCls} ${missingFields.unit ? errCls : ''}`} placeholder={t('con, bộ, tờ...', 'pcs, set, sheet...')} />
               </div>
             </div>
           </div>
@@ -141,21 +169,21 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Mã', 'Code')}</label>
-                    <input value={batchCode} onChange={(e) => setBatchCode(e.target.value)} className={inputCls} placeholder="BATCH-2026-001" />
+                    <input value={batchCode} onChange={(e) => setBatchCode(e.target.value)} className={`${inputCls} ${missingFields.batchCode ? errCls : ''}`} placeholder="BATCH-2026-001" />
                   </div>
                   <div>
                     <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ngày nhập', 'Received date')}</label>
-                    <input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} className={inputCls} />
+                    <input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} className={`${inputCls} ${missingFields.receivedDate ? errCls : ''}`} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Số lượng', 'Quantity')}</label>
-                    <NumberInput value={quantity} onChange={(e) => setQuantity(e.target.value)} className={inputCls} />
+                    <NumberInput value={quantity} onChange={(e) => setQuantity(e.target.value)} className={`${inputCls} ${missingFields.quantity ? errCls : ''}`} />
                   </div>
                   <div>
                     <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá trước VAT', 'Unit price (pre-VAT)')}</label>
-                    <NumberInput value={unitPriceBeforeVat} onChange={(e) => setUnitPriceBeforeVat(e.target.value)} className={inputCls} />
+                    <NumberInput value={unitPriceBeforeVat} onChange={(e) => setUnitPriceBeforeVat(e.target.value)} className={`${inputCls} ${missingFields.unitPriceBeforeVat ? errCls : ''}`} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -171,11 +199,11 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Nhà cung cấp', 'Supplier')}</label>
-                    <input value={supplier} onChange={(e) => setSupplier(e.target.value)} className={inputCls} />
+                    <input value={supplier} onChange={(e) => setSupplier(e.target.value)} className={`${inputCls} ${missingFields.supplier ? errCls : ''}`} />
                   </div>
                   <div>
                     <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Hợp đồng', 'Contract')}</label>
-                    <input value={contractCode} onChange={(e) => setContractCode(e.target.value)} className={inputCls} placeholder="HD-001/26" />
+                    <input value={contractCode} onChange={(e) => setContractCode(e.target.value)} className={`${inputCls} ${missingFields.contractCode ? errCls : ''}`} placeholder="HD-001/26" />
                   </div>
                 </div>
                 <div>

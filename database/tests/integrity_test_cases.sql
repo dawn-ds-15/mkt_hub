@@ -18,7 +18,7 @@ DECLARE
 BEGIN
     SELECT id INTO STRICT v_project_type_id
     FROM core.dropdowns
-    WHERE category = 'project_type' AND value = 'Internal' AND is_active = true;
+    WHERE category = 'project_type' AND value = 'workshop' AND is_active = true;
 
     SELECT id INTO STRICT v_project_status_id
     FROM core.dropdowns
@@ -117,3 +117,59 @@ END
 $test$ LANGUAGE plpgsql;
 
 ROLLBACK;
+
+-- DB-01 option B checks. Every anomaly query below must return zero rows.
+
+SELECT id, plan_id, month, kpi_key
+FROM marketing.kpi_monthly_plan_values
+WHERE month NOT BETWEEN 1 AND 12;
+
+SELECT id, plan_id, month, kpi_key, target_value
+FROM marketing.kpi_monthly_plan_values
+WHERE target_value < 0;
+
+SELECT monthly.id, monthly.plan_id, monthly.month,
+       monthly.kpi_key, monthly.target_value
+FROM marketing.kpi_monthly_plan_values AS monthly
+JOIN marketing.kpi_definitions AS definition
+  ON definition.kpi_key = monthly.kpi_key
+WHERE definition.value_type = 'COUNT'
+  AND monthly.target_value <> trunc(monthly.target_value);
+
+SELECT plan_id, month, kpi_key, count(*) AS duplicate_count
+FROM marketing.kpi_monthly_plan_values
+GROUP BY plan_id, month, kpi_key
+HAVING count(*) > 1;
+
+SELECT plan.id,
+       count(monthly.id) AS actual_cells,
+       12 * count(DISTINCT definition.kpi_key) AS expected_cells
+FROM marketing.kpi_plans AS plan
+CROSS JOIN marketing.kpi_definitions AS definition
+LEFT JOIN marketing.kpi_monthly_plan_values AS monthly
+  ON monthly.plan_id = plan.id
+ AND monthly.kpi_key = definition.kpi_key
+WHERE definition.is_active
+GROUP BY plan.id
+HAVING count(monthly.id) <> 12 * count(DISTINCT definition.kpi_key);
+
+SELECT plan.id AS plan_id, definition.kpi_key,
+       count(monthly.id) AS row_count,
+       count(DISTINCT monthly.month) AS month_count
+FROM marketing.kpi_plans AS plan
+CROSS JOIN marketing.kpi_definitions AS definition
+LEFT JOIN marketing.kpi_monthly_plan_values AS monthly
+  ON monthly.plan_id = plan.id
+ AND monthly.kpi_key = definition.kpi_key
+WHERE definition.is_active
+GROUP BY plan.id, definition.kpi_key
+HAVING count(monthly.id) <> 12
+    OR count(DISTINCT monthly.month) <> 12;
+
+SELECT plan.year,
+       monthly.kpi_key,
+       sum(monthly.target_value) AS monthly_total
+FROM marketing.kpi_monthly_plan_values AS monthly
+JOIN marketing.kpi_plans AS plan ON plan.id = monthly.plan_id
+GROUP BY plan.year, monthly.kpi_key
+ORDER BY plan.year, monthly.kpi_key;

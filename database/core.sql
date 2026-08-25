@@ -1,6 +1,7 @@
 SET search_path TO core, public;
 
 -- Drop dependent tables first so this seed can be rerun safely.
+DROP TABLE IF EXISTS marketing.kpi_monthly_plan_values;
 DROP TABLE IF EXISTS marketing.closed_deals;
 DROP TABLE IF EXISTS marketing.opportunities;
 DROP TABLE IF EXISTS finance.project_expenses;

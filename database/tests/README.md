@@ -53,3 +53,18 @@ Dùng ít nhất một tài khoản manager và một tài khoản specialist đ
 ## Điều kiện cho phép release
 
 Giữ DA-RISK-005 ở trạng thái mở cho đến khi có bằng chứng rằng bài kiểm tra SQL tự động và toàn bộ bước thủ công bên trên đã chạy thành công. Không được thêm dữ liệu test vào production chỉ để đóng rủi ro này.
+
+## Kiểm tra KPI tháng — DB-01 phương án B
+
+Sau khi import đủ `core.sql`, `finance.sql`, `marketing.sql` và `sys.sql`,
+chạy lại `database/tests/integrity_test_cases.sql`. Các truy vấn bất thường KPI
+phải trả về 0 dòng. Báo cáo cuối cùng hiển thị tổng target theo năm và KPI.
+
+Khi đã nhập đủ target tháng, cập nhật tổng năm và audit trong cùng transaction:
+
+```sql
+BEGIN;
+-- Update marketing.kpi_monthly_plan_values here.
+SELECT marketing.apply_kpi_monthly_plan(:plan_id, :user_id);
+COMMIT;
+```

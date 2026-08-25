@@ -82,7 +82,7 @@ export default {
         md: "16px",
         lg: "24px",
         xl: "32px",
-        "sidebar-width": "260px",
+        "sidebar-width": "160px",
         "topbar-height": "64px",
         "widget-padding": "20px",
         gutter: "20px",

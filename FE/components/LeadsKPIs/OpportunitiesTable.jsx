@@ -12,6 +12,7 @@ const emptyRow = {
   size: 'S',
   project: '',
   projectId: '',
+  contractName: '',
   fees: '',
   expectedCloseDate: '',
 };
@@ -123,7 +124,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
           return copy;
         });
       }
-      await convertOpportunityToWon(realId, signedDate);
+      await convertOpportunityToWon(realId, signedDate, row.contractName);
       setRemovingIds(prev => new Set([...prev, realId]));
       setTimeout(() => {
         setRows(prev => prev.filter((_, i) => i !== modalIndex));
@@ -192,12 +193,13 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
         <table className="w-full text-left border-collapse">
           <thead className="bg-surface-container-low border-b border-border-light">
             <tr>
-              <th className="p-3 min-w-[180px] text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Tên DN / Khách hàng' : 'Company / Customer'}</th>
-              <th className="p-3 min-w-[150px] text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Size' : 'Size'}</th>
-              <th className="p-3 min-w-[200px] text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Project' : 'Project'}</th>
-              <th className="p-3 min-w-[130px] text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Fees</th>
-              <th className="p-3 min-w-[160px] text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Dự kiến đóng' : 'Expected Close'}</th>
-              <th className="p-3 min-w-[220px] text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
+              <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Tên DN / Khách hàng' : 'Company / Customer'}</th>
+              <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Size' : 'Size'}</th>
+              <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Project' : 'Project'}</th>
+              <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Hợp đồng' : 'Contract'}</th>
+              <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Fees</th>
+              <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Dự kiến đóng' : 'Expected Close'}</th>
+              <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light">
@@ -210,7 +212,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                     isRemoving ? 'opacity-0 -translate-x-8 scale-95' : 'opacity-100 translate-x-0 scale-100'
                   }`}
                 >
-                  <td className="p-3">
+                  <td className="px-2 py-2">
                     <input
                       className="w-full border-0 focus:ring-0 px-2 py-1.5 text-body-md outline-none rounded-md hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
                       placeholder="Cty CP ABC..."
@@ -219,18 +221,18 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       onChange={(e) => handleRowChange(index, 'companyName', e.target.value)}
                     />
                   </td>
-                  <td className="p-3">
+                  <td className="px-2 py-2">
                     <select
-                      className="w-full border-0 focus:ring-0 px-2 py-1.5 text-body-md outline-none bg-transparent rounded-md cursor-pointer hover:bg-surface-container-low focus:bg-surface-container-low transition-colors whitespace-nowrap"
+                      className="w-full border-0 focus:ring-0 px-1 py-1.5 text-body-md outline-none bg-transparent rounded-md cursor-pointer hover:bg-surface-container-low focus:bg-surface-container-low transition-colors whitespace-nowrap"
                       value={row.size}
                       onChange={(e) => handleRowChange(index, 'size', e.target.value)}
                     >
                       {sizeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   </td>
-                  <td className="p-3">
+                  <td className="px-2 py-2">
                     <select
-                      className="w-full border-0 focus:ring-0 px-2 py-1.5 text-body-md outline-none bg-transparent rounded-md cursor-pointer hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
+                      className="w-full border-0 focus:ring-0 px-1 py-1.5 text-body-md outline-none bg-transparent rounded-md cursor-pointer hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
                       value={row.projectId}
                       onChange={(e) => {
                         const pid = e.target.value;
@@ -245,7 +247,16 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       )}
                     </select>
                   </td>
-                  <td className="p-3">
+                  <td className="px-2 py-2">
+                    <input
+                      className="w-full border-0 focus:ring-0 px-2 py-1.5 text-body-md outline-none rounded-md hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
+                      placeholder={locale === 'vi' ? 'Tên hợp đồng...' : 'Contract name...'}
+                      type="text"
+                      value={row.contractName}
+                      onChange={(e) => handleRowChange(index, 'contractName', e.target.value)}
+                    />
+                  </td>
+                  <td className="px-2 py-2">
                     <NumberInput
                       className="w-full border-0 focus:ring-0 px-2 py-1.5 text-data-display outline-none text-right rounded-md hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
                       placeholder="5,000"
@@ -253,23 +264,24 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       onChange={(e) => handleRowChange(index, 'fees', e.target.value)}
                     />
                   </td>
-                  <td className="p-3">
+                  <td className="px-2 py-2">
                     <input
-                      className="w-full border-0 focus:ring-0 px-2 py-1.5 text-body-md outline-none rounded-md hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
+                      className="w-full max-w-[150px] border-0 focus:ring-0 px-2 py-1.5 text-body-md outline-none rounded-md hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
                       type="date"
                       value={row.expectedCloseDate}
                       onChange={(e) => handleRowChange(index, 'expectedCloseDate', e.target.value)}
                     />
                   </td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2 whitespace-nowrap">
+                  <td className="px-2 py-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <button
                         onClick={() => handleConvert(index)}
                         disabled={convertingIndex === index}
-                        className="px-3 py-1.5 bg-success text-white rounded text-label-md font-semibold hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1 shadow-sm"
+                        title={locale === 'vi' ? 'Chuyển thành Won' : 'Convert to Won'}
+                        className="px-2.5 py-1.5 bg-success text-white rounded text-label-md font-semibold hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1 shadow-sm"
                       >
                         <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
-                        {locale === 'vi' ? 'Chuyển thành Won' : 'Convert to Won'}
+                        {locale === 'vi' ? 'Chuyển Won' : 'Won'}
                       </button>
                       <button
                         onClick={() => handleDeleteRow(index, row)}
@@ -310,6 +322,10 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                   <div className="flex justify-between text-sm">
                     <span className="text-on-surface-variant">{locale === 'vi' ? 'Khách hàng:' : 'Customer:'}</span>
                     <span className="font-semibold text-on-surface">{rows[modalIndex].companyName}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-on-surface-variant">{locale === 'vi' ? 'Hợp đồng:' : 'Contract:'}</span>
+                    <span className="font-semibold text-on-surface">{rows[modalIndex].contractName || '—'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-on-surface-variant">{locale === 'vi' ? 'Dự án:' : 'Project:'}</span>

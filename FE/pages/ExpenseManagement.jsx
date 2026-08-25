@@ -8,11 +8,18 @@ import ExpenseOverview from '../components/ExpenseManagement/ExpenseOverview';
 import ExpenseBudget from '../components/ExpenseManagement/ExpenseBudget';
 import { useDashboard } from '../contexts/DashboardContext';
 
-const tabs = [
+function getUserRole() {
+  try {
+    const u = JSON.parse(localStorage.getItem('mkt_hub_user'));
+    return u?.role || 'specialist';
+  } catch { return 'specialist'; }
+}
+
+const allTabs = [
   { vi: 'Tổng quan', en: 'Overview', key: 'overview' },
   { vi: 'Ngân sách', en: 'Budget', key: 'budget' },
   { vi: 'Nhập chi phí', en: 'Input Expense', key: 'input' },
-  { vi: 'Báo cáo', en: 'Reports', key: 'reports' },
+  { vi: 'Báo cáo', en: 'Reports', key: 'reports', managerOnly: true },
 ];
 
 export default function ExpenseManagement() {
@@ -20,6 +27,9 @@ export default function ExpenseManagement() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'budget';
   const [refreshKey, setRefreshKey] = useState(0);
+  const role = getUserRole();
+
+  const tabs = allTabs.filter(tab => !tab.managerOnly || role === 'manager');
 
   const setActiveTab = (key) => {
     setSearchParams({ tab: key }, { replace: true });
@@ -30,6 +40,15 @@ export default function ExpenseManagement() {
   };
 
   const renderContent = () => {
+    if (activeTab === 'reports' && role !== 'manager') {
+      return (
+        <div className="flex flex-col items-center justify-center h-80 gap-4 text-on-surface-variant">
+          <span className="material-symbols-outlined text-[64px] text-outline-variant">lock</span>
+          <p className="font-headline-sm">{locale === 'vi' ? 'Bạn không có quyền xem báo cáo' : 'You do not have permission to view reports'}</p>
+          <p className="text-body-md text-outline">{locale === 'vi' ? 'Chỉ quản lý mới có thể xem báo cáo chi phí.' : 'Only managers can view expense reports.'}</p>
+        </div>
+      );
+    }
     switch (activeTab) {
       case 'input':
         return (

@@ -25,12 +25,14 @@ const CHART_COLORS = ['bg-primary', 'bg-secondary', 'bg-tertiary'];
 
 export default function ExpenseReports({ refreshKey }) {
   const { locale } = useDashboard();
+  const t = (vi, en) => (locale === 'vi' ? vi : en);
   const [data, setData] = useState(null);
   const [period, setPeriod] = useState('Month');
   const [page, setPage] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
   const [filterText, setFilterText] = useState('');
   const [showDetail, setShowDetail] = useState(null);
+  const [error, setError] = useState(null);
   const rowsPerPage = 4;
 
   function periodToParam(p) {
@@ -41,8 +43,55 @@ export default function ExpenseReports({ refreshKey }) {
   }
 
   useEffect(() => {
-    getExpenseReports(periodToParam(period)).then((res) => setData(res.data));
+    setError(null);
+    setData(null);
+    getExpenseReports(periodToParam(period))
+      .then((res) => setData(res.data))
+      .catch((err) => {
+        const status = err?.response?.status;
+        if (status === 404) {
+          setError(t('Chưa có dữ liệu báo cáo cho kỳ này. Vui lòng nhập chi phí trước.', 'No report data for this period. Please enter expenses first.'));
+        } else if (status === 403) {
+          setError(t('Bạn không có quyền xem báo cáo chi phí.', 'You do not have permission to view expense reports.'));
+        } else {
+          setError(t('Không thể tải báo cáo. Vui lòng thử lại.', 'Could not load reports. Please try again.'));
+        }
+      });
   }, [period, refreshKey]);
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-body-md font-medium text-secondary">{t('Kỳ:', 'Period:')}</span>
+            <div className="flex bg-surface-container-high rounded-lg p-1">
+              {(periodTabs).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setPeriod(t.key)}
+                  className={`px-4 py-1 text-label-md rounded transition-colors ${
+                    period === t.key
+                      ? 'bg-surface-container-lowest shadow-sm text-primary font-bold'
+                      : 'text-secondary hover:bg-surface-container-lowest'
+                  }`}
+                >
+                  {t[locale] || t.en}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center h-80 gap-4 text-on-surface-variant">
+          <span className="material-symbols-outlined text-[64px] text-outline-variant">error</span>
+          <p className="font-headline-sm">{error}</p>
+          <button onClick={() => { setError(null); setPeriod(period); }} className="mt-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-semibold hover:brightness-110 transition-all">
+            {t('Thử lại', 'Retry')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!data) {
     return (
@@ -68,7 +117,7 @@ export default function ExpenseReports({ refreshKey }) {
   const hasData = projects.length > 0 || trend.length > 0 || distribution.length > 0;
 
   const detailRows = projects.map(p => ({
-    id: p.projectId,
+    id: p.projectName,
     project: p.projectName,
     type: p.projectType || 'N/A',
     date: overview.period || '',
@@ -152,19 +201,14 @@ export default function ExpenseReports({ refreshKey }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 border-t-primary shadow-sm">
-          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">{locale === 'vi' ? 'Tổng chi phí' : 'Total Cost'}</p>
-          <h3 className="font-display-lg text-display-lg text-on-surface">{formatCurrency(totalCost)}</h3>
-          <p className="text-body-sm font-body-sm text-outline mt-1 italic">{locale === 'vi' ? `Qua ${trend.length} kỳ` : `Across ${trend.length} periods`}</p>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 border-t-primary shadow-sm">
           <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">{locale === 'vi' ? 'Tổng ngân sách' : 'Total Budget'}</p>
           <h3 className="font-display-lg text-display-lg text-on-surface">{formatCurrency(totalBudget)}</h3>
           <p className="text-body-sm font-body-sm text-outline mt-1 italic">{locale === 'vi' ? 'Theo kế hoạch' : 'As planned'}</p>
         </div>
         <div className="bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 border-t-primary shadow-sm">
-          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">{locale === 'vi' ? 'Thực tế' : 'Actual'}</p>
+          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">{locale === 'vi' ? 'Thực tế (trước VAT)' : 'Actual (pre-VAT)'}</p>
           <h3 className="font-display-lg text-display-lg text-on-surface">{formatCurrency(totalActual)}</h3>
           <p className="text-body-sm font-body-sm text-outline mt-1 italic">{locale === 'vi' ? 'Đã giải ngân' : 'Disbursed'}</p>
         </div>
@@ -287,7 +331,7 @@ export default function ExpenseReports({ refreshKey }) {
               const budgetUsed = budget > 0 ? Math.round((actual / budget) * 100) : 0;
               const status = actual > budget ? 'over' : 'ok';
               return (
-                <div key={item.projectId} className="space-y-1.5">
+                <div key={item.projectName} className="space-y-1.5">
                   <div className="flex justify-between text-label-md text-secondary mb-1">
                     <span>{item.projectName}</span>
                     <span className={status === 'over' ? 'text-danger font-bold' : ''}>
@@ -338,16 +382,15 @@ export default function ExpenseReports({ refreshKey }) {
 
         <div className="bg-surface-container-lowest border border-border-subtle rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto data-table-container">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
+            <table className="w-full text-left border-collapse">
               <thead className="bg-surface-muted border-b border-border-subtle sticky top-0">
                 <tr>
                   {[
-                    { key: 'ID', vi: 'ID', en: 'ID' },
                     { key: 'Project', vi: 'Dự án', en: 'Project' },
                     { key: 'Type', vi: 'Loại', en: 'Type' },
                     { key: 'Period', vi: 'Kỳ', en: 'Period' },
-                    { key: 'Cost', vi: 'Chi phí (USD)', en: 'Cost (USD)' },
-                    { key: 'Budget', vi: 'Ngân sách (USD)', en: 'Budget (USD)' },
+                    { key: 'Cost', vi: 'Chi phí (trước VAT)', en: 'Cost (pre-VAT)' },
+                    { key: 'Budget', vi: 'Ngân sách (trước VAT)', en: 'Budget (pre-VAT)' },
                     { key: 'Variance', vi: 'Chênh lệch', en: 'Variance' },
                     { key: 'Health', vi: 'Tình trạng', en: 'Health' },
                   ].map((h) => (
@@ -364,8 +407,7 @@ export default function ExpenseReports({ refreshKey }) {
               </thead>
               <tbody className="divide-y divide-border-subtle">
                 {paginatedRows.map((row) => (
-                  <tr key={row.id} className="hover:bg-primary/5 transition-colors group">
-                    <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-primary">{row.id}</td>
+                  <tr key={row.project} className="hover:bg-primary/5 transition-colors group">
                     <td className="px-cell-padding-x py-cell-padding-y font-body-md text-body-md text-on-surface font-semibold">{row.project}</td>
                     <td className="px-cell-padding-x py-cell-padding-y">
                       <span className="px-2.5 py-0.5 bg-surface-container-high text-secondary rounded-full text-[11px] font-medium">{row.type}</span>
@@ -440,7 +482,6 @@ export default function ExpenseReports({ refreshKey }) {
               </div>
               <div className="space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[11px] font-semibold text-gray-500 uppercase">ID</label><p className="font-mono text-primary">{showDetail.id}</p></div>
                   <div><label className="text-[11px] font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Dự án' : 'Project'}</label><p className="font-semibold">{showDetail.project}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">

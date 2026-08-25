@@ -340,7 +340,7 @@ export default function ProjectDetail() {
           <div className="col-span-12 md:col-span-6 bg-surface-container-lowest border border-border-light rounded-lg p-4 flex flex-col group">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Công việc gần nhất' : 'Recent Tasks'}</h3>
-              <button onClick={() => navigate('/tasks')} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Mở module Công việc' : 'Open Tasks module'}>
+              <button onClick={() => navigate(`/tasks?projectId=${id}`)} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Mở module Công việc' : 'Open Tasks module'}>
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
             </div>

@@ -113,7 +113,7 @@ export default function StockBreakdownModal({ onClose }) {
                       <div className="font-headline-sm text-headline-sm font-bold text-on-surface tabular-nums">{formatNumber(detail.totalStock)} <span className="text-body-sm font-normal text-on-surface-variant">{detail.unit}</span></div>
                     </div>
                     <div className="bg-surface-container-low rounded-lg p-3">
-                      <div className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá TB', 'Avg price')}</div>
+                      <div className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá TB (sau VAT)', 'Avg price (post-VAT)')}</div>
                       <div className="font-headline-sm text-headline-sm font-bold text-on-surface tabular-nums">{formatNumber(detail.avgUnitPrice)} <span className="text-body-sm font-normal text-on-surface-variant">VND</span></div>
                     </div>
                     <div className="bg-surface-container-low rounded-lg p-3">

@@ -6,6 +6,40 @@ const ACCEPT = {
   image: 'image/*',
 };
 
+// BUG-C07: nén ảnh trước khi lưu/upload — giảm nặng base64 trong localStorage
+// và dung lượng upload lên server. Max cạnh 1600px, JPEG 80%.
+const MAX_DIMENSION = 1600;
+const JPEG_QUALITY = 0.8;
+
+const compressImage = (fileObj) =>
+  new Promise((resolve) => {
+    const imgUrl = URL.createObjectURL(fileObj);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(imgUrl);
+      try {
+        const scale = Math.min(1, MAX_DIMENSION / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', JPEG_QUALITY));
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(imgUrl);
+      resolve(null);
+    };
+    img.src = imgUrl;
+  });
+
 const TYPE_LABEL = (locale) => ({
   excel: locale === 'vi' ? 'File số liệu (Excel)' : 'Data File (Excel)',
   image: locale === 'vi' ? 'Hợp đồng (Ảnh)' : 'Contract (Image)',
@@ -100,16 +134,13 @@ export default function FileUploadModal({ type, onClose, onConfirm }) {
             </button>
             <button
               disabled={!file}
-              onClick={() => {
+              onClick={async () => {
                 if (!file) return;
-                const finish = (dataUrl) => onConfirm(file.name, { size: file.size, dataUrl: dataUrl || null });
                 if (type === 'image' && file.fileObj) {
-                  const reader = new FileReader();
-                  reader.onload = () => finish(reader.result);
-                  reader.onerror = () => finish(null);
-                  reader.readAsDataURL(file.fileObj);
+                  const dataUrl = await compressImage(file.fileObj);
+                  onConfirm(file.name, { size: file.size, dataUrl, file: file.fileObj });
                 } else {
-                  finish(null);
+                  onConfirm(file.name, { size: file.size, dataUrl: null, file: null });
                 }
               }}
               className="px-8 py-2.5 bg-primary text-white rounded-lg text-sm font-bold shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"

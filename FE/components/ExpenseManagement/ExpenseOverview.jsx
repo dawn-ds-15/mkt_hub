@@ -66,11 +66,13 @@ function formatSignedCurrency(n) {
 
 export default function ExpenseOverview({ refreshKey }) {
   const { locale } = useDashboard();
+  const t = (vi, en) => (locale === 'vi' ? vi : en);
   const [data, setData] = useState(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [periodType, setPeriodType] = useState('year');
   const [periodValue, setPeriodValue] = useState(CURRENT_YEAR);
+  const [error, setError] = useState(null);
   const rowsPerPage = 4;
 
   const periodOptions = getPeriodOptions(periodType);
@@ -82,8 +84,67 @@ export default function ExpenseOverview({ refreshKey }) {
 
   useEffect(() => {
     const period = buildPeriodParam(periodType, periodValue, CURRENT_YEAR);
-    getExpenseOverview(period).then((res) => setData(res.data));
+    setError(null);
+    setData(null);
+    getExpenseOverview(period)
+      .then((res) => setData(res.data))
+      .catch((err) => {
+        const status = err?.response?.status;
+        if (status === 404) {
+          setError(t('Chưa có dữ liệu tổng quan cho kỳ này. Vui lòng nhập chi phí trước.', 'No overview data for this period. Please enter expenses first.'));
+        } else if (status === 403) {
+          setError(t('Bạn không có quyền xem tổng quan chi phí.', 'You do not have permission to view expense overview.'));
+        } else {
+          setError(t('Không thể tải tổng quan. Vui lòng thử lại.', 'Could not load overview. Please try again.'));
+        }
+      });
   }, [periodType, periodValue, refreshKey]);
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 bg-white rounded-lg border border-border-light p-1 w-fit">
+          {periodTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => handlePeriodTypeChange(tab.key)}
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                periodType === tab.key
+                  ? 'bg-primary text-on-primary'
+                  : 'text-on-surface-variant hover:text-primary'
+              }`}
+            >
+              {locale === 'vi' ? tab.label : { week: 'Week', month: 'Month', quarter: 'Quarter', year: 'Year' }[tab.key] || tab.label}
+            </button>
+          ))}
+          {periodOptions.length > 0 && (
+            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border-light">
+              <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">
+                {locale === 'vi' ? (periodType === 'week' ? 'Tuần' : periodType === 'month' ? 'Tháng' : 'Quý') : (periodType === 'week' ? 'Week' : periodType === 'month' ? 'Month' : 'Quarter')}:
+              </span>
+              <select
+                value={periodValue}
+                onChange={(e) => setPeriodValue(e.target.value)}
+                className="border border-border-light rounded text-xs px-2 py-1 bg-white focus:ring-1 focus:ring-primary outline-none"
+              >
+                {periodOptions.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+              <span className="text-[11px] text-on-surface-variant font-medium ml-1">/ {CURRENT_YEAR}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-center justify-center h-80 gap-4 text-on-surface-variant">
+          <span className="material-symbols-outlined text-[64px] text-outline-variant">error</span>
+          <p className="font-headline-sm">{error}</p>
+          <button onClick={() => { setError(null); setPeriodValue(periodValue); }} className="mt-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-semibold hover:brightness-110 transition-all">
+            {t('Thử lại', 'Retry')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!data) {
     return (
@@ -286,7 +347,7 @@ export default function ExpenseOverview({ refreshKey }) {
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
                   {paginatedRows.map((row) => (
-                    <tr key={row.projectId} className="hover:bg-primary/5 transition-colors">
+                    <tr key={row.projectName} className="hover:bg-primary/5 transition-colors">
                       <td className="px-cell-padding-x py-cell-padding-y font-body-md text-body-md text-on-surface font-semibold">{row.projectName}</td>
                       <td className="px-cell-padding-x py-cell-padding-y font-body-sm text-body-sm text-on-surface-variant">{row.projectType}</td>
                       <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">{formatFullCurrency(row.budgetTotal)}</td>
@@ -298,7 +359,7 @@ export default function ExpenseOverview({ refreshKey }) {
                       </td>
                       <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-center text-on-surface">{row.newCustomers}</td>
                       <td className="px-cell-padding-x py-cell-padding-y font-data-mono text-data-mono text-right text-on-surface">
-                        {row.cac > 0 ? formatFullCurrency(Math.round(row.cac)) : '—'}
+                        {typeof row.cac === 'number' && row.cac > 0 ? formatFullCurrency(Math.round(row.cac)) : (typeof row.cac === 'string' && !row.cac.startsWith('N/A') ? row.cac : '—')}
                       </td>
                     </tr>
                   ))}

@@ -31,13 +31,8 @@ function matchesPeriod(p, periodKey) {
   return true;
 }
 
-// BUG-C03: đọc số lượng sự kiện lưu trong ghi chú ("Số lượng: N" / "SL: N" / "Qty: N")
-function parseQtyFromNote(note) {
-  const m = String(note || '').match(/(?:SL|Số lượng|Qty)\s*:\s*([\d.,]+)/i);
-  if (!m) return 1;
-  const v = parseInt(m[1].replace(/[.,]/g, ''), 10);
-  return v > 0 ? v : 1;
-}
+// fix_ui_cn: "Số lượng" = số lượng sự kiện (số dòng chi phí gộp trong bản ghi theo kỳ)
+const lineCountOf = (e) => Math.max(parseExpenseLines(String(e.directNote || e.note || '')).length, 1);
 
 export default function ExpenseBudget({ refreshKey, onAddExpense }) {
   const { locale } = useDashboard();
@@ -91,30 +86,27 @@ export default function ExpenseBudget({ refreshKey, onAddExpense }) {
     }
   };
 
-  // Kế hoạch = Σ cột "Kế hoạch" các dòng đã nhập, đọc từ ghi chú lưu trên BE
-  const plannedOfRec = (e) => {
-    const raw = String(e.directNote || e.note || '');
-    if (!raw) return 0;
-    return parseExpenseLines(raw).reduce((s, l) => s + l.planned, 0);
-  };
-  const eventsOfRec = (e) => (
-    parseExpenseLines(String(e.directNote || e.note || '')).map((l) => l.event).filter(Boolean).join(', ')
-  );
-
   const expenseFiltered = useMemo(() => (
     expenses.filter((e) => (projectFilter === 'all' || String(e.projectId) === projectFilter) && matchesPeriod(e.period, periodKey))
   ), [expenses, projectFilter, periodKey]);
 
+  // BUG-C05: đổi Dự án / Kỳ báo cáo thì các dòng đang chọn có thể không còn hiển thị
+  // nhưng vẫn nằm trong selectedIds → bấm Xóa sẽ xóa cả dòng bị ẩn. Bỏ chọn khi filter đổi.
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [projectFilter, periodKey]);
+
   const planRows = useMemo(() => (
     expenseFiltered.map((e) => {
-      const planned = plannedOfRec(e);
+      const lines = parseExpenseLines(String(e.directNote || e.note || ''));
+      const planned = lines.reduce((s, l) => s + l.planned, 0);
+      const qty = Math.max(lines.length, 1);
       return {
         id: e.id,
         name: e.project || '—',
-        price: planned,
-        qty: 1,
+        price: qty > 1 ? Math.round(planned / qty) : planned,
+        qty,
         total: planned,
-        vendor: eventsOfRec(e) || '—',
         period: e.period,
       };
     })
@@ -123,14 +115,13 @@ export default function ExpenseBudget({ refreshKey, onAddExpense }) {
   const actualRows = useMemo(() => (
     expenseFiltered.map((e) => {
       const total = Number(e.total) || 0;
-      const qty = parseQtyFromNote(e.directNote || e.note);
+      const qty = lineCountOf(e);
       return {
         id: e.id,
         name: e.project || '—',
         price: qty > 1 ? Math.round(total / qty) : total,
         qty,
         total,
-        vendor: e.note || '—',
         period: e.period,
       };
     })
@@ -282,7 +273,6 @@ export default function ExpenseBudget({ refreshKey, onAddExpense }) {
                     <th className="py-3 px-4 text-[12px] leading-[16px] font-semibold text-on-surface-variant uppercase tracking-wider text-right">{locale === 'vi' ? 'Đơn giá' : 'Unit price'}</th>
                     <th className="py-3 px-4 text-[12px] leading-[16px] font-semibold text-on-surface-variant uppercase tracking-wider text-right">{locale === 'vi' ? 'Số lượng' : 'Qty'}</th>
                     <th className="py-3 px-4 text-[12px] leading-[16px] font-semibold text-on-surface-variant uppercase tracking-wider text-right">{locale === 'vi' ? 'Thành tiền' : 'Amount'}</th>
-                    <th className="py-3 px-4 text-[12px] leading-[16px] font-semibold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Nhà cung cấp' : 'Vendor'}</th>
                     <th className="py-3 px-4 text-[12px] leading-[16px] font-semibold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Ngày phát sinh' : 'Date'}</th>
                     <th className="py-3 px-4 w-[56px]"></th>
                   </tr>
@@ -290,7 +280,7 @@ export default function ExpenseBudget({ refreshKey, onAddExpense }) {
                 <tbody className="divide-y divide-border-light">
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-10 text-center text-[14px] leading-[20px] text-on-surface-variant">
+                      <td colSpan={7} className="py-10 text-center text-[14px] leading-[20px] text-on-surface-variant">
                         {locale === 'vi' ? 'Chưa có dữ liệu chi phí' : 'No expense data yet'}
                       </td>
                     </tr>
@@ -309,7 +299,6 @@ export default function ExpenseBudget({ refreshKey, onAddExpense }) {
                       <td className="py-2.5 px-4 font-data-mono text-[14px] leading-[20px] text-on-surface-variant text-right tabular-nums">{formatCurrency(row.price)}</td>
                       <td className="py-2.5 px-4 font-data-mono text-[14px] leading-[20px] text-on-surface-variant text-right tabular-nums">{row.qty}</td>
                       <td className="py-2.5 px-4 font-data-mono text-[14px] leading-[20px] text-on-surface font-semibold text-right tabular-nums">{formatCurrency(row.total)}</td>
-                      <td className="py-2.5 px-4 text-[14px] leading-[20px] text-on-surface-variant max-w-[220px] truncate" title={row.vendor}>{row.vendor}</td>
                       <td className="py-2.5 px-4 font-data-mono text-[14px] leading-[20px] text-on-surface-variant tabular-nums">{formatPeriod(row.period)}</td>
                       <td className="py-2.5 px-4 text-right">
                         <button

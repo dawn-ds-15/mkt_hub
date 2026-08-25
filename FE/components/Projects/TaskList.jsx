@@ -5,18 +5,6 @@ import { translateTaskErrors } from '../../utils/taskErrors';
 import TaskEditDrawer from './TaskEditDrawer';
 import TaskViewModal from './TaskViewModal';
 
-function getISOWeek() {
-  const now = new Date();
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const week1 = new Date(d.getFullYear(), 0, 4);
-  return 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
-}
-
-const CURRENT_WEEK = getISOWeek();
-const CURRENT_YEAR = new Date().getFullYear();
-
 const statusStyles = {
   overdue: { bg: 'bg-red-100', text: 'text-red-700', label: 'Quá hạn', row: 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100', icon: 'error', iconColor: 'text-red-600', fill: true },
   Planning: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Chưa làm', row: 'hover:bg-surface-container-low', icon: null, iconColor: null },
@@ -56,7 +44,7 @@ const statsMeta = [
 
 const statusFilterOptions = ['Tất cả', 'Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'overdue'];
 
-export default function TaskList() {
+export default function TaskList({ projectId: projectIdProp }) {
   const { locale } = useDashboard();
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
@@ -91,8 +79,7 @@ export default function TaskList() {
     assigneeId: '',
     priority: '',
     due: '',
-    execWeek: CURRENT_WEEK,
-    execYear: CURRENT_YEAR,
+    startDate: '',
   });
 
   useEffect(() => {
@@ -103,14 +90,27 @@ export default function TaskList() {
     }).catch(e => console.error('[TaskList] getMembers:', e));
   }, []);
 
+  useEffect(() => {
+    if (projectIdProp && projects.length > 0) {
+      const matched = projects.find(p => p.id === projectIdProp);
+      if (matched) {
+        const projectName = matched.name;
+        setDraftFilters(prev => ({ ...prev, project: projectName }));
+        setFilters(prev => ({ ...prev, project: projectName }));
+      }
+    }
+  }, [projectIdProp, projects]);
+
   const fetchTasks = useCallback(() => {
-    getTaskList().then((res) => {
+    const params = {};
+    if (projectIdProp) params.project = projectIdProp;
+    getTaskList(params).then((res) => {
       setTasks(res.data);
       setLoading(false);
     }).catch(() => {
       setLoading(false);
     });
-  }, []);
+  }, [projectIdProp]);
 
   useEffect(() => {
     fetchTasks();
@@ -204,6 +204,10 @@ export default function TaskList() {
   const handleQuickAdd = async () => {
     if (!quickTask.name.trim()) return;
     setQuickAddError('');
+    if (quickTask.startDate && quickTask.due && new Date(quickTask.due) < new Date(quickTask.startDate)) {
+      setQuickAddError(locale === 'vi' ? 'Hạn chót không được trước ngày bắt đầu' : 'Due date cannot be before start date');
+      return;
+    }
     const q = { ...quickTask };
     const pid = q.projectId || (projects.length > 0 ? projects[0].id : null);
     const aid = q.assigneeId || (members.length > 0 ? members[0].id : null);
@@ -211,7 +215,7 @@ export default function TaskList() {
       setQuickAddError(locale === 'vi' ? 'Vui lòng chọn dự án và người phụ trách' : 'Please select project and assignee');
       return;
     }
-    setQuickTask({ name: '', projectId: '', assigneeId: '', priority: '', due: '', execWeek: CURRENT_WEEK, execYear: CURRENT_YEAR });
+    setQuickTask({ name: '', projectId: '', assigneeId: '', priority: '', due: '', startDate: '' });
     try {
       await createTask({
         title: q.name.trim(),
@@ -219,8 +223,7 @@ export default function TaskList() {
         assigneeId: aid,
         priority: q.priority ? q.priority.charAt(0).toUpperCase() + q.priority.slice(1) : 'Medium',
         dueDate: q.due || undefined,
-        execWeek: q.execWeek,
-        execYear: q.execYear,
+        startDate: q.startDate || undefined,
       });
       setShowQuickAddPopup(false);
       fetchTasks();
@@ -466,21 +469,12 @@ export default function TaskList() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Tuần thực hiện' : 'Exec Week'}</label>
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Ngày bắt đầu' : 'Start Date'}</label>
                 <input
                   className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
-                  type="number"
-                  value={quickTask.execWeek}
-                  onChange={(e) => setQuickTask(prev => ({ ...prev, execWeek: +e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Năm thực hiện' : 'Exec Year'}</label>
-                <input
-                  className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
-                  type="number" min="2024" max="2030"
-                  value={quickTask.execYear}
-                  onChange={(e) => setQuickTask(prev => ({ ...prev, execYear: +e.target.value }))}
+                  type="date"
+                  value={quickTask.startDate}
+                  onChange={(e) => setQuickTask(prev => ({ ...prev, startDate: e.target.value }))}
                 />
               </div>
             </div>
@@ -563,6 +557,7 @@ export default function TaskList() {
                 <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Ưu tiên' : 'Priority'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Bắt đầu' : 'Start'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Hạn chót' : 'Deadline'}</th>
+                <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Tuần' : 'Week'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Hoàn thành' : 'Completed'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase text-center"><span className="material-symbols-outlined">link</span></th>
                 <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Ghi chú' : 'Notes'}</th>
@@ -572,7 +567,7 @@ export default function TaskList() {
             <tbody className="divide-y divide-outline-variant">
               {pagedTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="p-10 text-center text-outline">{locale === 'vi' ? 'Không tìm thấy task' : 'No tasks found'}</td>
+                  <td colSpan={15} className="p-10 text-center text-outline">{locale === 'vi' ? 'Không tìm thấy task' : 'No tasks found'}</td>
                 </tr>
               ) : (
                 pagedTasks.map((task) => {
@@ -620,6 +615,9 @@ export default function TaskList() {
                       <td className="p-3 text-xs align-middle">{task.start}</td>
                       <td className={`p-3 text-xs font-bold align-middle ${task.status === 'overdue' ? 'text-red-600' : task.status === 'done' ? '' : ''}`}>
                         {task.due}
+                      </td>
+                      <td className="p-3 text-xs text-outline align-middle">
+                        {task.execWeek ? `W${task.execWeek}` : (task.durationWeeks ? `${task.durationWeeks}w` : '—')}
                       </td>
                       <td className={`p-3 text-xs align-middle ${task.done ? 'text-green-700 font-bold' : ''}`}>
                         {task.done || '-'}

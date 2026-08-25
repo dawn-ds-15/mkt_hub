@@ -23,7 +23,7 @@ export default function Tasks() {
   const renderContent = () => {
     switch (activeTab) {
       case 'tasks':
-        return <TaskList />;
+        return <TaskList projectId={searchParams.get('projectId') || ''} />;
       case 'kanban':
         return <KanbanBoard />;
       case 'weekly':

@@ -269,7 +269,8 @@ export const getDashboardData = async (periodType = 'year', periodValue = '2026'
 
   const ovRes = await expensePromise;
   const ov = ovRes?.data?.data ?? ovRes?.data ?? {};
-  const totalExpense = Number(ov.metrics?.totalExpense) || 0;
+  const ovMetrics = ov.metrics ?? {};
+  const totalExpense = Number(ovMetrics.totalExpense) || 0;
 
   const wonCard = (Array.isArray(rawKpiCards) ? rawKpiCards : []).find(
     (k) => String(k?.label || '').toLowerCase().includes('won')
@@ -316,12 +317,17 @@ export const getDashboardData = async (periodType = 'year', periodValue = '2026'
     taskStatus,
     alerts,
     roas: {
-      ratio: totalExpense > 0 && wonValue != null ? wonValue / totalExpense : null,
-      wonValue,
+      // Mục 8: ưu tiên số do BE trả (metrics.roas); chưa có thì tự tính từ closed-deals như cũ
+      ratio: ovMetrics.roas != null && Number.isFinite(Number(ovMetrics.roas))
+        ? Number(ovMetrics.roas)
+        : (totalExpense > 0 && wonValue != null ? wonValue / totalExpense : null),
+      wonValue: ovMetrics.totalWonValue != null ? Number(ovMetrics.totalWonValue) : wonValue,
       totalExpense,
     },
     cac: {
-      value: totalExpense > 0 && wonCount > 0 ? totalExpense / wonCount : null,
+      value: ovMetrics.cac != null && Number.isFinite(Number(ovMetrics.cac))
+        ? Number(ovMetrics.cac)
+        : (totalExpense > 0 && wonCount > 0 ? totalExpense / wonCount : null),
       totalExpense,
       wonCount,
     },
@@ -440,6 +446,17 @@ export const getProject = async (id) => {
   const raw = res.data?.data ?? res.data ?? {};
   if (!raw || !raw.id) return { data: null };
   return { data: mapProject(raw) };
+};
+
+export const getChecklistTemplates = async () => {
+  const res = await api.get('/v1/projects/checklist-templates');
+  const d = res.data?.data ?? res.data ?? {};
+  return {
+    data: {
+      templates: Array.isArray(d.templates) ? d.templates : [],
+      stakeholderOptions: Array.isArray(d.stakeholderOptions) ? d.stakeholderOptions : [],
+    },
+  };
 };
 
 export const createProject = async (data) => {
@@ -611,8 +628,7 @@ export const createTask = async (data) => {
     completedDate: data.completedDate,
     projectId: data.projectId,
     assigneeId: data.assigneeId,
-    execWeek: data.execWeek ? Number(data.execWeek) : undefined,
-    execYear: data.execYear ? Number(data.execYear) : undefined,
+    startDate: data.startDate,
     stakeholders: data.stakeholders || [],
     link: data.link,
     remark: data.remark,
@@ -929,6 +945,23 @@ export const savePlanKPIs = async (data) => {
   return { data: res.data?.data ?? res.data };
 };
 
+// ===================== MONTHLY KPI PLAN =====================
+
+export const getMonthlyPlan = async (year) => {
+  const res = await api.get(`/v1/leads-kpis/plan/${year}/months`);
+  return { data: res.data?.data ?? res.data ?? {} };
+};
+
+export const saveMonthlyPlan = async (year, months) => {
+  const res = await api.put(`/v1/leads-kpis/plan/${year}/months`, { months });
+  return { data: res.data?.data ?? res.data };
+};
+
+export const applyMonthlyTotal = async (year) => {
+  const res = await api.post(`/v1/leads-kpis/plan/${year}/apply-monthly-total`);
+  return { data: res.data?.data ?? res.data };
+};
+
 // ===================== ACTUALS =====================
 
 function parseWeekString(weekStr) {
@@ -1045,6 +1078,7 @@ function mapOppFromBE(o) {
     size: sizeMap[o.size] || o.size || 'S',
     project: o.project?.name || o.projectName || '',
     projectId: o.projectId || '',
+    contractName: o.contractName || o.contract || '',
     fees: o.setupFee ?? 0,
     expectedCloseDate: o.expectedCloseDate || '',
     status: o.status || 'active',
@@ -1067,6 +1101,7 @@ export const addOpportunity = async (data) => {
     companyName: data.companyName,
     size: feToBeSize[data.size] || 'Enterprise',
     projectId: data.projectId || undefined,
+    contractName: data.contractName || undefined,
     setupFee: Number(data.fees) || 0,
     expectedCloseDate: data.expectedCloseDate || undefined,
   });
@@ -1079,6 +1114,7 @@ export const updateOpportunity = async (id, data) => {
     companyName: data.companyName,
     size: feToBeSize[data.size] || 'Enterprise',
     projectId: data.projectId || undefined,
+    contractName: data.contractName || undefined,
     setupFee: Number(data.fees) || 0,
     expectedCloseDate: data.expectedCloseDate || undefined,
   });
@@ -1094,8 +1130,8 @@ export const convertToWon = async (id) => {
   return convertOpportunityToWon(id, new Date().toISOString().split('T')[0]);
 };
 
-export const convertOpportunityToWon = async (id, signedDate) => {
-  const res = await api.post(`/v1/leads-kpis/opportunities/${id}/won`, { signedDate });
+export const convertOpportunityToWon = async (id, signedDate, contractName) => {
+  const res = await api.post(`/v1/leads-kpis/opportunities/${id}/won`, { signedDate, contractName: contractName || undefined });
   return { data: res.data?.data ?? { id, status: 'won', signedDate } };
 };
 
@@ -1108,7 +1144,7 @@ export const getClosedDeals = async () => {
     const mapped = Array.isArray(list) ? list.map(d => ({
       id: d.id,
       customer: d.companyName || d.customer || '',
-      contract: d.project?.name || d.projectName || d.contract || '',
+      contract: d.contractName || d.contract || d.project?.name || d.projectName || '',
       finalFees: d.setupFee ?? d.finalFees ?? 0,
       signedDate: d.closedDate || d.signedDate || '',
       status: 'completed',
@@ -1123,6 +1159,7 @@ export const updateClosedDeal = async (id, data) => {
   const res = await api.put(`/v1/leads-kpis/closed-deals/${id}`, {
     companyName: data.companyName || data.customer,
     size: data.size,
+    contractName: data.contractName || data.contract || undefined,
     setupFee: Number(data.setupFee ?? data.finalFees ?? 0),
     monthlyFee: Number(data.monthlyFee ?? 0),
     closedDate: data.closedDate || data.signedDate,
@@ -1307,6 +1344,11 @@ export const updateExpense = async (id, data) => {
 export const deleteExpense = async (id) => {
   const res = await api.delete(`/v1/expenses/${id}`);
   return { data: res.data };
+};
+
+export const addExpenseLine = async (expenseId, data) => {
+  const res = await api.post(`/v1/expenses/${expenseId}/lines`, data);
+  return { data: res.data?.data ?? res.data };
 };
 
 export const getExpenseReports = async (period) => {
@@ -1659,6 +1701,26 @@ export const reorderDropdownValues = async (keyId, orderedValues) => {
   return { success: true };
 };
 
+export const createDropdownOption = async (dropdownKey, label) => {
+  const res = await api.post(`/v1/data-management/dropdowns/${dropdownKey}/options`, { label });
+  return { data: res.data?.data ?? res.data };
+};
+
+export const updateDropdownOption = async (dropdownKey, optionId, label) => {
+  const res = await api.patch(`/v1/data-management/dropdowns/${dropdownKey}/options/${optionId}`, { label });
+  return { data: res.data?.data ?? res.data };
+};
+
+export const getDropdownOptionImpact = async (dropdownKey, optionId) => {
+  const res = await api.get(`/v1/data-management/dropdowns/${dropdownKey}/options/${optionId}/impact`);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const deleteDropdownOption = async (dropdownKey, optionId) => {
+  const res = await api.delete(`/v1/data-management/dropdowns/${dropdownKey}/options/${optionId}`);
+  return { data: res.data?.data ?? res.data };
+};
+
 export const getProjectsDropdown = async () => {
   const res = await getProjects();
   const projects = Array.isArray(res.data) ? res.data : [];
@@ -1790,6 +1852,7 @@ export default {
   getTasks,
   getTaskList,
   getKanbanData,
+  getChecklistTemplates,
   createProject,
   updateProject,
   deleteProject,

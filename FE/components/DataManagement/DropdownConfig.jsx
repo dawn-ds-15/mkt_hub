@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
-import { getDropdownKeys, addDropdownValue, reorderDropdownValues } from '../../services/api';
-import { markDeleted, restoreDeleted, getDeletedIds } from '../../utils/softDelete';
+import { getDropdownKeys, createDropdownOption, updateDropdownOption, getDropdownOptionImpact, deleteDropdownOption, reorderDropdownValues } from '../../services/api';
 
 // Bản dịch tên khóa dropdown — BE có thể trả label thiếu hoặc dạng key raw (chứa "_")
 const KEY_LABELS = {
@@ -105,16 +104,15 @@ export default function DropdownConfig() {
   const [activeKey, setActiveKey] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newValue, setNewValue] = useState('');
-  const [showDeleted, setShowDeleted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renamingValue, setRenamingValue] = useState('');
+  const [impactModal, setImpactModal] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const dragIndexRef = useRef(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
-  // Soft-delete markers dùng composite id `${keyId}:${valueId}` để tránh trùng value id giữa các khóa
-  // Giữ làm state để UI tự cập nhật ngay khi xóa/khôi phục
-  const [deletedIds, setDeletedIds] = useState(() => getDeletedIds('dropdown_values'));
-
-  const syncDeletedIds = () => setDeletedIds(getDeletedIds('dropdown_values'));
 
   useEffect(() => {
     getDropdownKeys().then((res) => {
@@ -123,42 +121,103 @@ export default function DropdownConfig() {
     }).catch(e => console.error('[DropdownConfig] getDropdownKeys:', e)).finally(() => setLoading(false));
   }, []);
 
-  const deletedSet = deletedIds;
-  const visibleValues = activeKey ? activeKey.values.filter(v => !deletedSet.has(`${activeKey.id}:${v.id}`)) : [];
-  const deletedValues = activeKey ? activeKey.values.filter(v => deletedSet.has(`${activeKey.id}:${v.id}`)) : [];
-  const visibleCountOf = (k) => k.values.filter(v => !deletedSet.has(`${k.id}:${v.id}`)).length;
-
   const updateKeyValues = (keyId, newValues) => {
     setKeys(prev => prev.map(k => k.id === keyId ? { ...k, values: newValues } : k));
     setActiveKey(prev => prev?.id === keyId ? { ...prev, values: newValues } : prev);
   };
 
-  const handleAdd = () => {
-    if (!newValue.trim()) return;
-    addDropdownValue(activeKey.id, newValue).then((res) => {
-      updateKeyValues(activeKey.id, [...activeKey.values, res.data]);
+  const handleAdd = async () => {
+    if (!newValue.trim() || !activeKey || adding) return;
+    const trimmed = newValue.trim();
+    const duplicate = activeKey.values.some(v => (v.label || '').trim().toLowerCase() === trimmed.toLowerCase());
+    if (duplicate) {
+      addToast(locale === 'vi' ? 'Giá trị này đã tồn tại (không phân biệt hoa/thường)' : 'This value already exists (case-insensitive)', 'error');
+      return;
+    }
+    setAdding(true);
+    try {
+      await createDropdownOption(activeKey.key, trimmed);
+      const res = await getDropdownKeys();
+      const list = res.data || [];
+      setKeys(list);
+      const fresh = list.find(k => k.id === activeKey.id) || null;
+      setActiveKey(fresh);
       setNewValue('');
       addToast(locale === 'vi' ? 'Đã thêm giá trị mới' : 'Value added');
-    }).catch(() => {
-      addToast(locale === 'vi' ? 'Thêm giá trị thất bại' : 'Failed to add value', 'error');
-    });
+    } catch (err) {
+      if (err?.response?.status === 409) {
+        addToast(locale === 'vi' ? 'Giá trị này đã tồn tại' : 'This value already exists', 'error');
+      } else {
+        addToast(locale === 'vi' ? 'Thêm giá trị thất bại' : 'Failed to add value', 'error');
+      }
+    } finally {
+      setAdding(false);
+    }
   };
 
-  // Xóa (mềm): chỉ ẩn khỏi UI (localStorage), giữ nguyên trên backend — có thể khôi phục
-  const handleSoftDelete = (val) => {
-    markDeleted('dropdown_values', `${activeKey.id}:${val.id}`);
-    syncDeletedIds();
-    addToast(locale === 'vi' ? `Đã xóa "${val.label}" (có thể khôi phục)` : `Deleted "${val.label}" (restorable)`);
+  const handleRenameStart = (val) => {
+    setRenamingId(val.id);
+    setRenamingValue(val.label);
   };
 
-  // Khôi phục giá trị đã xóa
-  const handleRestore = (val) => {
-    restoreDeleted('dropdown_values', `${activeKey.id}:${val.id}`);
-    syncDeletedIds();
-    addToast(locale === 'vi' ? `Đã khôi phục "${val.label}"` : `Restored "${val.label}"`);
+  const handleRenameConfirm = async () => {
+    if (!renamingValue.trim() || !activeKey) return;
+    const trimmed = renamingValue.trim();
+    const duplicate = activeKey.values.some(v => v.id !== renamingId && (v.label || '').trim().toLowerCase() === trimmed.toLowerCase());
+    if (duplicate) {
+      addToast(locale === 'vi' ? 'Tên này đã tồn tại (không phân biệt hoa/thường)' : 'This name already exists (case-insensitive)', 'error');
+      return;
+    }
+    try {
+      await updateDropdownOption(activeKey.key, renamingId, trimmed);
+      const res = await getDropdownKeys();
+      const list = res.data || [];
+      setKeys(list);
+      const fresh = list.find(k => k.id === activeKey.id) || null;
+      setActiveKey(fresh);
+      setRenamingId(null);
+      setRenamingValue('');
+      addToast(locale === 'vi' ? 'Đã đổi tên' : 'Renamed successfully');
+    } catch (err) {
+      if (err?.response?.status === 409) {
+        addToast(locale === 'vi' ? 'Tên này đã tồn tại' : 'This name already exists', 'error');
+      } else {
+        addToast(locale === 'vi' ? 'Đổi tên thất bại' : 'Failed to rename', 'error');
+      }
+    }
   };
 
-  // Đặt lại: tải lại dữ liệu gốc từ BE cho khóa hiện tại + gỡ marker xóa mềm của khóa đó
+  const handleDeleteClick = async (val) => {
+    if (!activeKey) return;
+    try {
+      const res = await getDropdownOptionImpact(activeKey.key, val.id);
+      const impact = res.data;
+      setImpactModal({ val, impact });
+    } catch {
+      setImpactModal({ val, impact: null });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!impactModal || !activeKey) return;
+    setDeleting(true);
+    try {
+      await deleteDropdownOption(activeKey.key, impactModal.val.id);
+      const res = await getDropdownKeys();
+      const list = res.data || [];
+      setKeys(list);
+      const fresh = list.find(k => k.id === activeKey.id) || null;
+      setActiveKey(fresh);
+      addToast(locale === 'vi' ? `Đã xóa "${impactModal.val.label}"` : `Deleted "${impactModal.val.label}"`);
+      setImpactModal(null);
+    } catch {
+      addToast(locale === 'vi' ? 'Xóa thất bại' : 'Failed to delete', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Đặt lại: tải lại dữ liệu gốc từ BE cho khóa hiện tại
   const handleReset = async () => {
     if (!activeKey || resetting) return;
     const msg = locale === 'vi'
@@ -171,10 +230,7 @@ export default function DropdownConfig() {
       const list = res.data || [];
       setKeys(list);
       const fresh = list.find(k => k.id === activeKey.id) || null;
-      ((fresh && fresh.values) || []).forEach(v => restoreDeleted('dropdown_values', `${activeKey.id}:${v.id}`));
       setActiveKey(fresh);
-      setShowDeleted(false);
-      syncDeletedIds();
       addToast(locale === 'vi' ? 'Đã đặt lại về dữ liệu gốc' : 'Reset to server data');
     } catch (e) {
       console.error('[DropdownConfig] reset:', e);
@@ -190,6 +246,11 @@ export default function DropdownConfig() {
     setSaving(true);
     try {
       await reorderDropdownValues(activeKey.id, activeKey.values);
+      const res = await getDropdownKeys();
+      const list = res.data || [];
+      setKeys(list);
+      const fresh = list.find(k => k.id === activeKey.id) || null;
+      setActiveKey(fresh);
       addToast(locale === 'vi' ? 'Đã lưu thay đổi' : 'Changes saved');
     } catch (e) {
       console.error('[DropdownConfig] save:', e);
@@ -219,23 +280,20 @@ export default function DropdownConfig() {
     const from = dragIndexRef.current;
     handleDragEnd();
     if (from == null || from === index) return;
-    const reordered = [...visibleValues];
+    const reordered = [...activeKey.values];
     const [moved] = reordered.splice(from, 1);
     reordered.splice(index, 0, moved);
-    // Giữ nguyên slot của các giá trị đang bị xóa mềm trong mảng full
-    const visibleIds = new Set(visibleValues.map(v => v.id));
-    const slots = [];
-    activeKey.values.forEach((v, i) => { if (visibleIds.has(v.id)) slots.push(i); });
-    const full = [...activeKey.values];
-    reordered.forEach((v, j) => { full[slots[j]] = v; });
     const prevValues = activeKey.values;
-    updateKeyValues(activeKey.id, full);
-    reorderDropdownValues(activeKey.id, full).catch((e) => {
+    updateKeyValues(activeKey.id, reordered);
+    reorderDropdownValues(activeKey.id, reordered).catch((e) => {
       console.error('[DropdownConfig] reorder:', e);
       updateKeyValues(activeKey.id, prevValues);
       addToast(locale === 'vi' ? 'Lưu thứ tự thất bại' : 'Failed to save order', 'error');
     });
   };
+
+  const visibleValues = activeKey ? activeKey.values : [];
+  const visibleCountOf = (k) => k.values.length;
 
   if (loading) {
     return (
@@ -264,7 +322,7 @@ export default function DropdownConfig() {
             {keys.map((key) => (
               <button
                 key={key.id}
-                onClick={() => { setActiveKey(key); setShowDeleted(false); syncDeletedIds(); }}
+                onClick={() => setActiveKey(key)}
                 className={`w-full text-left p-4 rounded-lg flex items-center justify-between group transition-all ${
                   activeKey?.id === key.id
                     ? 'bg-primary-fixed/20 border border-primary/30 text-primary'
@@ -314,7 +372,7 @@ export default function DropdownConfig() {
               {visibleValues.map((val, index) => (
                 <div
                   key={val.id}
-                  draggable
+                  draggable={renamingId !== val.id}
                   onDragStart={() => handleDragStart(index)}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDrop={() => handleDrop(index)}
@@ -324,12 +382,35 @@ export default function DropdownConfig() {
                   }`}
                 >
                   <span className="material-symbols-outlined text-on-surface-variant/40 cursor-grab active:cursor-grabbing" title={locale === 'vi' ? 'Kéo để di chuyển' : 'Drag to move'}>drag_indicator</span>
-                  <div className="flex-1 text-body-md text-on-surface">{valueDisplayLabel(val, locale)}</div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {renamingId === val.id ? (
+                    <input
+                      autoFocus
+                      className="flex-1 text-body-md text-on-surface bg-white border border-primary rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
+                      value={renamingValue}
+                      onChange={(e) => setRenamingValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleRenameConfirm();
+                        if (e.key === 'Escape') setRenamingId(null);
+                      }}
+                      onBlur={handleRenameConfirm}
+                    />
+                  ) : (
+                    <div className="flex-1 text-body-md text-on-surface">{valueDisplayLabel(val, locale)}</div>
+                  )}
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {renamingId !== val.id && (
+                      <button
+                        onClick={() => handleRenameStart(val)}
+                        className="p-1.5 hover:bg-surface-container-high rounded-lg text-on-surface-variant"
+                        title={locale === 'vi' ? 'Đổi tên' : 'Rename'}
+                      >
+                        <span className="material-symbols-outlined text-lg">edit</span>
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleSoftDelete(val)}
+                      onClick={() => handleDeleteClick(val)}
                       className="p-1.5 hover:bg-error/10 rounded-lg text-error"
-                      title={locale === 'vi' ? 'Xóa (có thể khôi phục)' : 'Delete (restorable)'}
+                      title={locale === 'vi' ? 'Xóa' : 'Delete'}
                     >
                       <span className="material-symbols-outlined text-lg">delete</span>
                     </button>
@@ -342,36 +423,6 @@ export default function DropdownConfig() {
                 </div>
               )}
             </div>
-
-            {/* Deleted (soft) Values */}
-            {deletedValues.length > 0 && (
-              <div className="mb-8 pt-4 border-t border-dashed border-outline-variant">
-                <button
-                  onClick={() => setShowDeleted(!showDeleted)}
-                  className="flex items-center gap-2 text-body-md text-on-surface-variant hover:text-on-surface transition-colors"
-                >
-                  <span className={`material-symbols-outlined text-lg transition-transform ${showDeleted ? 'rotate-90' : ''}`}>chevron_right</span>
-                  {locale === 'vi' ? `Giá trị đã xóa (${deletedValues.length})` : `Deleted values (${deletedValues.length})`}
-                </button>
-                {showDeleted && (
-                  <div className="mt-3 space-y-2">
-                    {deletedValues.map((val) => (
-                      <div key={val.id} className="flex items-center gap-3 p-3 bg-surface-container-low border border-outline-variant/60 rounded-xl opacity-75">
-                        <span className="material-symbols-outlined text-on-surface-variant">archive</span>
-                        <div className="flex-1 text-body-md text-on-surface line-through">{valueDisplayLabel(val, locale)}</div>
-                        <button
-                          onClick={() => handleRestore(val)}
-                          className="p-1.5 hover:bg-surface-container-high rounded-lg text-secondary"
-                          title={locale === 'vi' ? 'Khôi phục' : 'Restore'}
-                        >
-                          <span className="material-symbols-outlined text-lg">undo</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Add Value */}
             <div className="pt-6 border-t border-outline-variant">
@@ -387,10 +438,11 @@ export default function DropdownConfig() {
                   />
                   <button
                     onClick={handleAdd}
-                    className="px-6 bg-surface-container-high hover:bg-surface-container text-primary border border-primary/20 rounded-lg transition-all font-bold flex items-center gap-2"
+                    disabled={adding}
+                    className="px-6 bg-surface-container-high hover:bg-surface-container text-primary border border-primary/20 rounded-lg transition-all font-bold flex items-center gap-2 disabled:opacity-50"
                   >
-                    <span className="material-symbols-outlined">add</span>
-                    <span className="text-body-md">{locale === 'vi' ? 'Thêm' : 'Add'}</span>
+                    <span className={`material-symbols-outlined ${adding ? 'animate-spin' : ''}`}>{adding ? 'sync' : 'add'}</span>
+                    <span className="text-body-md">{adding ? (locale === 'vi' ? 'Đang thêm...' : 'Adding...') : (locale === 'vi' ? 'Thêm' : 'Add')}</span>
                   </button>
                 </div>
               </div>
@@ -411,6 +463,79 @@ export default function DropdownConfig() {
           </div>
         </div>
       </div>
+
+      {/* Impact Check Modal */}
+      {impactModal && (
+        <>
+          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setImpactModal(null)} />
+          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md pointer-events-auto mx-4 p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-error">warning</span>
+                  {locale === 'vi' ? 'Xác nhận xóa' : 'Confirm Delete'}
+                </h3>
+                <button onClick={() => setImpactModal(null)} className="text-on-surface-variant hover:text-on-surface text-xl leading-none">&times;</button>
+              </div>
+
+              <div className="bg-surface-container-low rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-on-surface-variant">{locale === 'vi' ? 'Giá trị:' : 'Value:'}</span>
+                  <span className="font-semibold text-on-surface">{impactModal.val.label}</span>
+                </div>
+                {impactModal.impact && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-on-surface-variant">{locale === 'vi' ? 'Sử dụng trong Tasks:' : 'Used in Tasks:'}</span>
+                      <span className="font-semibold">{impactModal.impact.breakdown?.tasks || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-on-surface-variant">{locale === 'vi' ? 'Sử dụng trong Projects:' : 'Used in Projects:'}</span>
+                      <span className="font-semibold">{impactModal.impact.breakdown?.projects || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-on-surface-variant">{locale === 'vi' ? 'Sử dụng trong Opportunities:' : 'Used in Opportunities:'}</span>
+                      <span className="font-semibold">{impactModal.impact.breakdown?.opportunities || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-on-surface-variant">{locale === 'vi' ? 'Sử dụng trong Closed Deals:' : 'Used in Closed Deals:'}</span>
+                      <span className="font-semibold">{impactModal.impact.breakdown?.closedDeals || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm border-t pt-2 mt-2">
+                      <span className="text-on-surface-variant font-semibold">{locale === 'vi' ? 'Tổng references:' : 'Total references:'}</span>
+                      <span className="font-bold text-on-surface">{impactModal.impact.totalReferences || 0}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {(impactModal.impact?.totalReferences || 0) > 0 && (
+                <div className="p-3 rounded bg-danger/10 text-danger text-body-sm flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">info</span>
+                  {locale === 'vi' ? 'Giá trị này đang được sử dụng. Sau khi xóa, các bản ghi sẽ giữ nguyên giá trị cũ.' : 'This value is in use. After deletion, existing records will keep their current value.'}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setImpactModal(null)}
+                  className="flex-1 px-4 py-3 border border-border-light text-on-surface-variant font-semibold rounded-lg hover:bg-surface-container-low transition-all"
+                >
+                  {locale === 'vi' ? 'Hủy' : 'Cancel'}
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-3 bg-error text-white font-semibold rounded-lg hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                  {deleting ? (locale === 'vi' ? 'Đang xóa...' : 'Deleting...') : (locale === 'vi' ? 'Xóa' : 'Delete')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

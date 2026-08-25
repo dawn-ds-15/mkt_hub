@@ -110,7 +110,7 @@ export default function ClosedDealsTable() {
   );
 
   return (
-    <div className="space-y-4 mt-8">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="text-label-md font-semibold text-on-surface uppercase tracking-wider">
           {locale === 'vi' ? 'Chi tiết Closed Deal' : 'Closed Deal Detail'} {!loading && `(${deals.length})`}

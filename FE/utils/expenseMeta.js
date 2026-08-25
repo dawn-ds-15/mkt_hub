@@ -9,9 +9,11 @@ function readAll() {
   }
 }
 
+// Trả về { ok, droppedDataUrls? } để caller cảnh báo thay vì drop ảnh im lặng (BUG-C07)
 function writeAll(map) {
   try {
     localStorage.setItem(KEY, JSON.stringify(map));
+    return { ok: true };
   } catch {
     // quota exceeded — retry without heavy dataUrls
     try {
@@ -20,8 +22,9 @@ function writeAll(map) {
         light[id] = { ...m, contractDataUrl: null };
       });
       localStorage.setItem(KEY, JSON.stringify(light));
+      return { ok: true, droppedDataUrls: true };
     } catch {
-      /* ignore */
+      return { ok: false };
     }
   }
 }
@@ -32,7 +35,7 @@ export function getExpenseMeta(id) {
 }
 
 export function setExpenseMeta(id, meta) {
-  if (id == null) return;
+  if (id == null) return { ok: false };
   const map = readAll();
   const key = String(id);
   const next = { ...(map[key] || {}), ...meta };
@@ -40,7 +43,7 @@ export function setExpenseMeta(id, meta) {
     next.contractDataUrl = null;
   }
   map[key] = next;
-  writeAll(map);
+  return writeAll(map);
 }
 
 export function removeExpenseMeta(id) {
@@ -93,7 +96,9 @@ export function parseExpenseNote(raw) {
 }
 
 // Tách TẤT CẢ các dòng chi phí từ ghi chú BE (định dạng do buildNote tạo:
-// "Sự kiện: X | Kế hoạch: Y | SL: Z | ghi chú", nhiều dòng nối bằng " ; ", có thể đánh số "1. ")
+// "Sự kiện: X | Kế hoạch: Y | Thực tế: Z | SL: Q | ghi chú", nhiều dòng nối bằng " ; ",
+// có thể đánh số "1. "). "Thực tế" = đơn giá của dòng (BUG-C06: để khôi phục đủ dữ liệu dòng
+// trên máy khác thay vì chỉ còn tổng tiền).
 function toNum(str) {
   const v = parseFloat(String(str ?? '').replace(/\./g, '').replace(/,/g, '.'));
   return Number.isFinite(v) ? v : 0;
@@ -107,6 +112,7 @@ export function parseExpenseLines(raw) {
     if (!seg) return;
     let event = '';
     let planned = 0;
+    let actual = 0;
     let qty = 1;
     const rest = [];
     seg.split('|').map((p) => p.trim()).forEach((part) => {
@@ -115,12 +121,14 @@ export function parseExpenseLines(raw) {
       if (m) { event = m[1].trim(); return; }
       m = part.match(/^(?:Kế hoạch|Planned)\s*:\s*([\d.,]+)$/i);
       if (m) { planned = toNum(m[1]); return; }
+      m = part.match(/^(?:Thực tế|Actual)\s*:\s*([\d.,]+)$/i);
+      if (m) { actual = toNum(m[1]); return; }
       m = part.match(/^(?:SL|Số lượng|Qty)\s*:\s*([\d.,]+)$/i);
       if (m) { qty = parseInt(m[1].replace(/[.,]/g, ''), 10) || 1; return; }
       rest.push(part);
     });
-    if (event || planned || rest.length) {
-      out.push({ event, planned, qty, note: rest.join(' | ') });
+    if (event || planned || actual || rest.length) {
+      out.push({ event, planned, actual, qty, note: rest.join(' | ') });
     }
   });
   return out;

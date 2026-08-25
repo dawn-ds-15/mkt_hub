@@ -1,47 +1,29 @@
 import { useEffect, useState } from 'react';
-import { createProject, updateProject, getMembers, getDropdownKeys, createTask } from '../../services/api';
+import { updateProject, getMembers, getDropdownKeys, createProject, getChecklistTemplates } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
-import NumberInput from '../common/NumberInput';
+import { useToast } from '../../contexts/ToastContext';
 
 const FALLBACK_TYPES = ['Internal', 'Client', 'Research', 'Workshop', 'Event', 'Exhibition', 'Webinar'];
 const FALLBACK_STATUSES = ['Planning', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 
-const PROJECT_TEMPLATES = {
-  Workshop: {
-    tasks: [
-      { name: 'Xác định mục tiêu & đối tượng workshop', description: 'Xác định mục tiêu, đối tượng tham gia và phạm vi nội dung workshop', priority: 'High', dayOffset: 0.1 },
-      { name: 'Xây dựng nội dung & chương trình', description: 'Soạn nội dung, kịch bản và tài liệu cho workshop', priority: 'High', dayOffset: 0.3 },
-      { name: 'Chuẩn bị địa điểm & vật phẩm', description: 'Đặt địa điểm, chuẩn bị vật phẩm, banner và thiết bị', priority: 'Medium', dayOffset: 0.5 },
-      { name: 'Gửi thư mời & theo dõi RSVP', description: 'Gửi thư mời, theo dõi xác nhận tham gia và nhắc lịch', priority: 'Medium', dayOffset: 0.7 },
-      { name: 'Tổ chức workshop', description: 'Điều phối ngày diễn ra workshop', priority: 'High', dayOffset: 0.95 },
-      { name: 'Tổng kết & báo cáo sau sự kiện', description: 'Tổng hợp feedback, hình ảnh và báo cáo kết quả', priority: 'Low', dayOffset: 1.1 },
-    ],
-  },
-  Webinar: {
-    tasks: [
-      { name: 'Xác định chủ đề & khách mời', description: 'Chốt chủ đề, diễn giả và khách mời của webinar', priority: 'High', dayOffset: 0.1 },
-      { name: 'Soạn kịch bản & slide', description: 'Xây dựng kịch bản, slide và nội dung trình bày', priority: 'High', dayOffset: 0.3 },
-      { name: 'Chuẩn bị nền tảng & kỹ thuật', description: 'Setup phòng phát sóng, link đăng ký và kiểm tra kỹ thuật', priority: 'High', dayOffset: 0.5 },
-      { name: 'Marketing & thu hút người đăng ký', description: 'Chạy kênh truyền thông, nhắc lịch và xử lý đăng ký', priority: 'Medium', dayOffset: 0.7 },
-      { name: 'Tổ chức webinar', description: 'Dẫn dắt và vận hành buổi phát sóng trực tiếp', priority: 'High', dayOffset: 0.95 },
-      { name: 'Follow-up & báo cáo', description: 'Gửi lại video, khảo sát và tổng hợp báo cáo', priority: 'Low', dayOffset: 1.1 },
-    ],
-  },
-  Event: {
-    tasks: [
-      { name: 'Lập kế hoạch & ngân sách sự kiện', description: 'Chốt mục tiêu, ngân sách và quy mô sự kiện', priority: 'High', dayOffset: 0.1 },
-      { name: 'Ký hợp đồng địa điểm & nhà cung cấp', description: 'Đặt địa điểm, ký hợp đồng nhà cung cấp và dịch vụ', priority: 'High', dayOffset: 0.25 },
-      { name: 'Xây dựng nội dung & kịch bản', description: 'Soạn nội dung, kịch bản và chương trình chi tiết', priority: 'High', dayOffset: 0.4 },
-      { name: 'Marketing & mời khách', description: 'Truyền thông sự kiện, gửi thư mời và theo dõi khách mời', priority: 'Medium', dayOffset: 0.6 },
-      { name: 'Chuẩn bị logistics & vật phẩm', description: 'Chuẩn bị nhân sự, vật phẩm, trang thiết bị và check-in', priority: 'Medium', dayOffset: 0.8 },
-      { name: 'Tổ chức sự kiện', description: 'Vận hành và điều phối ngày diễn ra sự kiện', priority: 'High', dayOffset: 0.95 },
-      { name: 'Tổng kết & báo cáo', description: 'Tổng hợp feedback, số liệu và báo cáo tổng kết', priority: 'Low', dayOffset: 1.1 },
-    ],
-  },
+// Checklist mẫu lấy từ BE (GET /v1/projects/checklist-templates) — cache module-level vì là nội dung chuẩn ít đổi
+let checklistCache = null;
+const fetchChecklists = async () => {
+  if (checklistCache) return checklistCache;
+  const res = await getChecklistTemplates();
+  checklistCache = res.data;
+  return checklistCache;
+};
+
+const PRIORITY_CHIP = {
+  High: 'bg-red-100 text-red-700',
+  Medium: 'bg-amber-100 text-amber-700',
+  Low: 'bg-gray-100 text-gray-600',
 };
 
 export default function CreateProjectForm({ project, onClose, onSuccess }) {
   const { locale } = useDashboard();
+  const addToast = useToast();
   const isEditing = !!project;
   const [members, setMembers] = useState([]);
   const [typeOptions, setTypeOptions] = useState([]);
@@ -52,12 +34,9 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
   const [status, setStatus] = useState('');
   const [ownerId, setOwnerId] = useState('');
   const [deadline, setDeadline] = useState('');
-  const [budget, setBudget] = useState('');
-  const [overhead, setOverhead] = useState('');
-  const [kpiPlan, setKpiPlan] = useState('');
-  const [kpiActual, setKpiActual] = useState('');
-  const [template, setTemplate] = useState('');
-  const [creatingTasks, setCreatingTasks] = useState(false);
+  const [templateKey, setTemplateKey] = useState('');
+  const [checklists, setChecklists] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [errorField, setErrorField] = useState('');
@@ -73,6 +52,15 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
       setMembers([]);
     });
   }, []);
+
+  useEffect(() => {
+    if (isEditing || checklists) return undefined;
+    let cancelled = false;
+    fetchChecklists()
+      .then((d) => { if (!cancelled) setChecklists(d); })
+      .catch(() => { if (!cancelled) setChecklists({ templates: [], stakeholderOptions: [] }); });
+    return () => { cancelled = true; };
+  }, [isEditing, checklists]);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,13 +93,27 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
       setOwnerId(project.ownerId || '');
       const rawDeadline = project.deadlineRaw || project.deadline;
       setDeadline(rawDeadline ? rawDeadline.split('T')[0] : '');
-      setBudget(String(project.budgetPlanDirect || ''));
-      setOverhead(String(project.budgetPlanOverhead || ''));
-      setKpiPlan(String(project.kpiRawLeadsPlan || ''));
-      setKpiActual(String(project.kpiRawLeadsActual || ''));
       setInitialized(true);
     }
   }, [project, initialized]);
+
+  const typeTemplates = (checklists?.templates || []).filter(
+    (t) => (t.appliesToTypes || []).some((x) => String(x).toLowerCase() === String(type).toLowerCase()),
+  );
+  const selectedTemplate = templateKey ? typeTemplates.find((t) => t.key === templateKey) : null;
+  const stakeholderMap = {};
+  (checklists?.stakeholderOptions || []).forEach((s) => { stakeholderMap[s.code] = s.label; });
+
+  const groupTasksOf = (tpl) => {
+    const order = [];
+    const byGroup = new Map();
+    tpl.tasks.forEach((t) => {
+      const g = t.group || 'Khác';
+      if (!byGroup.has(g)) { byGroup.set(g, []); order.push(g); }
+      byGroup.get(g).push(t);
+    });
+    return order.map((g) => ({ name: g, tasks: byGroup.get(g) }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -140,38 +142,23 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
         status,
         ownerId,
         deadline: deadline || undefined,
-        budgetPlanDirect: parseFloat(budget) || 0,
-        budgetPlanOverhead: parseFloat(overhead) || 0,
-        kpiRawLeadsPlan: parseFloat(kpiPlan) || 0,
-        kpiRawLeadsActual: parseFloat(kpiActual) || 0,
       };
       if (isEditing) {
         await updateProject(project.id, payload);
       } else {
+        if (templateKey && selectedTemplate) {
+          payload.applyTemplate = true;
+          payload.templateType = templateKey;
+        }
         const created = await createProject(payload);
         const raw = created?.data?.data ?? created?.data ?? {};
-        const templateTasks = PROJECT_TEMPLATES[type];
-        if (template && templateTasks && raw?.id) {
-          setCreatingTasks(true);
-          const projectId = raw.id;
-          const start = new Date();
-          const end = deadline ? new Date(deadline) : null;
-          const spanDays = end && end > start ? Math.max(1, Math.round((end - start) / 86400000)) : null;
-          await Promise.all(
-            templateTasks.tasks.map((t) => {
-              const dueDate = spanDays ? new Date(start.getTime() + t.dayOffset * spanDays * 86400000) : null;
-              return createTask({
-                title: t.name,
-                description: t.description,
-                priority: t.priority,
-                projectId,
-                assigneeId: ownerId,
-                startDate: dueDate ? dueDate.toISOString() : undefined,
-                dueDate: dueDate ? dueDate.toISOString() : undefined,
-              });
-            })
-          );
-        }
+        const taskCount = Number(raw?.createdTasksCount) || 0;
+        addToast(
+          locale === 'vi'
+            ? (taskCount > 0 ? `Tạo dự án thành công và đã sinh ${taskCount} công việc` : 'Tạo dự án thành công')
+            : (taskCount > 0 ? `Project created with ${taskCount} tasks generated` : 'Project created'),
+          'success',
+        );
       }
       if (onSuccess) onSuccess();
       if (onClose) onClose();
@@ -212,7 +199,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Loại' : 'Type'}</label>
-            <select className="w-full px-3 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none" value={type} onChange={(e) => { setType(e.target.value); setTemplate(''); }}>
+            <select className="w-full px-3 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none" value={type} onChange={(e) => { setType(e.target.value); setTemplateKey(''); }}>
               {dropdownLoading ? (
                 <option value="">{locale === 'vi' ? 'Đang tải...' : 'Loading...'}</option>
               ) : (
@@ -231,38 +218,42 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
             </select>
           </div>
         </div>
-        {!isEditing && PROJECT_TEMPLATES[type] && (
+        {!isEditing && typeTemplates.length > 0 && (
           <div className="border border-outline-variant rounded-lg p-3 bg-surface-container-low/40">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Template & tự tạo Task' : 'Template & auto-create Tasks'}</label>
+              <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Mẫu checklist' : 'Checklist template'}</label>
               <span className="text-[11px] leading-[14px] text-on-surface-variant italic">
-                {locale === 'vi' ? 'Chọn template để hệ thống tự tạo task cơ bản' : 'Pick a template to auto-create base tasks'}
+                {locale === 'vi' ? 'Chọn mẫu để hệ thống tự sinh danh sách việc chuẩn bị' : 'Pick a template to auto-generate prep tasks'}
               </span>
             </div>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">auto_awesome</span>
               <select
                 className="w-full pl-10 pr-4 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
-                value={template}
-                onChange={(e) => setTemplate(e.target.value)}
+                value={templateKey}
+                onChange={(e) => setTemplateKey(e.target.value)}
               >
-                <option value="">{locale === 'vi' ? 'Không dùng template' : 'No template'}</option>
-                <option value="default">{locale === 'vi' ? `${type} — mặc định` : `${type} — default`}</option>
+                <option value="">{locale === 'vi' ? 'Không dùng mẫu checklist' : 'No checklist template'}</option>
+                {typeTemplates.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.name} — {t.totalTasks} {locale === 'vi' ? 'việc' : 'tasks'} (T-{t.leadTimeDays})
+                  </option>
+                ))}
               </select>
             </div>
-            {template && (
-              <div className="mt-2">
-                <p className="text-[12px] leading-[16px] font-semibold text-on-surface mb-1">
-                  {locale === 'vi' ? 'Các task sẽ được tạo:' : 'Tasks that will be created:'}
+            {selectedTemplate && (
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <p className="text-[12px] leading-[16px] text-on-surface-variant truncate">
+                  {selectedTemplate.totalTasks} {locale === 'vi' ? 'việc sẽ được sinh tự động theo hạn chót' : 'tasks will be generated from deadline'}
                 </p>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                  {PROJECT_TEMPLATES[type].tasks.map((t, i) => (
-                    <li key={i} className="flex items-center gap-1.5 text-[12px] leading-[16px] text-on-surface-variant">
-                      <span className="material-symbols-outlined text-[14px] text-primary">task_alt</span>
-                      <span className="truncate">{t.name}</span>
-                    </li>
-                  ))}
-                </ul>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className="flex items-center gap-1 shrink-0 text-[12px] leading-[16px] font-semibold text-primary hover:underline"
+                >
+                  <span className="material-symbols-outlined text-[16px]">visibility</span>
+                  {locale === 'vi' ? 'Xem trước mẫu' : 'Preview template'}
+                </button>
               </div>
             )}
           </div>
@@ -295,36 +286,6 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
             />
           </div>
         </div>
-        <div className="border-t border-outline-variant pt-4 space-y-4">
-          <div className="flex items-center justify-between">
-              <h4 className="text-label-sm font-bold text-on-surface-variant uppercase tracking-widest">{locale === 'vi' ? 'Tài chính' : 'Finance'}</h4>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Ngân sách' : 'Budget'}</label>
-              <NumberInput className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md text-right focus:ring-1 focus:ring-primary outline-none" placeholder="0" value={budget} onChange={(e) => setBudget(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Chi phí phát sinh' : 'Overhead Cost'}</label>
-              <NumberInput className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md text-right focus:ring-1 focus:ring-primary outline-none" placeholder="0" value={overhead} onChange={(e) => setOverhead(e.target.value)} />
-            </div>
-          </div>
-        </div>
-        <div className="border-t border-outline-variant pt-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-label-sm font-bold text-on-surface-variant uppercase tracking-widest">{locale === 'vi' ? 'KPI Hiệu suất' : 'KPI Performance'}</h4>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Kế hoạch (Mục tiêu)' : 'Plan (Target)'}</label>
-              <NumberInput className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary outline-none" placeholder="100,000" value={kpiPlan} onChange={(e) => setKpiPlan(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Thực tế (Đạt được)' : 'Actual (Achieved)'}</label>
-              <NumberInput className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-body-md focus:ring-1 focus:ring-primary outline-none" placeholder="0" value={kpiActual} onChange={(e) => setKpiActual(e.target.value)} />
-            </div>
-          </div>
-        </div>
         {error && (
           <div className="bg-red-50 border-l-4 border-danger p-3 rounded">
             {error.split('\n').map((line, i) => (
@@ -334,12 +295,66 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
         )}
         <button className="w-full py-3 bg-primary text-on-primary rounded font-bold text-label-md mt-6 hover:shadow-lg transition-all active:scale-[0.98]" type="submit" disabled={saving}>
           {saving
-            ? (creatingTasks
-              ? (locale === 'vi' ? 'Đang tạo task từ template...' : 'Creating tasks from template...')
-              : (locale === 'vi' ? 'Đang lưu...' : 'Saving...'))
+            ? (locale === 'vi' ? 'Đang lưu...' : 'Saving...')
             : (locale === 'vi' ? (isEditing ? 'Cập nhật dự án' : 'Tạo dự án') : (isEditing ? 'Update Project' : 'Create Project'))}
         </button>
       </form>
+      {showPreview && selectedTemplate && (() => {
+        const groups = groupTasksOf(selectedTemplate);
+        return (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowPreview(false)}>
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-start justify-between gap-3 p-4 border-b border-outline-variant">
+                <div>
+                  <h4 className="font-headline-sm text-headline-sm font-bold text-on-surface">{selectedTemplate.name}</h4>
+                  <p className="text-body-sm text-on-surface-variant mt-0.5">
+                    {selectedTemplate.totalTasks} {locale === 'vi' ? 'việc · thời gian chuẩn bị khoảng T-' : 'tasks · lead time about T-'}{selectedTemplate.leadTimeDays} {locale === 'vi' ? 'ngày trước hạn chót' : 'days before deadline'}
+                  </p>
+                </div>
+                <button onClick={() => setShowPreview(false)} className="text-on-surface-variant hover:text-primary transition-colors">
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+              <div className="overflow-y-auto p-4 space-y-4">
+                {groups.map((g) => (
+                  <div key={g.name}>
+                    <p className="text-label-sm font-bold text-on-surface-variant uppercase tracking-widest mb-2">{g.name}</p>
+                    <ul className="space-y-1.5">
+                      {g.tasks.map((t, i) => (
+                        <li key={`${g.name}-${i}`} className="flex items-start gap-2 text-body-sm">
+                          <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${PRIORITY_CHIP[t.priority] || PRIORITY_CHIP.Low}`}>{t.priority}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-on-surface font-medium leading-snug">{t.name}</p>
+                            <p className="text-[11px] leading-[15px] text-on-surface-variant mt-0.5 flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-[13px]">schedule</span>
+                                {(t.startOffset && t.endOffset && t.startOffset !== t.endOffset)
+                                  ? `${t.startOffset} – ${t.endOffset}`
+                                  : (t.startOffset || t.endOffset || `T-${t.daysBeforeDeadline} ${locale === 'vi' ? 'ngày' : 'days'}`)}
+                              </span>
+                              {!!(t.stakeholders || '').trim() && (
+                                <span>· {t.stakeholders.split(/[,;|]+/).map((s) => s.trim()).filter(Boolean).map((s) => stakeholderMap[s] || s).join(', ')}</span>
+                              )}
+                            </p>
+                            {!!(t.description || '').trim() && (
+                              <p className="text-[11px] leading-[15px] text-on-surface-variant/80 mt-0.5">{t.description}</p>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+              <div className="p-3 border-t border-outline-variant text-right">
+                <button onClick={() => setShowPreview(false)} className="px-4 py-2 rounded border border-outline-variant text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
+                  {locale === 'vi' ? 'Đóng' : 'Close'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

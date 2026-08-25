@@ -204,7 +204,7 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
               <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium">{t('Vật phẩm', 'Item')}</th>
               <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium">{t('Danh mục', 'Category')}</th>
               <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium text-right">{t('Tổng tồn kho', 'Total stock')}</th>
-              <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium text-right">{t('Đơn giá TB', 'Avg. price')}</th>
+              <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium text-right">{t('Đơn giá TB (sau VAT)', 'Avg. price (post-VAT)')}</th>
               <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium text-center">{t('Trạng thái', 'Status')}</th>
               <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium text-center">{t('Thao tác', 'Actions')}</th>
             </tr>

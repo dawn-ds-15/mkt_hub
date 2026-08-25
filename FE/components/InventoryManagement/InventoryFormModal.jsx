@@ -27,10 +27,13 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
   const [batchCode, setBatchCode] = useState('');
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().slice(0, 10));
   const [quantity, setQuantity] = useState('');
-  const [unitPrice, setUnitPrice] = useState('');
+  const [unitPriceBeforeVat, setUnitPriceBeforeVat] = useState('');
+  const [vatRate, setVatRate] = useState('0');
   const [supplier, setSupplier] = useState('');
   const [contractCode, setContractCode] = useState('');
   const [note, setNote] = useState('');
+
+  const unitPriceAfterVat = Math.round((Number(unitPriceBeforeVat) || 0) * (1 + (Number(vatRate) || 0) / 100));
 
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -43,6 +46,19 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
 
     if (!name.trim()) {
       setFormError(t('Vui lòng nhập tên vật phẩm.', 'Item name is required.'));
+      return;
+    }
+
+    if (Number(unitPriceBeforeVat) < 0) {
+      setFormError(t('Đơn giá trước VAT không được âm.', 'Unit price before VAT cannot be negative.'));
+      return;
+    }
+    if (Number(vatRate) < 0 || Number(vatRate) > 100) {
+      setFormError(t('VAT phải từ 0 đến 100%.', 'VAT must be between 0 and 100%.'));
+      return;
+    }
+    if (Number(quantity) < 0) {
+      setFormError(t('Số lượng không được âm.', 'Quantity cannot be negative.'));
       return;
     }
 
@@ -63,7 +79,8 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
             receivedDate,
             batchCode: batchCode.trim(),
             quantity: Number(quantity) || 0,
-            unitPrice: Number(unitPrice) || 0,
+            unitPriceBeforeVat: Number(unitPriceBeforeVat) || 0,
+            vatRate: Number(vatRate) || 0,
             supplier: supplier.trim(),
             contractCode: contractCode.trim(),
             note: note.trim(),
@@ -137,8 +154,18 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
                     <NumberInput value={quantity} onChange={(e) => setQuantity(e.target.value)} className={inputCls} />
                   </div>
                   <div>
-                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá', 'Unit price')}</label>
-                    <NumberInput value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className={inputCls} />
+                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá trước VAT', 'Unit price (pre-VAT)')}</label>
+                    <NumberInput value={unitPriceBeforeVat} onChange={(e) => setUnitPriceBeforeVat(e.target.value)} className={inputCls} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('VAT (%)', 'VAT (%)')}</label>
+                    <NumberInput value={vatRate} onChange={(e) => setVatRate(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá sau VAT', 'Unit price (post-VAT)')}</label>
+                    <input readOnly value={unitPriceAfterVat ? unitPriceAfterVat.toLocaleString() : ''} className={`${inputCls} bg-surface-container-low cursor-not-allowed`} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">

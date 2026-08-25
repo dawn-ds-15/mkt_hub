@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { updateTask, deleteTask } from '../../services/api';
+import { updateTask, deleteTask, getMembers, getDropdownKeys } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { translateTaskErrors } from '../../utils/taskErrors';
 
@@ -18,7 +18,7 @@ const priorityOptions = (locale) => [
   { value: 'Low', label: locale === 'vi' ? 'Thấp' : 'Low' },
 ];
 
-const stakeholderOptions = ['BOD', 'Sales Team', 'Dev Team', 'CS Team', 'Partner'];
+const FALLBACK_STAKEHOLDERS = ['BOD', 'Sales Team', 'Dev Team', 'CS Team', 'Partner'];
 
 function toDateInput(v) {
   if (!v || typeof v !== 'string') return '';
@@ -49,7 +49,6 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
   const [startDate, setStartDate] = useState(toDateInput(task.startDate));
   const [dueDate, setDueDate] = useState(toDateInput(task.dueDate));
   const [completedDate, setCompletedDate] = useState(toDateInput(task.completedDate));
-  const [execWeek, setExecWeek] = useState(task.execWeek || '');
   const [link, setLink] = useState(() => {
     if (!task.link) return '';
     if (typeof task.link === 'string') return task.link;
@@ -59,13 +58,29 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
   const [reason, setReason] = useState(task.reason || '');
   const [neededSupportBod, setNeededSupportBod] = useState(task.neededSupportBod || '');
   const [stakeholders, setStakeholders] = useState(() => {
-    const list = Array.isArray(task.stakeholders) ? task.stakeholders : (task.stakeholders ? task.stakeholders.split(', ').filter(Boolean) : []);
-    return list.filter((s) => stakeholderOptions.includes(s));
+    const raw = Array.isArray(task.stakeholders) ? task.stakeholders : (task.stakeholders ? task.stakeholders.split(', ').filter(Boolean) : []);
+    return raw.map(s => s.trim()).filter(Boolean);
   });
+  const [stakeholderOptions, setStakeholderOptions] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [assigneeId, setAssigneeId] = useState(task.assigneeId || task.assignee?.id || '');
+  const [members, setMembers] = useState([]);
 
   const role = getUserRole();
+
+  useEffect(() => {
+    getMembers().then(r => {
+      const m = Array.isArray(r.data) ? r.data : (r.data?.members || []);
+      setMembers(m);
+    }).catch(() => setMembers([]));
+    getDropdownKeys().then(r => {
+      const keys = r.data || [];
+      const entry = keys.find(k => k.key === 'stakeholder');
+      const opts = (entry?.options || []).map(o => ({ label: o.label, isActive: o.isActive !== false }));
+      setStakeholderOptions(opts.length ? opts : FALLBACK_STAKEHOLDERS.map(l => ({ label: l, isActive: true })));
+    }).catch(() => setStakeholderOptions(FALLBACK_STAKEHOLDERS.map(l => ({ label: l, isActive: true }))));
+  }, []);
   const isSpecialist = role === 'specialist';
   const showReason = ['Backlog', 'Pending', 'Cancel'].includes(status);
   const reasonRequired = showReason && !reason.trim();
@@ -88,18 +103,26 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
   }, [onClose]);
 
   const addStakeholder = (value) => {
-    if (value && !stakeholders.includes(value)) {
-      setStakeholders([...stakeholders, value]);
+    const trimmed = (value || '').trim();
+    if (!trimmed) return;
+    const normalized = trimmed.toLowerCase();
+    const duplicate = stakeholders.some(s => s.toLowerCase() === normalized);
+    if (!duplicate) {
+      setStakeholders([...stakeholders, trimmed]);
     }
   };
 
   const removeStakeholder = (value) => {
-    setStakeholders(stakeholders.filter((s) => s !== value));
+    setStakeholders(stakeholders.filter((s) => s.toLowerCase() !== value.toLowerCase()));
   };
 
   const handleSave = async () => {
     if (reasonRequired) {
       setError(locale === 'vi' ? 'Bắt buộc nhập lý do' : 'Reason is required');
+      return;
+    }
+    if (startDate && dueDate && new Date(dueDate) < new Date(startDate)) {
+      setError(locale === 'vi' ? 'Hạn chót không được trước ngày bắt đầu' : 'Due date cannot be before start date');
       return;
     }
     setError('');
@@ -110,12 +133,11 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
         description,
         status,
         priority,
+        assigneeId: assigneeId || undefined,
         stakeholders,
         startDate: startDate || undefined,
         dueDate: dueDate || undefined,
         completedDate: completedDate || undefined,
-        execWeek: execWeek ? parseInt(execWeek) : undefined,
-        execYear: task.execYear ? parseInt(task.execYear) : undefined,
         link: link || undefined,
         remark,
         neededSupportBod: neededSupportBod || undefined,
@@ -187,29 +209,46 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
             </div>
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Người phụ trách' : 'Assignee'}</label>
-              <p className="px-3 py-2 bg-gray-50 rounded text-sm text-gray-900">{task.assignee?.name || task.assignee || '-'}</p>
+              <select
+                className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none"
+                value={assigneeId}
+                onChange={(e) => setAssigneeId(e.target.value)}
+                disabled={readOnly}
+              >
+                <option value="">{locale === 'vi' ? 'Chọn người phụ trách' : 'Select assignee'}</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Người liên quan' : 'Stakeholders'}</label>
             <div className="flex flex-wrap gap-1.5 mb-1.5">
-              {stakeholders.map((s) => (
-                <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[11px] font-medium">
-                  {s}
-                  <button onClick={() => removeStakeholder(s)} className="text-blue-400 hover:text-blue-700" disabled={readOnly}>×</button>
-                </span>
-              ))}
+              {stakeholders.map((s) => {
+                const opt = stakeholderOptions.find(o => o.label.toLowerCase() === s.toLowerCase());
+                const isActive = opt ? opt.isActive : true;
+                return (
+                  <span key={s} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium ${isActive ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400 italic'}`}>
+                    {s}{!isActive && <span className="text-[9px] ml-0.5">({locale === 'vi' ? 'Ngừng SD' : 'Inactive'})</span>}
+                    <button onClick={() => removeStakeholder(s)} className={`${isActive ? 'text-blue-400 hover:text-blue-700' : 'text-gray-300 hover:text-gray-500'}`} disabled={readOnly}>×</button>
+                  </span>
+                );
+              })}
             </div>
             <select
               className="w-full px-3 py-2 border border-gray-200 rounded text-xs focus:border-blue-500 focus:ring-0 outline-none"
               value=""
               onChange={(e) => { addStakeholder(e.target.value); e.target.value = ''; }}
+              disabled={readOnly}
             >
               <option value="">{locale === 'vi' ? '+ Thêm người liên quan' : '+ Add stakeholder'}</option>
-              {stakeholderOptions.filter((o) => !stakeholders.includes(o)).map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
+              {stakeholderOptions
+                .filter((o) => o.isActive && !stakeholders.some(s => s.toLowerCase() === o.label.toLowerCase()))
+                .map((o) => (
+                  <option key={o.label} value={o.label}>{o.label}</option>
+                ))}
             </select>
           </div>
 
@@ -273,8 +312,17 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Hạn chót' : 'Deadline'}</label>
               <input type="date" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={readOnly} />
             </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Ngày hoàn thành' : 'Completed Date'}</label>
+          </div>
+
+          {(task.execWeek || task.durationWeeks) && (
+            <div className="flex gap-4 px-3 py-2 bg-gray-50 rounded text-[11px] text-on-surface-variant">
+              {task.execWeek && <span>{locale === 'vi' ? 'Tuần thực hiện:' : 'Exec Week:'} <span className="font-bold text-on-surface">{task.execWeek}</span></span>}
+              {task.durationWeeks && <span>{locale === 'vi' ? 'Thời lượng:' : 'Duration:'} <span className="font-bold text-on-surface">{task.durationWeeks} {locale === 'vi' ? 'tuần' : 'weeks'}</span></span>}
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Ngày hoàn thành' : 'Completed Date'}</label>
               <input type="date" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={completedDate} onChange={(e) => setCompletedDate(e.target.value)} disabled={readOnly} />
               {status !== 'Done' && (
                 <div className="text-[11px] leading-[15px] text-amber-600 flex items-start gap-0.5 mt-0.5">
@@ -285,12 +333,6 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
                 </div>
               )}
             </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Tuần thực hiện' : 'Exec Week'}</label>
-              <input type="number" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={execWeek} onChange={(e) => setExecWeek(e.target.value)}               placeholder={locale === 'vi' ? 'VD: 24' : 'E.g. 24'} disabled={readOnly} />
-              <div className="text-[10px] text-gray-400 mt-0.5">{locale === 'vi' ? '→ Dùng để lọc trong báo cáo tuần' : '→ Used for weekly report filtering'}</div>
-            </div>
-          </div>
 
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Link (Drive / Công cụ)' : 'Link (Drive / Tool)'}</label>

@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PlanKPIsForm from '../components/LeadsKPIs/PlanKPIsForm';
 import ActualsForm from '../components/LeadsKPIs/ActualsForm';
+import OpportunitiesTable from '../components/LeadsKPIs/OpportunitiesTable';
+import ClosedDealsTable from '../components/LeadsKPIs/ClosedDealsTable';
 import LeadsKPIsFooter from '../components/LeadsKPIs/LeadsKPIsFooter';
 import ViewAnalytics from '../components/LeadsKPIs/ViewAnalytics';
 import ComparePeriods from '../components/LeadsKPIs/ComparePeriods';
@@ -34,10 +36,10 @@ export default function LeadsKPIs() {
       case 'input':
         return (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              <PlanKPIsForm />
-              <ActualsForm />
-            </div>
+            <PlanKPIsForm />
+            <ActualsForm />
+            <OpportunitiesTable />
+            <ClosedDealsTable />
             <LeadsKPIsFooter />
           </>
         );

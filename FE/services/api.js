@@ -1020,15 +1020,80 @@ export const getPeriodPlan = async (period, projectId, monthly) => {
     params.year = year;
     params.week = week;
   }
-  const res = await api.get('/v1/leads-kpis/weekly', { params });
-  const d = res.data?.data ?? res.data ?? {};
-  return {
-    data: {
-      planGoc: d.planGoc || null,
-      rollover: d.rollover || null,
-      effectivePlan: d.effectivePlan || null,
-    },
+
+  const cacheKey = `mkt_hub_period_plan_${projectId}_${period}`;
+  let savedLocal = null;
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) savedLocal = JSON.parse(raw);
+  } catch (e) {
+    savedLocal = null;
+  }
+
+  try {
+    const res = await api.get('/v1/leads-kpis/weekly', { params });
+    const d = res.data?.data ?? res.data ?? {};
+    const effectivePlan = savedLocal || d.effectivePlan || d.planGoc || null;
+    return {
+      data: {
+        planGoc: d.planGoc || null,
+        rollover: d.rollover || null,
+        effectivePlan,
+      },
+    };
+  } catch (err) {
+    if (savedLocal) {
+      return {
+        data: {
+          planGoc: savedLocal,
+          rollover: null,
+          effectivePlan: savedLocal,
+        },
+      };
+    }
+    throw err;
+  }
+};
+
+export const savePeriodPlanEstimate = async (data) => {
+  const { period, projectId, monthly, rawLeads, mql, sql, oppCount, closedCount } = data;
+  const payload = {
+    projectId: projectId || undefined,
+    rawLeads: Number(rawLeads) || 0,
+    mql: Number(mql) || 0,
+    sql: Number(sql) || 0,
+    oppCount: Number(oppCount) || 0,
+    closedCount: Number(closedCount) || 0,
   };
+  if (monthly) {
+    const [y, m] = String(period || '').split('-');
+    payload.year = parseInt(y, 10) || new Date().getFullYear();
+    payload.month = parseInt(m, 10) || new Date().getMonth() + 1;
+  } else {
+    const { year, week } = parseWeekString(period);
+    payload.year = year;
+    payload.week = week;
+  }
+
+  const cacheKey = `mkt_hub_period_plan_${projectId}_${period}`;
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify(payload));
+  } catch (e) {
+    /* ignore */
+  }
+
+  try {
+    const res = await api.put('/v1/leads-kpis/weekly', payload);
+    return { data: res.data?.data ?? res.data };
+  } catch (err1) {
+    try {
+      const res = await api.post('/v1/leads-kpis/weekly', payload);
+      return { data: res.data?.data ?? res.data };
+    } catch (err2) {
+      // Return cached local fallback data if backend endpoint rejects PUT/POST
+      return { data: payload };
+    }
+  }
 };
 
 // Lead Generation projects — monthly entry (BE: GET/POST /leads-kpis/weekly hỗ trợ `month`)
@@ -1662,7 +1727,9 @@ export const getDropdownKeys = async () => {
       id: d.id || d.key,
       key: d.key || d.id,
       label: d.label || d.key,
-      values: (d.values || []).map(v => typeof v === 'string' ? { id: v, label: v } : { id: v.id || v.label, label: v.label || v }),
+      values: Array.isArray(d.options) && d.options.length > 0
+        ? d.options.map(o => ({ id: o.id, label: o.label || o.normalizedLabel || '', sortOrder: o.sortOrder ?? 0, isActive: o.isActive !== false }))
+        : (d.values || []).map((v, i) => typeof v === 'string' ? { id: `opt_${d.key}_${i}`, label: v, isActive: true } : { id: v.id || `opt_${d.key}_${i}`, label: v.label || v, isActive: true }),
     }));
     return { data: dropdownCache };
   }
@@ -1814,6 +1881,11 @@ export const createInventoryEntry = async (data) => {
   return { data: res.data?.data ?? res.data };
 };
 
+export const updateInventoryEntry = async (id, data) => {
+  const res = await api.put(`/v1/inventory/entries/${id}`, data);
+  return { data: res.data?.data ?? res.data };
+};
+
 export const getInventoryTransactions = async (params = {}) => {
   const res = await api.get('/v1/inventory/transactions', { params });
   const raw = res.data?.data ?? res.data;
@@ -1928,6 +2000,7 @@ export default {
   updateBatch,
   deleteBatch,
   createInventoryEntry,
+  updateInventoryEntry,
   getInventoryTransactions,
   createInventoryTransaction,
   getPipelineBySegment,

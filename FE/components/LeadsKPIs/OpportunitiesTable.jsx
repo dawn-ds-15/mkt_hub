@@ -2,10 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getOpportunities, addOpportunity, updateOpportunity, deleteOpportunity, convertOpportunityToWon, getProjects } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useDropdownOptions } from '../../hooks/useDropdownOptions';
 import NumberInput from '../common/NumberInput';
-
-const feSize = { 'S': 'Enterprise', 'M': 'Medium', 'L': 'Enterprise' };
-const beSize = { 'Enterprise': 'S', 'Medium': 'M' };
 
 const emptyRow = {
   companyName: '',
@@ -24,15 +22,13 @@ function getTodayISO() {
 
 const noop = () => {};
 
-const sizeOptions = [
-  { value: 'S', label: 'S (Enterprise)' },
-  { value: 'M', label: 'M (Medium)' },
-  { value: 'L', label: 'L (Enterprise)' },
-];
-
 export default function OpportunitiesTable({ onConvertSuccess = noop }) {
   const addToast = useToast();
   const { locale } = useDashboard();
+  const companySizeOpts = useDropdownOptions('company_size');
+  const sizeOptions = companySizeOpts.length > 0
+    ? companySizeOpts.map(o => ({ value: o.label, label: o.label }))
+    : [{ value: 'S', label: 'S (Enterprise)' }, { value: 'M', label: 'M (Medium)' }, { value: 'L', label: 'L (Enterprise)' }];
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [convertingIndex, setConvertingIndex] = useState(null);

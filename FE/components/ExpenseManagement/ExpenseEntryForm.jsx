@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { getProjects, saveExpense, updateExpense, deleteExpense, getExpenseList, getInventoryItems, addExpenseLine, uploadProjectDocuments, deleteProjectDocument, DOC_CATEGORY } from '../../services/api';
+import { getProjects, saveExpense, updateExpense, deleteExpense, getExpenseList, getInventoryItems, createInventoryTransaction, uploadProjectDocuments, deleteProjectDocument, DOC_CATEGORY } from '../../services/api';
 import NumberInput from '../common/NumberInput';
 import FileUploadModal from '../common/FileUploadModal';
 import { setExpenseMeta, getExpenseMeta, removeExpenseMeta, parseExpenseLines } from '../../utils/expenseMeta';
@@ -35,15 +35,35 @@ const lineActualToTotal = (l) => {
   return String((parseFloat(l.actual) || 0) * q);
 };
 
+function getUserRole() {
+  try {
+    const u = JSON.parse(localStorage.getItem('mkt_hub_user'));
+    return u?.role || 'specialist';
+  } catch { return 'specialist'; }
+}
+
+function normPeriod(p) {
+  if (!p) return '';
+  const str = String(p).trim();
+  const parts = str.split('-');
+  if (parts.length === 2 && parts[0].length === 4) {
+    return `${parts[0]}-${String(parts[1]).padStart(2, '0')}`;
+  }
+  return str;
+}
+
 export default function ExpenseEntryForm({ onSaved }) {
   const { locale } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
+  const role = getUserRole();
+  const isManager = role === 'manager';
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState('');
   const [period, setPeriod] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [periodMode, setPeriodMode] = useState('month');
   const [rows, setRows] = useState(() => [emptyRow()]);
   const [saving, setSaving] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -62,50 +82,86 @@ export default function ExpenseEntryForm({ onSaved }) {
     }).catch(() => {});
   }, []);
 
-  // BUG-C01: load đúng dữ liệu đã lưu của tổ hợp Dự án + Kỳ đang chọn
+  const prevProjectIdRef = useRef('');
+
+  // Tự động load phiên nhập gần nhất của Dự án khi chuyển Dự án / mở Tab
   useEffect(() => {
-    if (!projectId || !period) return undefined;
+    if (!projectId) return undefined;
     let cancelled = false;
+    const isProjectChange = prevProjectIdRef.current !== projectId;
+    prevProjectIdRef.current = projectId;
+
     getExpenseList(projectId)
       .then((res) => {
         if (cancelled) return;
-        const list = (Array.isArray(res.data) ? res.data : []).filter(
-          (x) => String(x.period || '') === String(period)
+        const rawList = Array.isArray(res.data) ? res.data : [];
+        const projectList = rawList.filter(
+          (x) => !x.projectId || String(x.projectId) === String(projectId)
         );
+
+        let targetPeriod = normPeriod(period);
+
+        if (isProjectChange) {
+          if (projectList.length > 0) {
+            const sorted = [...projectList].sort((a, b) =>
+              normPeriod(b.period).localeCompare(normPeriod(a.period))
+            );
+            targetPeriod = normPeriod(sorted[0].period) || targetPeriod;
+            setPeriod(targetPeriod);
+          } else {
+            const d = new Date();
+            targetPeriod = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            setPeriod(targetPeriod);
+          }
+        }
+
+        const list = projectList.filter(
+          (x) => normPeriod(x.period) === targetPeriod
+        );
+
         const mapped = [];
         list.forEach((e) => {
-          const meta = getExpenseMeta(e.id) || {};
+          const meta = getExpenseMeta(e.id, `${projectId}_${normPeriod(e.period)}`) || {};
           const parsed = parseExpenseLines(String(e.directNote || e.note || ''));
 
           let lines;
           if (Array.isArray(meta.lines) && meta.lines.length > 0) {
-            // Meta máy này có đủ (kể cả file hợp đồng); "Thực tế" quy đổi thành thành tiền (fix_ui_cn bỏ SL),
-            // phần thiếu bù từ note (cũng đã quy đổi theo SL của bản ghi cũ)
             lines = meta.lines.map((ln, i) => ({
               event: ln.event || parsed[i]?.event || '',
               planned: ln.planned != null && ln.planned !== '' ? String(ln.planned) : (parsed[i]?.planned ? String(parsed[i].planned) : ''),
               actual: lineActualToTotal(ln) || lineActualToTotal(parsed[i] || {}),
+              expenseCategory: ln.expenseCategory || parsed[i]?.expenseCategory || '',
+              inventoryItemId: ln.inventoryItemId || parsed[i]?.inventoryItemId || '',
+              plannedQty: ln.plannedQty != null && ln.plannedQty !== '' ? String(ln.plannedQty) : (parsed[i]?.plannedQty ? String(parsed[i].plannedQty) : ''),
+              actualQty: ln.actualQty != null && ln.actualQty !== '' ? String(ln.actualQty) : (parsed[i]?.actualQty ? String(parsed[i].actualQty) : ''),
+              unitPriceAfterVat: ln.unitPriceAfterVat || parsed[i]?.unitPriceAfterVat || 0,
+              isOther: Boolean(ln.isOther || parsed[i]?.isOther),
+              otherName: ln.otherName || parsed[i]?.otherName || '',
               note: ln.note != null && ln.note !== '' ? String(ln.note) : (parsed[i]?.note || ''),
               contractFile: ln.contractFile || '',
               contractDataUrl: ln.contractDataUrl || null,
               contractDocId: ln.contractDocId || null,
             }));
           } else if (parsed.length > 0) {
-            // BUG-C06: không có meta (máy khác) — khôi phục TỪNG DÒNG từ ghi chú BE
             lines = parsed.map((ln) => ({
               event: ln.event || '',
               planned: ln.planned ? String(ln.planned) : '',
               actual: lineActualToTotal(ln),
+              expenseCategory: ln.expenseCategory || '',
+              inventoryItemId: ln.inventoryItemId || '',
+              plannedQty: ln.plannedQty ? String(ln.plannedQty) : '',
+              actualQty: ln.actualQty ? String(ln.actualQty) : '',
+              unitPriceAfterVat: ln.unitPriceAfterVat || 0,
+              isOther: Boolean(ln.isOther),
+              otherName: ln.otherName || '',
               note: ln.note || '',
               contractFile: '',
               contractDataUrl: null,
               contractDocId: null,
             }));
-            // Bản ghi cũ lưu trước khi note có "Thực tế": dòng đơn lấy thẳng tổng tiền
             if (lines.length === 1 && !lines[0].actual && Number(e.directCost)) {
               lines[0].actual = String(Number(e.directCost));
             }
-            // Ghi chú chỉ có 1 dòng thì bù thêm thông tin meta của máy này (nếu có)
             if (parsed.length <= 1) {
               const metaActTotal = (meta.actual != null && meta.actual !== '')
                 ? lineActualToTotal({ actual: String(meta.actual), qty: String(meta.qty == null ? 1 : meta.qty) })
@@ -115,6 +171,13 @@ export default function ExpenseEntryForm({ onSaved }) {
                 event: meta.event || lines[0].event,
                 planned: (meta.planned != null && meta.planned !== '') ? String(meta.planned) : lines[0].planned,
                 actual: metaActTotal || lines[0].actual,
+                expenseCategory: meta.expenseCategory || lines[0].expenseCategory,
+                inventoryItemId: meta.inventoryItemId || lines[0].inventoryItemId,
+                plannedQty: meta.plannedQty || lines[0].plannedQty,
+                actualQty: meta.actualQty || lines[0].actualQty,
+                unitPriceAfterVat: meta.unitPriceAfterVat || lines[0].unitPriceAfterVat,
+                isOther: meta.isOther || lines[0].isOther,
+                otherName: meta.otherName || lines[0].otherName,
                 contractFile: meta.contractFile || lines[0].contractFile,
                 contractDataUrl: meta.contractDataUrl || lines[0].contractDataUrl,
                 contractDocId: meta.contractDocId || lines[0].contractDocId || null,
@@ -125,6 +188,13 @@ export default function ExpenseEntryForm({ onSaved }) {
               event: meta.event || '',
               planned: meta.planned != null && meta.planned !== '' ? String(meta.planned) : '',
               actual: Number(e.directCost) ? String(Number(e.directCost)) : '',
+              expenseCategory: meta.expenseCategory || '',
+              inventoryItemId: meta.inventoryItemId || '',
+              plannedQty: meta.plannedQty != null && meta.plannedQty !== '' ? String(meta.plannedQty) : '',
+              actualQty: meta.actualQty != null && meta.actualQty !== '' ? String(meta.actualQty) : '',
+              unitPriceAfterVat: meta.unitPriceAfterVat || 0,
+              isOther: Boolean(meta.isOther),
+              otherName: meta.otherName || '',
               note: meta.note != null && meta.note !== '' ? String(meta.note) : '',
               contractFile: meta.contractFile || '',
               contractDataUrl: meta.contractDataUrl || null,
@@ -139,6 +209,13 @@ export default function ExpenseEntryForm({ onSaved }) {
               event: ln.event || '',
               planned: ln.planned != null && ln.planned !== '' ? String(ln.planned) : '',
               actual: ln.actual != null && ln.actual !== '' ? String(ln.actual) : '',
+              expenseCategory: ln.expenseCategory || '',
+              inventoryItemId: ln.inventoryItemId || '',
+              plannedQty: ln.plannedQty != null && ln.plannedQty !== '' ? String(ln.plannedQty) : '',
+              actualQty: ln.actualQty != null && ln.actualQty !== '' ? String(ln.actualQty) : '',
+              unitPriceAfterVat: ln.unitPriceAfterVat || 0,
+              isOther: Boolean(ln.isOther),
+              otherName: ln.otherName || '',
               contractFile: ln.contractFile || '',
               contractDataUrl: ln.contractDataUrl || null,
               contractDocId: ln.contractDocId || null,
@@ -146,6 +223,7 @@ export default function ExpenseEntryForm({ onSaved }) {
             });
           });
         });
+
         setRows(mapped.length > 0 ? mapped : [emptyRow()]);
       })
       .catch(() => {});
@@ -227,7 +305,7 @@ export default function ExpenseEntryForm({ onSaved }) {
         if (!ok) return;
         try {
           await deleteExpense(target.expenseId);
-          removeExpenseMeta(target.expenseId);
+          removeExpenseMeta(target.expenseId, `${projectId}_${period}`);
         } catch {
           showToast(t('Lỗi khi xóa bản ghi đã lưu', 'Error deleting saved record'), 'error');
           return;
@@ -256,14 +334,36 @@ export default function ExpenseEntryForm({ onSaved }) {
     resetForm();
   };
 
+  const isRowValid = (r) => {
+    if (r.event && r.event.trim()) return true;
+    if (r.planned && parseFloat(r.planned)) return true;
+    if (r.actual && parseFloat(r.actual)) return true;
+    if (r.inventoryItemId) return true;
+    if (r.otherName && r.otherName.trim()) return true;
+    if (r.plannedQty && Number(r.plannedQty) > 0) return true;
+    if (r.actualQty && Number(r.actualQty) > 0) return true;
+    if (r.expenseCategory && r.expenseCategory !== '') return true;
+    if (r.note && r.note.trim()) return true;
+    return false;
+  };
+
   const buildNote = (r) => {
     const parts = [];
-    if (r.event.trim()) parts.push(`${t('Sự kiện', 'Event')}: ${r.event.trim()}`);
-    if (parseFloat(r.planned)) parts.push(`${t('Kế hoạch', 'Planned')}: ${formatCurrency(parseFloat(r.planned))}`);
-    // BUG-C06: ghi "Thực tế" (THÀNH TIỀN dòng, fix_ui_cn bỏ SL) vào note trên BE — nếu không,
-    // sang máy/browser khác (không có localStorage meta) sẽ chỉ còn tổng tiền mà mất chi tiết từng dòng.
-    if (parseFloat(r.actual)) parts.push(`${t('Thực tế', 'Actual')}: ${formatCurrency(parseFloat(r.actual))}`);
-    if (r.note.trim()) parts.push(r.note.trim());
+    if (r.expenseCategory) parts.push(`Danh mục: ${r.expenseCategory}`);
+    if (r.inventoryItemId) parts.push(`ItemID: ${r.inventoryItemId}`);
+    if (r.isOther || r.expenseCategory === '__other__') {
+      parts.push(`Khác: 1`);
+      if (r.otherName && r.otherName.trim()) parts.push(`Tên: ${r.otherName.trim()}`);
+      if (r.unitPriceAfterVat) parts.push(`Đơn giá: ${r.unitPriceAfterVat}`);
+    }
+    if (r.plannedQty != null && r.plannedQty !== '') parts.push(`SL KH: ${r.plannedQty}`);
+    if (r.actualQty != null && r.actualQty !== '') parts.push(`SL Thực: ${r.actualQty}`);
+    if (r.event && r.event.trim()) parts.push(`Sự kiện: ${r.event.trim()}`);
+    const pAmt = calcRowPlanned(r);
+    if (pAmt) parts.push(`Kế hoạch: ${formatCurrency(pAmt)}`);
+    const aAmt = lineTotalOf(r, inventoryItems) || (parseFloat(r.actual) || 0);
+    if (aAmt) parts.push(`Thực tế: ${formatCurrency(aAmt)}`);
+    if (r.note && r.note.trim()) parts.push(r.note.trim());
     return parts.join(' | ');
   };
 
@@ -273,7 +373,7 @@ export default function ExpenseEntryForm({ onSaved }) {
       showToast(t('Vui lòng chọn dự án', 'Please select a project'), 'error');
       return;
     }
-    const validRows = rows.filter((r) => r.event.trim() || parseFloat(r.planned) || parseFloat(r.actual));
+    const validRows = rows.filter(isRowValid);
     if (validRows.length === 0) {
       showToast(t('Nhập ít nhất một dòng chi phí', 'Enter at least one expense line'), 'error');
       return;
@@ -315,21 +415,26 @@ export default function ExpenseEntryForm({ onSaved }) {
       }
 
       if (savedId) {
-        const inventoryRows = validRows.filter((r) => r.inventoryItemId);
+        const inventoryRows = validRows.filter((r) => r.inventoryItemId && Number(r.actualQty) > 0);
         for (const r of inventoryRows) {
           try {
-            await addExpenseLine(savedId, {
-              inventoryItemId: r.inventoryItemId,
-              plannedQuantity: Number(r.plannedQty) || 0,
-              actualQuantity: Number(r.actualQty) || 0,
+            const item = inventoryItems.find((i) => i.id === r.inventoryItemId);
+            await createInventoryTransaction({
+              itemId: r.inventoryItemId,
+              projectId: projectId,
+              type: 'out',
+              quantity: Number(r.actualQty),
+              date: new Date().toISOString().slice(0, 10),
+              note: `Xuất kho từ nhập chi phí (${period}) ${item?.name ? `- ${item.name}` : ''} ${r.note || ''}`.trim(),
             });
           } catch (lineErr) {
-            console.error('[ExpenseEntryForm] addExpenseLine failed:', lineErr);
-            const lineMsg = lineErr?.response?.data?.message || lineErr?.message;
-            if (lineMsg && (lineMsg.includes('vượt') || lineMsg.includes('overflow') || lineMsg.includes('409'))) {
-              showToast(lineMsg, 'error');
+            console.error('[ExpenseEntryForm] createInventoryTransaction failed:', lineErr);
+            const lineMsg = lineErr?.response?.data?.message;
+            const msgStr = Array.isArray(lineMsg) ? lineMsg.join('; ') : lineMsg;
+            if (msgStr && (msgStr.includes('vượt') || msgStr.includes('overflow') || msgStr.includes('409'))) {
+              showToast(msgStr, 'error');
             } else {
-              showToast(t('Lỗi tạo dòng vật phẩm kho — kiểm tra lại dữ liệu', 'Error creating inventory line — check data'), 'error');
+              showToast(t('Lỗi trừ tồn kho vật phẩm — kiểm tra lại dữ liệu', 'Error deducting inventory stock — check data'), 'error');
             }
           }
         }
@@ -337,29 +442,33 @@ export default function ExpenseEntryForm({ onSaved }) {
 
       let metaWrite = null;
       if (savedId) {
-        metaWrite = setExpenseMeta(savedId, validRows.length === 1
-          ? {
-            event: validRows[0].event.trim(),
-            planned: parseFloat(validRows[0].planned) || 0,
-            actual: parseFloat(validRows[0].actual) || 0,
-            contractFile: validRows[0].contractFile || '',
-            contractDataUrl: validRows[0].contractDataUrl || null,
-            contractDocId: validRows[0].contractDocId || null,
-          }
-          : {
+        metaWrite = setExpenseMeta(
+          savedId,
+          {
             event: validRows.map((r) => r.event.trim()).filter(Boolean).join(', '),
-            planned: validRows.reduce((s, r) => s + (parseFloat(r.planned) || 0), 0),
-            contractFile: '',
-            contractDataUrl: null,
+            planned: validRows.reduce((s, r) => s + (calcRowPlanned(r) || 0), 0),
+            actual: totalActual,
+            contractFile: validRows[0]?.contractFile || '',
+            contractDataUrl: validRows[0]?.contractDataUrl || null,
+            contractDocId: validRows[0]?.contractDocId || null,
             lines: validRows.map((r) => ({
               event: r.event.trim(),
-              planned: parseFloat(r.planned) || 0,
-              actual: parseFloat(r.actual) || 0,
+              planned: r.planned != null && r.planned !== '' ? r.planned : '',
+              actual: r.actual != null && r.actual !== '' ? r.actual : '',
+              expenseCategory: r.expenseCategory || '',
+              inventoryItemId: r.inventoryItemId || '',
+              plannedQty: r.plannedQty || '',
+              actualQty: r.actualQty || '',
+              unitPriceAfterVat: r.unitPriceAfterVat || 0,
+              isOther: Boolean(r.isOther),
+              otherName: r.otherName || '',
               note: r.note.trim(),
               contractFile: r.contractFile || '',
               contractDocId: r.contractDocId || null,
             })),
-          });
+          },
+          `${projectId}_${period}`
+        );
         // BUG-C07: hết quota localStorage → báo rõ thay vì drop ảnh im lặng
         if (metaWrite?.droppedDataUrls) {
           showToast(t('Bộ nhớ máy đầy — bản xem trước ảnh bị bỏ bớt. File hợp đồng vẫn an toàn trên server.', 'Device storage full — local previews dropped. Contract files remain safe on the server.'));
@@ -420,13 +529,46 @@ export default function ExpenseEntryForm({ onSaved }) {
           </div>
 
           <div className="mb-6 md:w-1/3">
-            <label className="block font-label-md text-on-surface-variant mb-1">{t('Kỳ phát sinh', 'Occurrence Period')}</label>
-            <input
-              className={`${inputCls} text-body-md`}
-              type="month"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-            />
+            <div className="flex items-center gap-2 mb-1">
+              <label className="font-label-md text-on-surface-variant">{t('Kỳ phát sinh', 'Occurrence Period')}</label>
+              {isManager && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (periodMode === 'month') {
+                      setPeriodMode('year');
+                      setPeriod(period.slice(0, 4));
+                    } else {
+                      setPeriodMode('month');
+                      const d = new Date();
+                      setPeriod(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+                    }
+                  }}
+                  className="text-xs px-2 py-0.5 rounded-full border border-outline-variant hover:bg-surface-container-high text-on-surface-variant transition-colors"
+                  title={t('Chuyển đổi nhập theo tháng / năm', 'Toggle month / year input')}
+                >
+                  {periodMode === 'month' ? t('Tháng', 'Month') : t('Năm', 'Year')}
+                </button>
+              )}
+            </div>
+            {periodMode === 'month' ? (
+              <input
+                className={`${inputCls} text-body-md`}
+                type="month"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+              />
+            ) : (
+              <input
+                className={`${inputCls} text-body-md`}
+                type="number"
+                min="2020"
+                max="2099"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                placeholder={t('VD: 2026', 'E.g.: 2026')}
+              />
+            )}
             <p className="text-xs text-on-surface-variant italic mt-1">
               {t('Đổi Dự án/Kỳ sẽ tải lại dữ liệu đã lưu của tổ hợp này. Hiện mỗi Dự án + Kỳ lưu thành một khoản tổng hợp.', 'Changing Project/Period reloads its saved data. Currently each Project + Period is stored as one combined record.')}
             </p>
@@ -568,20 +710,6 @@ export default function ExpenseEntryForm({ onSaved }) {
                 </tr>
               </tfoot>
             </table>
-          </div>
-
-          <div className="bg-background-subtle border border-border-light rounded-lg p-4 flex justify-between items-center mb-6">
-            <div className="space-y-1">
-              <p className="font-label-md text-on-surface-variant">{t('Tổng cộng', 'Grand Total')}</p>
-              <div className="flex gap-6 text-xs text-on-surface-variant">
-                <span>{t('Kế hoạch:', 'Planned:')} <span className="font-bold text-secondary">{formatCurrency(totalPlanned)} VNĐ</span></span>
-                <span>{t('Thực tế:', 'Actual:')} <span className="font-bold text-primary">{formatCurrency(totalActual)} VNĐ</span></span>
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-[28px] leading-none font-bold text-primary tabular-nums">{formatCurrency(grandTotal)}</span>
-              <span className="font-semibold text-primary text-body-lg">VNĐ</span>
-            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border-light">

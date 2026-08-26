@@ -1,318 +1,242 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getMonthlyPlan, saveMonthlyPlan, applyMonthlyTotal } from '../../services/api';
+import { getPlanKPIs, savePlanKPIs } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
+import NumberInput from '../common/NumberInput';
 
 const years = [2024, 2025, 2026];
 
-const KPI_FIELDS = [
-  { key: 'rawLeads', label: { vi: 'Raw Leads', en: 'Raw Leads' } },
-  { key: 'mql', label: { vi: 'MQL', en: 'MQL' } },
-  { key: 'sql', label: { vi: 'SQL', en: 'SQL' } },
-  { key: 'oppCount', label: { vi: 'OPP Count', en: 'OPP Count' } },
-  { key: 'closedCount', label: { vi: 'Closed', en: 'Closed' } },
-  { key: 'pipelineValue', label: { vi: 'Pipeline', en: 'Pipeline' } },
-  { key: 'wonValue', label: { vi: 'Won Value', en: 'Won Value' } },
+const FIELD_DEFS = [
+  { apiKey: 'targetLeads', label: { vi: 'MỤC TIÊU RAW LEADS', en: 'RAW LEADS TARGET' }, icon: 'groups' },
+  { apiKey: 'mqlTarget', label: { vi: 'MỤC TIÊU MQL', en: 'MQL TARGET' }, icon: 'filter_alt' },
+  { apiKey: 'sqlTarget', label: { vi: 'MỤC TIÊU SQL', en: 'SQL TARGET' }, icon: 'fact_check' },
+  { apiKey: 'opportunityCount', label: { vi: 'SỐ LƯỢNG CƠ HỘI (OPP)', en: 'OPPORTUNITY COUNT' }, icon: 'lightbulb' },
+  { apiKey: 'closedDealCount', label: { vi: 'SỐ LƯỢNG CLOSED DEAL', en: 'CLOSED DEAL COUNT' }, icon: 'handshake' },
+  { apiKey: 'pipelineValue', label: { vi: 'GIÁ TRỊ PIPELINE', en: 'PIPELINE VALUE' }, icon: 'payments' },
+  { apiKey: 'wonValue', label: { vi: 'GIÁ TRỊ WON', en: 'WON VALUE' }, icon: 'monetization_on' },
 ];
 
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
-
-const EMPTY_MONTH = () => {
-  const m = { month: 0 };
-  KPI_FIELDS.forEach(f => { m[f.key] = 0; });
-  return m;
-};
-
 function fmt(n) {
-  if (n == null || isNaN(n)) return '0';
+  if (n == null || isNaN(n) || n === '') return '0';
   return Number(n).toLocaleString('vi-VN');
-}
-
-function getStatus(total, annualVal) {
-  if (!annualVal) return null;
-  const diff = total - annualVal;
-  if (diff === 0) return { key: 'enough', vi: 'Đủ', en: 'Enough', color: 'text-green-600 bg-green-50' };
-  if (diff < 0) return { key: 'short', vi: 'Thiếu', en: 'Short', color: 'text-red-600 bg-red-50' };
-  return { key: 'excess', vi: 'Thừa', en: 'Excess', color: 'text-blue-600 bg-blue-50' };
 }
 
 export default function PlanKPIsForm() {
   const { locale } = useDashboard();
   const addToast = useToast();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
-  const [selectedYear, setSelectedYear] = useState(2026);
-  const [months, setMonths] = useState([]);
-  const [annualPlan, setAnnualPlan] = useState(null);
-  const [diff, setDiff] = useState(null);
-  const [canApply, setCanApply] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [applying, setApplying] = useState(false);
-  const [showApplyModal, setShowApplyModal] = useState(false);
 
-  const fetchData = useCallback(() => {
+  const [selectedYear, setSelectedYear] = useState(2026);
+  const [plan, setPlan] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    targetLeads: 0,
+    mqlTarget: 0,
+    sqlTarget: 0,
+    opportunityCount: 0,
+    closedDealCount: 0,
+    pipelineValue: 0,
+    wonValue: 0,
+  });
+
+  const fetchPlan = useCallback(() => {
     let cancelled = false;
     setLoading(true);
-    getMonthlyPlan(selectedYear)
+    setIsEditing(false);
+    getPlanKPIs(selectedYear)
       .then((r) => {
-        if (cancelled) return;
-        const d = r.data || {};
-        const raw = Array.isArray(d.months) ? d.months : [];
-        const filled = MONTHS.map(m => {
-          const existing = raw.find(x => x.month === m);
-          const row = { month: m };
-          KPI_FIELDS.forEach(f => { row[f.key] = Number(existing?.[f.key]) || 0; });
-          return row;
-        });
-        setMonths(filled);
-        setAnnualPlan(d.annualPlan || null);
-        setDiff(d.diff || null);
-        setCanApply(!!d.canApply);
+        if (!cancelled) setPlan(r.data || null);
       })
       .catch(() => {
-        if (cancelled) return;
-        setMonths(MONTHS.map(m => { const row = EMPTY_MONTH(); row.month = m; return row; }));
+        if (!cancelled) setPlan(null);
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [selectedYear]);
 
-  useEffect(() => { return fetchData(); }, [fetchData]);
+  useEffect(() => { return fetchPlan(); }, [fetchPlan]);
 
-  const updateCell = (monthIdx, fieldKey, value) => {
-    setMonths(prev => {
-      const next = [...prev];
-      next[monthIdx] = { ...next[monthIdx], [fieldKey]: value };
-      return next;
-    });
+  const getFieldValue = (apiKey) => {
+    if (!plan) return 0;
+    return plan[apiKey] ?? 0;
   };
 
-  const totals = {};
-  KPI_FIELDS.forEach(f => { totals[f.key] = months.reduce((s, m) => s + (Number(m[f.key]) || 0), 0); });
+  const handleStartEdit = () => {
+    setEditForm({
+      targetLeads: plan?.targetLeads ?? 0,
+      mqlTarget: plan?.mqlTarget ?? 0,
+      sqlTarget: plan?.sqlTarget ?? 0,
+      opportunityCount: plan?.opportunityCount ?? 0,
+      closedDealCount: plan?.closedDealCount ?? 0,
+      pipelineValue: plan?.pipelineValue ?? 0,
+      wonValue: plan?.wonValue ?? 0,
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
 
   const handleSave = async () => {
-    setSaving(true);
+    setIsSaving(true);
     try {
-      await saveMonthlyPlan(selectedYear, months);
-      addToast(t('Đã lưu kế hoạch tháng', 'Monthly plan saved'), 'success');
-      fetchData();
-    } catch (e) {
-      addToast(t('Lưu thất bại', 'Save failed'), 'error');
+      const payload = {
+        year: selectedYear,
+        targetLeads: editForm.targetLeads,
+        mqlTarget: editForm.mqlTarget,
+        sqlTarget: editForm.sqlTarget,
+        opportunityCount: editForm.opportunityCount,
+        closedDealCount: editForm.closedDealCount,
+        pipelineValue: editForm.pipelineValue,
+        wonValue: editForm.wonValue,
+      };
+      await savePlanKPIs(payload);
+      setPlan({
+        year: selectedYear,
+        ...payload,
+      });
+      setIsEditing(false);
+      if (addToast) {
+        addToast(t('Cập nhật kế hoạch KPI thành công!', 'KPI plan updated successfully!'), 'success');
+      }
+    } catch (err) {
+      console.error('Error saving KPI plan:', err);
+      if (addToast) {
+        addToast(t('Lỗi khi cập nhật kế hoạch KPI.', 'Error updating KPI plan.'), 'error');
+      }
     } finally {
-      setSaving(false);
+      setIsSaving(false);
     }
   };
 
-  const handleApplyClick = () => {
-    setShowApplyModal(true);
+  const renderField = (field) => {
+    const value = isEditing ? editForm[field.apiKey] : getFieldValue(field.apiKey);
+    return (
+      <div key={field.apiKey} className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-surface-container/30 p-2.5 rounded-lg border border-slate-200/80 dark:border-border-light/60">
+        <div className="flex items-center justify-between gap-1">
+          <label className="text-[11px] font-bold text-slate-600 dark:text-on-surface-variant uppercase tracking-wider truncate flex items-center gap-1">
+            <span className="material-symbols-outlined text-[15px] text-secondary">{field.icon}</span>
+            {t(field.label.vi, field.label.en)}
+          </label>
+        </div>
+        {isEditing ? (
+          <NumberInput
+            className="w-full bg-white dark:bg-surface-container-lowest border-2 border-secondary/50 focus:border-secondary focus:ring-2 focus:ring-secondary/20 rounded-md py-1.5 px-3 text-body-md font-bold text-on-surface shadow-sm outline-none transition-all"
+            value={value}
+            onChange={(e) => setEditForm(prev => ({ ...prev, [field.apiKey]: e.target.value }))}
+            placeholder="0"
+            disabled={isSaving}
+          />
+        ) : (
+          <div className="bg-white dark:bg-surface-container-lowest border border-border-light rounded-md py-1.5 px-3 font-bold text-primary text-body-lg tabular-nums shadow-2xs">
+            {fmt(value)}
+          </div>
+        )}
+      </div>
+    );
   };
-
-  const handleApply = async () => {
-    setShowApplyModal(false);
-    setApplying(true);
-    try {
-      const r = await applyMonthlyTotal(selectedYear);
-      addToast(r.data?.message || t('Đã áp dụng thành công', 'Applied successfully'), 'success');
-      fetchData();
-    } catch (e) {
-      addToast(t('Áp dụng thất bại', 'Apply failed'), 'error');
-    } finally {
-      setApplying(false);
-    }
-  };
-
-  const hasAnyDiff = annualPlan && KPI_FIELDS.some(f => {
-    const annualVal = annualPlan[`target${f.key.charAt(0).toUpperCase() + f.key.slice(1)}`] || annualPlan[f.key];
-    return annualVal && totals[f.key] !== Number(annualVal);
-  });
-
-  const inputCls = "w-full px-1.5 py-1 text-[13px] text-right border border-outline-variant rounded bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary outline-none tabular-nums";
 
   return (
-    <section className="lg:col-span-4 w-full bg-white border border-border-light p-6 rounded-lg flex flex-col">
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-border-light">
-        <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary">ads_click</span>
-          {t('Kế hoạch KPIs theo tháng', 'Monthly KPI Plan')}
-        </h3>
+    <section className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-4 sm:p-5 flex flex-col gap-3.5">
+      <div className="flex justify-between items-center border-b border-outline-variant pb-3 flex-wrap gap-2">
+        <h2 className="font-headline-sm text-headline-sm text-primary flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-secondary text-2xl">ads_click</span>
+          {t('Kế hoạch KPIs', 'KPI Plan')}
+        </h2>
         <div className="flex items-center gap-2">
           <select
-            className="bg-surface-container-low text-body-sm border border-border-light rounded px-2 py-1 focus:ring-primary focus:border-primary"
+            className="form-select text-body-sm font-semibold border-outline-variant rounded-md py-1.5 pl-3 pr-8 text-on-surface bg-surface focus:border-secondary focus:ring-2 focus:ring-secondary/20 disabled:opacity-60 cursor-pointer"
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
+            disabled={isEditing || isSaving}
           >
             {years.map(year => (
               <option key={year} value={year}>{t(`Năm ${year}`, `Year ${year}`)}</option>
             ))}
           </select>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-3 py-1.5 bg-primary text-on-primary rounded text-[11px] font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            {saving ? t('Đang lưu...', 'Saving...') : t('Lưu kế hoạch', 'Save Plan')}
-          </button>
-          <button
-            onClick={handleApplyClick}
-            disabled={applying || !canApply || !hasAnyDiff}
-            className="px-3 py-1.5 bg-secondary text-on-secondary rounded text-[11px] font-bold hover:bg-secondary/90 transition-colors disabled:opacity-50"
-            title={!canApply ? t('Chưa có dữ liệu hợp lệ', 'No valid data yet') : !hasAnyDiff ? t('Không có chênh lệch', 'No difference') : ''}
-          >
-            {applying ? t('Đang áp dụng...', 'Applying...') : t('Áp dụng vào năm', 'Apply to Year')}
-          </button>
+
+          {!isEditing ? (
+            <button
+              type="button"
+              onClick={handleStartEdit}
+              disabled={loading}
+              className="flex items-center gap-1 text-body-sm font-semibold px-3 py-1.5 rounded-md text-secondary bg-secondary/5 hover:bg-secondary/10 transition-colors border border-secondary/30 cursor-pointer disabled:opacity-50"
+              title={t('Chỉnh sửa kế hoạch KPI', 'Edit KPI plan')}
+            >
+              <span className="material-symbols-outlined text-[18px]">edit</span>
+              <span>{t('Sửa', 'Edit')}</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={isSaving}
+                className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+                <span>{t('Hủy', 'Cancel')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-4 py-1.5 text-body-sm rounded-md bg-primary text-on-primary hover:brightness-110 transition-all flex items-center gap-1 font-bold shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-outlined text-[18px]">save</span>
+                )}
+                <span>{t('Lưu', 'Save')}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center text-on-surface-variant text-body-sm gap-2">
-          <span className="material-symbols-outlined animate-spin">progress_activity</span>
-          {t('Đang tải...', 'Loading...')}
+        <div className="flex items-center justify-center py-6 text-on-surface-variant gap-2">
+          <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+          <span className="text-body-md font-medium">{t('Đang tải...', 'Loading...')}</span>
         </div>
       ) : (
-        <div>
-          <table className="w-full text-[14px] border-collapse table-fixed">
-            <colgroup>
-              <col className="w-[110px]" />
-              {MONTHS.map((m) => <col key={m} />)}
-              <col className="w-[80px]" />
-              {annualPlan && <col className="w-[80px]" />}
-              {diff && <col className="w-[80px]" />}
-              {annualPlan && <col className="w-[70px]" />}
-            </colgroup>
-            <thead>
-              <tr className="bg-surface-container-low">
-                <th className="p-2 text-left font-bold text-on-surface-variant">{t('Chỉ tiêu', 'Metric')}</th>
-                {MONTHS.map(m => (
-                  <th key={m} className="p-2 text-center font-bold text-on-surface-variant">{t(`T${m}`, `M${m}`)}</th>
-                ))}
-                <th className="p-2 text-center font-bold text-primary">{t('Tổng', 'Total')}</th>
-                {annualPlan && (
-                  <th className="p-2 text-center font-bold text-secondary">{t('Năm', 'Annual')}</th>
-                )}
-                {diff && (
-                  <th className="p-2 text-center font-bold">{t('±', 'Diff')}</th>
-                )}
-                {annualPlan && (
-                  <th className="p-2 text-center font-bold">{t('Trạng thái', 'Status')}</th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-outline-variant">
-              {KPI_FIELDS.map((field) => (
-                <tr key={field.key} className="hover:bg-surface-container-low/50">
-                  <td className="p-2 font-semibold text-on-surface-variant whitespace-nowrap overflow-hidden text-ellipsis" title={field.label[locale] || field.label.en}>{field.label[locale] || field.label.en}</td>
-                  {MONTHS.map((m, idx) => (
-                    <td key={m} className="p-1">
-                      <input
-                        type="number"
-                        className={inputCls}
-                        value={months[idx]?.[field.key] || ''}
-                        onChange={(e) => updateCell(idx, field.key, e.target.value)}
-                      />
-                    </td>
-                  ))}
-                  <td className="p-2 text-center font-bold tabular-nums text-on-surface">{fmt(totals[field.key])}</td>
-                  {annualPlan && (
-                    <td className="p-2 text-center tabular-nums text-on-surface-variant">
-                      {fmt(annualPlan[`target${field.key.charAt(0).toUpperCase() + field.key.slice(1)}`] || annualPlan[field.key])}
-                    </td>
-                  )}
-                  {diff && (
-                    <td className={`p-2 text-center font-bold tabular-nums ${(diff[field.key] ?? 0) < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {fmt(diff[field.key])}
-                    </td>
-                  )}
-                  {annualPlan && (() => {
-                    const annualVal = annualPlan[`target${field.key.charAt(0).toUpperCase() + field.key.slice(1)}`] || annualPlan[field.key];
-                    const status = getStatus(totals[field.key], Number(annualVal) || 0);
-                    return status ? (
-                      <td className="p-2 text-center">
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${status.color}`}>
-                          {t(status.vi, status.en)}
-                        </span>
-                      </td>
-                    ) : <td className="p-2"></td>;
-                  })()}
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="font-bold border-t-2 border-primary">
-                <td className="p-2 text-on-surface bg-primary/10">{t('Tổng', 'Total')}</td>
-                {MONTHS.map((_, idx) => {
-                  const monthTotal = KPI_FIELDS.reduce((s, f) => s + (Number(months[idx]?.[f.key]) || 0), 0);
-                  return <td key={idx} className="p-2 text-center tabular-nums bg-primary/10">{fmt(monthTotal)}</td>;
-                })}
-                <td className="p-2 text-center tabular-nums text-primary font-extrabold bg-primary/10">{fmt(KPI_FIELDS.reduce((s, f) => s + totals[f.key], 0))}</td>
-                <td className="p-2 bg-primary/10"></td>
-                {diff && <td className="p-2 bg-primary/10"></td>}
-                {annualPlan && <td className="p-2 bg-primary/10"></td>}
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
-
-      {/* Apply Confirm Modal */}
-      {showApplyModal && (
-        <>
-          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowApplyModal(false)} />
-          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg pointer-events-auto mx-4 p-6 max-h-[80vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-on-surface flex items-center gap-2">
-                  <span className="material-symbols-outlined text-secondary">check_circle</span>
-                  {t('Xác nhận Áp dụng', 'Confirm Apply')}
-                </h3>
-                <button onClick={() => setShowApplyModal(false)} className="text-on-surface-variant hover:text-on-surface text-xl leading-none">&times;</button>
-              </div>
-
-              <p className="text-sm text-on-surface-variant mb-4">
-                {t('Tổng 12 tháng sẽ được đặt làm mục tiêu năm:', 'Monthly totals will be applied as annual targets:')}
-              </p>
-
-              <table className="w-full text-sm mb-4">
-                <thead>
-                  <tr className="border-b">
-                    <th className="py-2 text-left font-semibold">{t('KPI', 'KPI')}</th>
-                    <th className="py-2 text-right font-semibold">{t('Mục tiêu hiện tại', 'Current Target')}</th>
-                    <th className="py-2 text-right font-semibold">{t('Giá trị mới', 'New Value')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {KPI_FIELDS.map((f) => {
-                    const annualVal = Number(annualPlan?.[`target${f.key.charAt(0).toUpperCase() + f.key.slice(1)}`] || annualPlan?.[f.key]) || 0;
-                    const newVal = totals[f.key];
-                    const changed = annualVal !== newVal;
-                    return (
-                      <tr key={f.key} className={`border-b ${changed ? 'bg-primary/5' : ''}`}>
-                        <td className="py-2 font-medium">{f.label[locale] || f.label.en}</td>
-                        <td className="py-2 text-right tabular-nums">{fmt(annualVal)}</td>
-                        <td className={`py-2 text-right tabular-nums font-bold ${changed ? 'text-primary' : ''}`}>{fmt(newVal)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setShowApplyModal(false)}
-                  className="flex-1 px-4 py-3 border border-border-light text-on-surface-variant font-semibold rounded-lg hover:bg-surface-container-low transition-all"
-                >
-                  {t('Hủy', 'Cancel')}
-                </button>
-                <button
-                  onClick={handleApply}
-                  className="flex-1 px-4 py-3 bg-secondary text-on-secondary font-semibold rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                  {t('Xác nhận', 'Confirm')}
-                </button>
-              </div>
-            </div>
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {FIELD_DEFS.map(renderField)}
           </div>
-        </>
+
+          {isEditing && (
+            <div className="flex justify-end items-center gap-3 pt-3 border-t border-outline-variant">
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={isSaving}
+                className="px-4 py-2 text-body-sm font-medium rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+                <span>{t('Hủy', 'Cancel')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-6 py-2 text-body-sm rounded-lg bg-primary text-on-primary hover:brightness-110 transition-all flex items-center gap-1.5 font-bold shadow-md cursor-pointer disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-outlined text-[18px]">save</span>
+                )}
+                <span>{t('Lưu thay đổi', 'Save changes')}</span>
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </section>
   );

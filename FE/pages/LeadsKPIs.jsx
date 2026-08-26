@@ -35,13 +35,17 @@ export default function LeadsKPIs() {
         return <PerformanceDashboard onViewAll={() => setActiveTab('view')} />;
       case 'input':
         return (
-          <>
-            <PlanKPIsForm />
-            <ActualsForm />
-            <OpportunitiesTable />
-            <ClosedDealsTable />
-            <LeadsKPIsFooter />
-          </>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg flex-1">
+            <div className="lg:col-span-4">
+              <PlanKPIsForm />
+            </div>
+            <div className="lg:col-span-8 flex flex-col gap-lg">
+              <ActualsForm />
+              <OpportunitiesTable />
+              <ClosedDealsTable />
+              <LeadsKPIsFooter />
+            </div>
+          </div>
         );
       case 'view':
         return (

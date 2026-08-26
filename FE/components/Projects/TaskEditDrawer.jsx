@@ -2,21 +2,7 @@ import { useState, useEffect } from 'react';
 import { updateTask, deleteTask, getMembers, getDropdownKeys } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { translateTaskErrors } from '../../utils/taskErrors';
-
-const statusOptions = (locale) => [
-  { value: 'Planning', label: locale === 'vi' ? 'Chưa làm' : 'To Do' },
-  { value: 'Processing', label: locale === 'vi' ? 'Đang làm' : 'In Progress' },
-  { value: 'Done', label: locale === 'vi' ? 'Hoàn thành' : 'Done' },
-  { value: 'Backlog', label: locale === 'vi' ? 'Tồn đọng' : 'Backlog' },
-  { value: 'Pending', label: locale === 'vi' ? 'Chờ xử lý' : 'Pending' },
-  { value: 'Cancel', label: locale === 'vi' ? 'Đã huỷ' : 'Cancelled' },
-];
-
-const priorityOptions = (locale) => [
-  { value: 'High', label: locale === 'vi' ? 'Cao' : 'High' },
-  { value: 'Medium', label: locale === 'vi' ? 'Trung bình' : 'Medium' },
-  { value: 'Low', label: locale === 'vi' ? 'Thấp' : 'Low' },
-];
+import { useDropdownOptions } from '../../hooks/useDropdownOptions';
 
 const FALLBACK_STAKEHOLDERS = ['BOD', 'Sales Team', 'Dev Team', 'CS Team', 'Partner'];
 
@@ -66,6 +52,8 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
   const [error, setError] = useState('');
   const [assigneeId, setAssigneeId] = useState(task.assigneeId || task.assignee?.id || '');
   const [members, setMembers] = useState([]);
+  const taskStatusOptions = useDropdownOptions('task_status');
+  const taskPriorityOptions = useDropdownOptions('task_priority');
 
   const role = getUserRole();
 
@@ -77,7 +65,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
     getDropdownKeys().then(r => {
       const keys = r.data || [];
       const entry = keys.find(k => k.key === 'stakeholder');
-      const opts = (entry?.options || []).map(o => ({ label: o.label, isActive: o.isActive !== false }));
+      const opts = (entry?.values || []).map(o => ({ label: o.label || o, isActive: o.isActive !== false }));
       setStakeholderOptions(opts.length ? opts : FALLBACK_STAKEHOLDERS.map(l => ({ label: l, isActive: true })));
     }).catch(() => setStakeholderOptions(FALLBACK_STAKEHOLDERS.map(l => ({ label: l, isActive: true }))));
   }, []);
@@ -261,8 +249,8 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
                 onChange={(e) => { setStatus(e.target.value); setError(''); }}
                 disabled={readOnly}
               >
-                {statusOptions(locale).map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {taskStatusOptions.map((opt) => (
+                  <option key={opt.id} value={opt.label}>{opt.label}</option>
                 ))}
               </select>
             </div>
@@ -274,8 +262,8 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
                 onChange={(e) => setPriority(e.target.value)}
                 disabled={readOnly}
               >
-                {priorityOptions(locale).map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {taskPriorityOptions.map((opt) => (
+                  <option key={opt.id} value={opt.label}>{opt.label}</option>
                 ))}
               </select>
             </div>

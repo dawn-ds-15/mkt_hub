@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { createInventoryItem, updateInventoryItem, createInventoryEntry } from '../../services/api';
+import { createInventoryItem, updateInventoryItem, createBatch, updateBatch, getItemBatches } from '../../services/api';
 import NumberInput from '../common/NumberInput';
 
 const CATEGORY_META = {
@@ -32,6 +32,27 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
   const [supplier, setSupplier] = useState('');
   const [contractCode, setContractCode] = useState('');
   const [note, setNote] = useState('');
+  const [entryId, setEntryId] = useState(null);
+
+  useEffect(() => {
+    if (!isCreate && item?.id) {
+      getItemBatches(item.id).then((res) => {
+        const batches = Array.isArray(res.data) ? res.data : [];
+        const latest = batches[batches.length - 1] || batches[0] || null;
+        if (latest) {
+          setBatchCode(latest.batchCode || '');
+          setReceivedDate(latest.receivedDate || new Date().toISOString().slice(0, 10));
+          setQuantity(latest.quantityIn != null ? String(latest.quantityIn) : '');
+          setUnitPriceBeforeVat(latest.unitPrice != null ? String(latest.unitPrice) : '');
+          setVatRate(latest.vatRate != null ? String(latest.vatRate) : '0');
+          setSupplier(latest.supplier || '');
+          setContractCode(latest.contractCode || '');
+          setNote(latest.note || '');
+          setEntryId(latest.id || null);
+        }
+      }).catch(() => {});
+    }
+  }, [isCreate, item?.id]);
 
   const unitPriceAfterVat = Math.round((Number(unitPriceBeforeVat) || 0) * (1 + (Number(vatRate) || 0) / 100));
 
@@ -49,15 +70,12 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
     const missing = {};
     if (!name.trim()) missing.name = true;
     if (!unit.trim()) missing.unit = true;
-
-    if (isCreate) {
-      if (!batchCode.trim()) missing.batchCode = true;
-      if (!receivedDate) missing.receivedDate = true;
-      if (!quantity && quantity !== '0') missing.quantity = true;
-      if (!unitPriceBeforeVat && unitPriceBeforeVat !== '0') missing.unitPriceBeforeVat = true;
-      if (!supplier.trim()) missing.supplier = true;
-      if (!contractCode.trim()) missing.contractCode = true;
-    }
+    if (!batchCode.trim()) missing.batchCode = true;
+    if (!receivedDate) missing.receivedDate = true;
+    if (!quantity && quantity !== '0') missing.quantity = true;
+    if (!unitPriceBeforeVat && unitPriceBeforeVat !== '0') missing.unitPriceBeforeVat = true;
+    if (!supplier.trim()) missing.supplier = true;
+    if (!contractCode.trim()) missing.contractCode = true;
 
     if (Object.keys(missing).length > 0) {
       setMissingFields(missing);
@@ -90,6 +108,17 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
     }
 
     try {
+      const entryPayload = {
+        batchCode: batchCode.trim(),
+        receivedDate,
+        quantityIn: Number(quantity) || 0,
+        unitPrice: Number(unitPriceBeforeVat) || 0,
+        vatRate: Number(vatRate) || 0,
+        supplier: supplier.trim(),
+        contractCode: contractCode.trim(),
+        note: note.trim(),
+      };
+
       if (isCreate) {
         const itemPayload = {
           code: generateCode(name),
@@ -100,18 +129,8 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
         const res = await createInventoryItem(itemPayload);
         const newItem = res.data;
         const itemId = newItem?.id;
-        if (itemId && (batchCode.trim() || Number(quantity) > 0)) {
-          await createInventoryEntry({
-            itemId,
-            receivedDate,
-            batchCode: batchCode.trim(),
-            quantity: Number(quantity) || 0,
-            unitPriceBeforeVat: Number(unitPriceBeforeVat) || 0,
-            vatRate: Number(vatRate) || 0,
-            supplier: supplier.trim(),
-            contractCode: contractCode.trim(),
-            note: note.trim(),
-          });
+        if (itemId) {
+          await createBatch(itemId, entryPayload);
         }
         onSaved(t('Đã tạo vật phẩm mới', 'Item created'));
       } else {
@@ -120,6 +139,11 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
           category,
           unit: unit.trim(),
         });
+        if (entryId) {
+          await updateBatch(entryId, entryPayload);
+        } else {
+          await createBatch(item.id, entryPayload);
+        }
         onSaved(t('Đã cập nhật vật phẩm', 'Item updated'));
       }
     } catch (e) {
@@ -162,57 +186,55 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
             </div>
           </div>
 
-          {isCreate && (
-            <div className="border-t border-border-light pt-5">
-              <h4 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-4">{t('Nhập kho', 'Stock entry')}</h4>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Mã', 'Code')}</label>
-                    <input value={batchCode} onChange={(e) => setBatchCode(e.target.value)} className={`${inputCls} ${missingFields.batchCode ? errCls : ''}`} placeholder="BATCH-2026-001" />
-                  </div>
-                  <div>
-                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ngày nhập', 'Received date')}</label>
-                    <input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} className={`${inputCls} ${missingFields.receivedDate ? errCls : ''}`} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Số lượng', 'Quantity')}</label>
-                    <NumberInput value={quantity} onChange={(e) => setQuantity(e.target.value)} className={`${inputCls} ${missingFields.quantity ? errCls : ''}`} />
-                  </div>
-                  <div>
-                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá trước VAT', 'Unit price (pre-VAT)')}</label>
-                    <NumberInput value={unitPriceBeforeVat} onChange={(e) => setUnitPriceBeforeVat(e.target.value)} className={`${inputCls} ${missingFields.unitPriceBeforeVat ? errCls : ''}`} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('VAT (%)', 'VAT (%)')}</label>
-                    <NumberInput value={vatRate} onChange={(e) => setVatRate(e.target.value)} className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá sau VAT', 'Unit price (post-VAT)')}</label>
-                    <input readOnly value={unitPriceAfterVat ? unitPriceAfterVat.toLocaleString() : ''} className={`${inputCls} bg-surface-container-low cursor-not-allowed`} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Nhà cung cấp', 'Supplier')}</label>
-                    <input value={supplier} onChange={(e) => setSupplier(e.target.value)} className={`${inputCls} ${missingFields.supplier ? errCls : ''}`} />
-                  </div>
-                  <div>
-                    <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Hợp đồng', 'Contract')}</label>
-                    <input value={contractCode} onChange={(e) => setContractCode(e.target.value)} className={`${inputCls} ${missingFields.contractCode ? errCls : ''}`} placeholder="HD-001/26" />
-                  </div>
+          <div className="border-t border-border-light pt-5">
+            <h4 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-4">{t('Nhập kho', 'Stock entry')}</h4>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Mã', 'Code')}</label>
+                  <input value={batchCode} onChange={(e) => setBatchCode(e.target.value)} className={`${inputCls} ${missingFields.batchCode ? errCls : ''}`} placeholder="BATCH-2026-001" />
                 </div>
                 <div>
-                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ghi chú', 'Note')}</label>
-                  <textarea value={note} onChange={(e) => setNote(e.target.value)} className={`${inputCls} h-20 resize-none`} />
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ngày nhập', 'Received date')}</label>
+                  <input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} className={`${inputCls} ${missingFields.receivedDate ? errCls : ''}`} />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Số lượng', 'Quantity')}</label>
+                  <NumberInput value={quantity} onChange={(e) => setQuantity(e.target.value)} className={`${inputCls} ${missingFields.quantity ? errCls : ''}`} />
+                </div>
+                <div>
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá trước VAT', 'Unit price (pre-VAT)')}</label>
+                  <NumberInput value={unitPriceBeforeVat} onChange={(e) => setUnitPriceBeforeVat(e.target.value)} className={`${inputCls} ${missingFields.unitPriceBeforeVat ? errCls : ''}`} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('VAT (%)', 'VAT (%)')}</label>
+                  <NumberInput value={vatRate} onChange={(e) => setVatRate(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá sau VAT', 'Unit price (post-VAT)')}</label>
+                  <input readOnly value={unitPriceAfterVat ? unitPriceAfterVat.toLocaleString() : ''} className={`${inputCls} bg-surface-container-low cursor-not-allowed`} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Nhà cung cấp', 'Supplier')}</label>
+                  <input value={supplier} onChange={(e) => setSupplier(e.target.value)} className={`${inputCls} ${missingFields.supplier ? errCls : ''}`} />
+                </div>
+                <div>
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Hợp đồng', 'Contract')}</label>
+                  <input value={contractCode} onChange={(e) => setContractCode(e.target.value)} className={`${inputCls} ${missingFields.contractCode ? errCls : ''}`} placeholder="HD-001/26" />
+                </div>
+              </div>
+              <div>
+                <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ghi chú', 'Note')}</label>
+                <textarea value={note} onChange={(e) => setNote(e.target.value)} className={`${inputCls} h-20 resize-none`} />
+              </div>
             </div>
-          )}
+          </div>
 
           {formError && (
             <div className="p-3 rounded bg-danger/10 text-danger text-body-sm flex items-center gap-2">

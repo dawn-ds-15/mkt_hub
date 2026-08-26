@@ -106,7 +106,7 @@ export default function DropdownConfig() {
   const [newValue, setNewValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [resetting, setResetting] = useState(false);
+
   const [renamingId, setRenamingId] = useState(null);
   const [renamingValue, setRenamingValue] = useState('');
   const [impactModal, setImpactModal] = useState(null);
@@ -129,7 +129,7 @@ export default function DropdownConfig() {
   const handleAdd = async () => {
     if (!newValue.trim() || !activeKey || adding) return;
     const trimmed = newValue.trim();
-    const duplicate = activeKey.values.some(v => (v.label || '').trim().toLowerCase() === trimmed.toLowerCase());
+    const duplicate = activeKey.values.some(v => v.isActive !== false && (v.label || '').trim().toLowerCase() === trimmed.toLowerCase());
     if (duplicate) {
       addToast(locale === 'vi' ? 'Giá trị này đã tồn tại (không phân biệt hoa/thường)' : 'This value already exists (case-insensitive)', 'error');
       return;
@@ -163,10 +163,18 @@ export default function DropdownConfig() {
   const handleRenameConfirm = async () => {
     if (!renamingValue.trim() || !activeKey) return;
     const trimmed = renamingValue.trim();
-    const duplicate = activeKey.values.some(v => v.id !== renamingId && (v.label || '').trim().toLowerCase() === trimmed.toLowerCase());
+    const duplicate = activeKey.values.some(v => v.isActive !== false && v.id !== renamingId && (v.label || '').trim().toLowerCase() === trimmed.toLowerCase());
     if (duplicate) {
       addToast(locale === 'vi' ? 'Tên này đã tồn tại (không phân biệt hoa/thường)' : 'This name already exists (case-insensitive)', 'error');
       return;
+    }
+    const originalVal = activeKey.values.find(v => v.id === renamingId);
+    const originalLabel = originalVal?.label || '';
+    if (trimmed !== originalLabel) {
+      const msg = locale === 'vi'
+        ? `Đổi tên "${originalLabel}" thành "${trimmed}" sẽ cập nhật dữ liệu ở tất cả các task, dự án, lead đang sử dụng giá trị này.`
+        : `Renaming "${originalLabel}" to "${trimmed}" will update data across all tasks, projects, and leads using this value.`;
+      if (!window.confirm(msg)) return;
     }
     try {
       await updateDropdownOption(activeKey.key, renamingId, trimmed);
@@ -217,35 +225,13 @@ export default function DropdownConfig() {
     }
   };
 
-  // Đặt lại: tải lại dữ liệu gốc từ BE cho khóa hiện tại
-  const handleReset = async () => {
-    if (!activeKey || resetting) return;
-    const msg = locale === 'vi'
-      ? 'Đặt lại khóa này về dữ liệu gốc trên máy chủ? Các thay đổi chưa lưu sẽ bị mất.'
-      : 'Reset this key to server data? Unsaved changes will be lost.';
-    if (!window.confirm(msg)) return;
-    setResetting(true);
-    try {
-      const res = await getDropdownKeys();
-      const list = res.data || [];
-      setKeys(list);
-      const fresh = list.find(k => k.id === activeKey.id) || null;
-      setActiveKey(fresh);
-      addToast(locale === 'vi' ? 'Đã đặt lại về dữ liệu gốc' : 'Reset to server data');
-    } catch (e) {
-      console.error('[DropdownConfig] reset:', e);
-      addToast(locale === 'vi' ? 'Đặt lại thất bại. Vui lòng thử lại.' : 'Reset failed. Please try again.', 'error');
-    } finally {
-      setResetting(false);
-    }
-  };
-
   // Lưu thay đổi: PUT full values array của khóa hiện tại lên BE (thứ tự + danh sách hiện tại)
   const handleSave = async () => {
     if (!activeKey || saving) return;
     setSaving(true);
     try {
-      await reorderDropdownValues(activeKey.id, activeKey.values);
+      const activeValues = activeKey.values.filter(v => v.isActive !== false);
+      await reorderDropdownValues(activeKey.id, activeValues);
       const res = await getDropdownKeys();
       const list = res.data || [];
       setKeys(list);
@@ -285,15 +271,16 @@ export default function DropdownConfig() {
     reordered.splice(index, 0, moved);
     const prevValues = activeKey.values;
     updateKeyValues(activeKey.id, reordered);
-    reorderDropdownValues(activeKey.id, reordered).catch((e) => {
+    const activeOnly = reordered.filter(v => v.isActive !== false);
+    reorderDropdownValues(activeKey.id, activeOnly).catch((e) => {
       console.error('[DropdownConfig] reorder:', e);
       updateKeyValues(activeKey.id, prevValues);
       addToast(locale === 'vi' ? 'Lưu thứ tự thất bại' : 'Failed to save order', 'error');
     });
   };
 
-  const visibleValues = activeKey ? activeKey.values : [];
-  const visibleCountOf = (k) => k.values.length;
+  const visibleValues = activeKey ? activeKey.values.filter(v => v.isActive !== false) : [];
+  const visibleCountOf = (k) => k.values.filter(v => v.isActive !== false).length;
 
   if (loading) {
     return (
@@ -345,17 +332,9 @@ export default function DropdownConfig() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="font-headline-md text-headline-md text-on-surface">{activeKey ? keyDisplayLabel(activeKey, locale) : ''}</h3>
-                <p className="text-body-md text-on-surface-variant">{locale === 'vi' ? 'Kéo thả để sắp xếp thứ tự. Xóa mềm có thể khôi phục.' : 'Drag & drop to reorder. Soft-deleted values can be restored.'}</p>
+                <p className="text-body-md text-on-surface-variant">{locale === 'vi' ? 'Kéo thả để sắp xếp thứ tự.' : 'Drag & drop to reorder.'}</p>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={handleReset}
-                  disabled={resetting}
-                  className="flex items-center gap-2 px-4 py-2 bg-surface-container-high hover:bg-surface-container text-on-surface rounded-lg transition-all border border-outline-variant disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  <span className={`material-symbols-outlined text-sm ${resetting ? 'animate-spin' : ''}`}>{resetting ? 'sync' : 'undo'}</span>
-                  <span className="text-body-md">{locale === 'vi' ? 'Đặt lại' : 'Reset'}</span>
-                </button>
                 <button
                   onClick={handleSave}
                   disabled={saving}
@@ -529,7 +508,7 @@ export default function DropdownConfig() {
                   className="flex-1 px-4 py-3 bg-error text-white font-semibold rounded-lg hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[18px]">delete</span>
-                  {deleting ? (locale === 'vi' ? 'Đang xóa...' : 'Deleting...') : (locale === 'vi' ? 'Xóa' : 'Delete')}
+                  {deleting ? (locale === 'vi' ? 'Đang xóa...' : 'Deleting...') : (locale === 'vi' ? 'Xóa vĩnh viễn' : 'Delete Permanently')}
                 </button>
               </div>
             </div>

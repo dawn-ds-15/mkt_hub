@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { updateProject, getMembers, getDropdownKeys, createProject, getChecklistTemplates } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useDropdownOptions } from '../../hooks/useDropdownOptions';
 
-const FALLBACK_TYPES = ['Internal', 'Client', 'Research', 'Workshop', 'Event', 'Exhibition', 'Webinar'];
+const FALLBACK_TYPES = ['Internal', 'Client', 'Workshop', 'Event', 'Exhibition', 'Webinar', 'Online Campaign', 'Lead Generation', 'Awards', 'Production'];
 const FALLBACK_STATUSES = ['Planning', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 
 // Checklist mẫu lấy từ BE (GET /v1/projects/checklist-templates) — cache module-level vì là nội dung chuẩn ít đổi

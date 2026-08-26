@@ -29,27 +29,36 @@ function writeAll(map) {
   }
 }
 
-export function getExpenseMeta(id) {
-  if (id == null) return null;
-  return readAll()[String(id)] || null;
+export function getExpenseMeta(id, periodKey) {
+  if (id == null && periodKey == null) return null;
+  const map = readAll();
+  if (id != null && map[String(id)]) return map[String(id)];
+  if (periodKey != null && map[String(periodKey)]) return map[String(periodKey)];
+  return null;
 }
 
-export function setExpenseMeta(id, meta) {
-  if (id == null) return { ok: false };
+export function setExpenseMeta(id, meta, periodKey) {
+  if (id == null && periodKey == null) return { ok: false };
   const map = readAll();
-  const key = String(id);
-  const next = { ...(map[key] || {}), ...meta };
+  const next = { ...meta };
   if (next.contractDataUrl && String(next.contractDataUrl).length > MAX_DATAURL_LENGTH) {
     next.contractDataUrl = null;
   }
-  map[key] = next;
+  if (id != null) {
+    const key = String(id);
+    map[key] = { ...(map[key] || {}), ...next };
+  }
+  if (periodKey != null) {
+    const pKey = String(periodKey);
+    map[pKey] = { ...(map[pKey] || {}), ...next };
+  }
   return writeAll(map);
 }
 
-export function removeExpenseMeta(id) {
-  if (id == null) return;
+export function removeExpenseMeta(id, periodKey) {
   const map = readAll();
-  delete map[String(id)];
+  if (id != null) delete map[String(id)];
+  if (periodKey != null) delete map[String(periodKey)];
   writeAll(map);
 }
 
@@ -95,10 +104,6 @@ export function parseExpenseNote(raw) {
   return { event, planned: planned ? String(planned) : '', note: rest.join(' | '), qty: qty ? String(qty) : '' };
 }
 
-// Tách TẤT CẢ các dòng chi phí từ ghi chú BE (định dạng do buildNote tạo:
-// "Sự kiện: X | Kế hoạch: Y | Thực tế: Z | SL: Q | ghi chú", nhiều dòng nối bằng " ; ",
-// có thể đánh số "1. "). "Thực tế" = đơn giá của dòng (BUG-C06: để khôi phục đủ dữ liệu dòng
-// trên máy khác thay vì chỉ còn tổng tiền).
 function toNum(str) {
   const v = parseFloat(String(str ?? '').replace(/\./g, '').replace(/,/g, '.'));
   return Number.isFinite(v) ? v : 0;
@@ -114,21 +119,68 @@ export function parseExpenseLines(raw) {
     let planned = 0;
     let actual = 0;
     let qty = 1;
+    let expenseCategory = '';
+    let inventoryItemId = '';
+    let plannedQty = '';
+    let actualQty = '';
+    let unitPriceAfterVat = 0;
+    let isOther = false;
+    let otherName = '';
     const rest = [];
+
     seg.split('|').map((p) => p.trim()).forEach((part) => {
       if (!part) return;
-      let m = part.match(/^(?:Sự kiện|Event)\s*:\s*(.+)$/i);
+      let m = part.match(/^(?:Danh mục|Category)\s*:\s*(.+)$/i);
+      if (m) { expenseCategory = m[1].trim(); return; }
+
+      m = part.match(/^(?:ItemID|InventoryItemID)\s*:\s*(.+)$/i);
+      if (m) { inventoryItemId = m[1].trim(); return; }
+
+      m = part.match(/^(?:Khác|IsOther)\s*:\s*(.+)$/i);
+      if (m) { isOther = true; return; }
+
+      m = part.match(/^(?:Tên|ItemName|OtherName|Vật phẩm|Item)\s*:\s*(.+)$/i);
+      if (m) { otherName = m[1].trim(); return; }
+
+      m = part.match(/^(?:Đơn giá|UnitPrice)\s*:\s*([\d.,]+)$/i);
+      if (m) { unitPriceAfterVat = toNum(m[1]); return; }
+
+      m = part.match(/^(?:SL KH|PlanQty)\s*:\s*([\d.,]+)$/i);
+      if (m) { plannedQty = m[1].trim(); return; }
+
+      m = part.match(/^(?:SL Thực|ActualQty)\s*:\s*([\d.,]+)$/i);
+      if (m) { actualQty = m[1].trim(); return; }
+
+      m = part.match(/^(?:Sự kiện|Event)\s*:\s*(.+)$/i);
       if (m) { event = m[1].trim(); return; }
+
       m = part.match(/^(?:Kế hoạch|Planned)\s*:\s*([\d.,]+)$/i);
       if (m) { planned = toNum(m[1]); return; }
+
       m = part.match(/^(?:Thực tế|Actual)\s*:\s*([\d.,]+)$/i);
       if (m) { actual = toNum(m[1]); return; }
+
       m = part.match(/^(?:SL|Số lượng|Qty)\s*:\s*([\d.,]+)$/i);
       if (m) { qty = parseInt(m[1].replace(/[.,]/g, ''), 10) || 1; return; }
+
       rest.push(part);
     });
-    if (event || planned || actual || rest.length) {
-      out.push({ event, planned, actual, qty, note: rest.join(' | ') });
+
+    if (event || planned || actual || expenseCategory || inventoryItemId || plannedQty || actualQty || otherName || rest.length) {
+      out.push({
+        event,
+        planned,
+        actual,
+        qty,
+        expenseCategory,
+        inventoryItemId,
+        plannedQty,
+        actualQty,
+        unitPriceAfterVat,
+        isOther,
+        otherName,
+        note: rest.join(' | ')
+      });
     }
   });
   return out;

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getTaskList, createTask, deleteTask, getProjects, getMembers } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { translateTaskErrors } from '../../utils/taskErrors';
+import { useDropdownOptions } from '../../hooks/useDropdownOptions';
 import TaskEditDrawer from './TaskEditDrawer';
 import TaskViewModal from './TaskViewModal';
 
@@ -42,10 +43,12 @@ const statsMeta = [
   { key: 'overdue', label: 'Quá hạn', color: 'text-red-700' },
 ];
 
-const statusFilterOptions = ['Tất cả', 'Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'overdue'];
-
 export default function TaskList({ projectId: projectIdProp }) {
   const { locale } = useDashboard();
+  const taskStatusOpts = useDropdownOptions('task_status');
+  const taskPriorityOpts = useDropdownOptions('task_priority');
+  const statusFilterOptions = useMemo(() => ['Tất cả', ...taskStatusOpts.map(o => o.label), 'overdue'], [taskStatusOpts]);
+  const priorityFilterOptions = useMemo(() => ['Tất cả', ...taskPriorityOpts.map(o => o.label.toLowerCase())], [taskPriorityOpts]);
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,15 +105,13 @@ export default function TaskList({ projectId: projectIdProp }) {
   }, [projectIdProp, projects]);
 
   const fetchTasks = useCallback(() => {
-    const params = {};
-    if (projectIdProp) params.project = projectIdProp;
-    getTaskList(params).then((res) => {
+    getTaskList({}).then((res) => {
       setTasks(res.data);
       setLoading(false);
     }).catch(() => {
       setLoading(false);
     });
-  }, [projectIdProp]);
+  }, []);
 
   useEffect(() => {
     fetchTasks();
@@ -291,7 +292,7 @@ export default function TaskList({ projectId: projectIdProp }) {
   const filterDefs = [
     { key: 'project', label: locale === 'vi' ? 'Dự án:' : 'Project:', options: ['Tất cả', ...projects.map(p => p.name)] },
     { key: 'status', label: locale === 'vi' ? 'Trạng thái:' : 'Status:', options: statusFilterOptions },
-    { key: 'priority', label: locale === 'vi' ? 'Ưu tiên:' : 'Priority:', options: ['Tất cả', 'high', 'medium', 'low'] },
+    { key: 'priority', label: locale === 'vi' ? 'Ưu tiên:' : 'Priority:', options: priorityFilterOptions },
     { key: 'assignee', label: locale === 'vi' ? 'Người phụ trách:' : 'Assignee:', options: ['Tất cả', ...members.map(m => m.name)] },
   ];
 
@@ -454,9 +455,9 @@ export default function TaskList({ projectId: projectIdProp }) {
                   onChange={(e) => setQuickTask(prev => ({ ...prev, priority: e.target.value }))}
                 >
                   <option value="">{locale === 'vi' ? 'Chọn' : 'Select'}</option>
-                  <option value="high">{locale === 'vi' ? 'Cao' : 'High'}</option>
-                  <option value="medium">{locale === 'vi' ? 'Trung bình' : 'Medium'}</option>
-                  <option value="low">{locale === 'vi' ? 'Thấp' : 'Low'}</option>
+                  {taskPriorityOpts.map(o => (
+                    <option key={o.id} value={o.label.toLowerCase()}>{o.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1">

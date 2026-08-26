@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { getExpenseList, deleteExpense, getProjects } from '../../services/api';
+import { getExpenseList, deleteExpense, getProjects, createInventoryTransaction } from '../../services/api';
 import { getExpenseMeta, removeExpenseMeta, parseExpenseNote, parseExpenseLines } from '../../utils/expenseMeta';
 
 function formatCurrency(val) {
@@ -25,10 +25,6 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
     const raw = String(exp.directNote || exp.note || '');
     if (!raw) return 0;
     return parseExpenseLines(raw).reduce((s, l) => s + l.planned, 0);
-  };
-  const totalOf = (exp) => {
-    const m = metaOf(exp);
-    return m ? plannedOf(exp) + (Number(exp.directCost) || 0) : (Number(exp.total) || 0);
   };
   const hasContract = (exp) => {
     const m = metaOf(exp);
@@ -119,9 +115,29 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
 
   const handleDelete = async (id) => {
     if (!window.confirm(t('Xóa khoản chi phí này?', 'Delete this expense entry?'))) return;
+    const target = expenses.find(e => e.id === id);
     const prev = expenses;
     setExpenses(prev => prev.filter(e => e.id !== id));
     try {
+      if (target) {
+        const lines = parseExpenseLines(String(target.directNote || target.note || ''));
+        for (const ln of lines) {
+          if (ln.inventoryItemId && Number(ln.actualQty) > 0) {
+            try {
+              await createInventoryTransaction({
+                itemId: ln.inventoryItemId,
+                projectId: target.projectId,
+                type: 'in',
+                quantity: Number(ln.actualQty),
+                date: new Date().toISOString().slice(0, 10),
+                note: `Hoàn kho từ xóa chi phí (${target.period || ''})`,
+              });
+            } catch (txErr) {
+              console.error('[ExpenseHistory] reverse inventory failed:', txErr?.response?.data || txErr);
+            }
+          }
+        }
+      }
       await deleteExpense(id);
       removeExpenseMeta(id);
       showToast(t('Đã xóa chi phí', 'Expense deleted'));
@@ -148,7 +164,6 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
               <th className="px-3 py-2 text-[11px] font-semibold text-on-surface-variant border-b border-border-light uppercase tracking-wider">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
               <th className="px-3 py-2 text-[11px] font-semibold text-on-surface-variant border-b border-border-light text-right uppercase tracking-wider">{t('Kế hoạch', 'Planned')}</th>
               <th className="px-3 py-2 text-[11px] font-semibold text-on-surface-variant border-b border-border-light text-right uppercase tracking-wider">{t('Thực tế', 'Actual')}</th>
-              <th className="px-3 py-2 text-[11px] font-semibold text-on-surface-variant border-b border-border-light text-right uppercase tracking-wider">{locale === 'vi' ? 'Tổng' : 'Total'}</th>
               <th className="px-3 py-2 text-[11px] font-semibold text-on-surface-variant border-b border-border-light text-center uppercase tracking-wider">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
             </tr>
           </thead>
@@ -164,7 +179,6 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
                 <td className="px-3 py-1.5 text-body-sm text-on-surface-variant max-w-[120px] truncate">{(exp.project?.name || exp.project) || '—'}</td>
                 <td className="px-3 py-1.5 text-body-sm text-right font-medium">{formatCurrency(plannedOf(exp))}</td>
                 <td className="px-3 py-1.5 text-body-sm text-right font-medium">{formatCurrency(exp.directCost)}</td>
-                <td className="px-3 py-1.5 text-body-sm text-right font-bold text-on-surface">{formatCurrency(totalOf(exp))}</td>
                 <td className="px-3 py-1.5 text-center">
                   <div className="flex justify-center gap-1">
                     {renderContractBtn(exp)}
@@ -210,7 +224,6 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
                       <th className="px-4 py-2 text-[11px] font-semibold text-gray-500 border-b uppercase tracking-wider">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
                       <th className="px-4 py-2 text-[11px] font-semibold text-gray-500 border-b text-right uppercase tracking-wider">{t('Kế hoạch', 'Planned')}</th>
                       <th className="px-4 py-2 text-[11px] font-semibold text-gray-500 border-b text-right uppercase tracking-wider">{t('Thực tế', 'Actual')}</th>
-                      <th className="px-4 py-2 text-[11px] font-semibold text-gray-500 border-b text-right uppercase tracking-wider">{locale === 'vi' ? 'Tổng' : 'Total'}</th>
                       <th className="px-4 py-2 text-[11px] font-semibold text-gray-500 border-b text-right uppercase tracking-wider">{locale === 'vi' ? 'Ghi chú' : 'Note'}</th>
                       <th className="px-4 py-2 text-[11px] font-semibold text-gray-500 border-b text-center uppercase tracking-wider">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
                     </tr>
@@ -227,7 +240,6 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
                         <td className="px-4 py-2 text-sm text-gray-600">{(exp.project?.name || exp.project) || '—'}</td>
                         <td className="px-4 py-2 text-sm text-right font-medium">{formatCurrency(plannedOf(exp))}</td>
                         <td className="px-4 py-2 text-sm text-right font-medium">{formatCurrency(exp.directCost)}</td>
-                        <td className="px-4 py-2 text-sm text-right font-bold">{formatCurrency(totalOf(exp))}</td>
                         <td className="px-4 py-2 text-sm text-gray-500 max-w-[200px] truncate">{getExpenseMeta(exp.id)?.event || exp.note || exp.directNote || exp.overheadNote || '—'}</td>
                         <td className="px-4 py-2 text-center">
                           <div className="flex justify-center gap-1">

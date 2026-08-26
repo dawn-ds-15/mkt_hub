@@ -1893,6 +1893,11 @@ export const getInventoryTransactions = async (params = {}) => {
   return { data: list };
 };
 
+export const deleteInventoryTransaction = async (id) => {
+  const res = await api.delete(`/v1/inventory/transactions/${id}`);
+  return { data: res.data?.data ?? res.data };
+};
+
 export const createInventoryTransaction = async (data) => {
   const res = await api.post('/v1/inventory/transactions', {
     itemId: data.itemId,
@@ -2003,5 +2008,6 @@ export default {
   updateInventoryEntry,
   getInventoryTransactions,
   createInventoryTransaction,
+  deleteInventoryTransaction,
   getPipelineBySegment,
 };

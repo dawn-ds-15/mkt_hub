@@ -1,19 +1,42 @@
+import { useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { deleteInventoryTransaction } from '../../services/api';
 
 function formatDate(iso) {
   if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString('en-GB');
+  const str = String(iso);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str.split('-').reverse().join('/');
+  const d = new Date(str);
+  if (Number.isNaN(d.getTime())) return str;
+  return d.toLocaleDateString('en-GB');
 }
 
-export default function BatchHistoryModal({ item, batch, rows, error, onClose }) {
+export default function BatchHistoryModal({ item, batch, rows, error, onClose, onRestored }) {
   const { locale } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
+  const [restoringId, setRestoringId] = useState(null);
 
   const typeMeta = {
     in: { vi: 'Nhập', en: 'In', badge: 'bg-success/10 text-success border-success/20' },
     out: { vi: 'Xuất', en: 'Out', badge: 'bg-warning/10 text-warning border-warning/20' },
+  };
+
+  const handleRestore = async (row) => {
+    const msg = t(
+      `Hoàn tác giao dịch ${row.type === 'out' ? 'xuất' : 'nhập'} ${row.quantity} sản phẩm?`,
+      `Reverse this ${row.type} transaction (${row.quantity} units)?`
+    );
+    if (!window.confirm(msg)) return;
+    setRestoringId(row.id);
+    try {
+      await deleteInventoryTransaction(row.id);
+      if (onRestored) onRestored();
+    } catch (err) {
+      console.error('[BatchHistoryModal] restore failed:', err?.response?.data || err);
+      alert(t('Lỗi khi hoàn tác. Vui lòng thử lại.', 'Restore failed. Please try again.'));
+    } finally {
+      setRestoringId(null);
+    }
   };
 
   return (
@@ -51,6 +74,7 @@ export default function BatchHistoryModal({ item, batch, rows, error, onClose })
                     <th className="p-md font-label-md text-label-md text-on-surface-variant border-b border-border-light text-right uppercase tracking-wider">{t('Số lượng', 'Qty')}</th>
                     <th className="p-md font-label-md text-label-md text-on-surface-variant border-b border-border-light uppercase tracking-wider">{t('Ngày', 'Date')}</th>
                     <th className="p-md font-label-md text-label-md text-on-surface-variant border-b border-border-light uppercase tracking-wider">{t('Ghi chú', 'Note')}</th>
+                    <th className="p-md font-label-md text-label-md text-on-surface-variant border-b border-border-light text-right uppercase tracking-wider">{t('Thao tác', 'Action')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-light font-body-sm text-body-sm">
@@ -67,6 +91,18 @@ export default function BatchHistoryModal({ item, batch, rows, error, onClose })
                         <td className="px-3 py-2.5 text-right font-medium tabular-nums">{Number(row.quantity) || 0}</td>
                         <td className="px-3 py-2.5">{formatDate(row.date || row.createdAt)}</td>
                         <td className="px-3 py-2.5 text-on-surface-variant max-w-[220px] truncate">{row.note || '—'}</td>
+                        <td className="px-3 py-2.5 text-right">
+                          <button
+                            disabled={restoringId === row.id}
+                            onClick={() => handleRestore(row)}
+                            title={t('Hoàn tác giao dịch này', 'Reverse this transaction')}
+                            className="text-danger hover:text-danger/80 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">
+                              {restoringId === row.id ? 'hourglass_top' : 'undo'}
+                            </span>
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}

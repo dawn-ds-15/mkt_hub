@@ -378,6 +378,10 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
           rows={historyFor.rows}
           error={historyFor.error}
           onClose={() => setHistoryFor(null)}
+          onRestored={() => {
+            openHistory(historyFor.item, historyFor.batch);
+            loadItems();
+          }}
         />
       )}
 

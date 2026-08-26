@@ -60,7 +60,7 @@ export default function ExpenseManagement() {
       case 'overview':
         return <ExpenseOverview refreshKey={refreshKey} />;
       case 'budget':
-        return <ExpenseBudget refreshKey={refreshKey} onAddExpense={() => setActiveTab('input')} />;
+        return <ExpenseBudget refreshKey={refreshKey} onSaved={handleSaved} onAddExpense={() => setActiveTab('input')} />;
       case 'reports':
         return <ExpenseReports refreshKey={refreshKey} />;
       default:

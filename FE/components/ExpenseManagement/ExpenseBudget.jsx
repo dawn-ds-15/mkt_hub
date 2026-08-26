@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
-import { getExpenseList, getProjects, deleteExpense } from '../../services/api';
+import { getExpenseList, getProjects, deleteExpense, createInventoryTransaction } from '../../services/api';
 import { parseExpenseLines } from '../../utils/expenseMeta';
 
 const CURRENT_YEAR = String(new Date().getFullYear());
@@ -34,7 +34,7 @@ function matchesPeriod(p, periodKey) {
 // fix_ui_cn: "Số lượng" = số lượng sự kiện (số dòng chi phí gộp trong bản ghi theo kỳ)
 const lineCountOf = (e) => Math.max(parseExpenseLines(String(e.directNote || e.note || '')).length, 1);
 
-export default function ExpenseBudget({ refreshKey, onAddExpense }) {
+export default function ExpenseBudget({ refreshKey, onSaved, onAddExpense }) {
   const { locale } = useDashboard();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -73,11 +73,34 @@ export default function ExpenseBudget({ refreshKey, onAddExpense }) {
     if (!window.confirm(msg)) return;
     setDeleting(true);
     try {
+      for (const id of ids) {
+        const exp = expenses.find(e => e.id === id);
+        if (exp) {
+          const lines = parseExpenseLines(String(exp.directNote || exp.note || ''));
+          for (const ln of lines) {
+            if (ln.inventoryItemId && Number(ln.actualQty) > 0) {
+              try {
+                await createInventoryTransaction({
+                  itemId: ln.inventoryItemId,
+                  projectId: exp.projectId,
+                  type: 'in',
+                  quantity: Number(ln.actualQty),
+                  date: new Date().toISOString().slice(0, 10),
+                  note: `Hoàn kho từ xóa chi phí (${exp.period || ''})`,
+                });
+              } catch (txErr) {
+                console.error('[ExpenseBudget] reverse inventory failed:', txErr?.response?.data || txErr);
+              }
+            }
+          }
+        }
+      }
       await Promise.all(ids.map((id) => deleteExpense(id)));
       addToast(locale === 'vi' ? `Đã xóa ${ids.length} khoản chi phí` : `Deleted ${ids.length} expense record(s)`);
       const ex = await getExpenseList();
       setExpenses(Array.isArray(ex.data) ? ex.data : []);
       setSelectedIds([]);
+      if (onSaved) onSaved();
     } catch (e) {
       console.error('[ExpenseBudget] handleDeleteRows:', e);
       addToast(locale === 'vi' ? 'Thao tác thất bại.' : 'Action failed.', 'error');

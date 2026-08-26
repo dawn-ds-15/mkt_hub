@@ -116,23 +116,21 @@ export default function PlanKPIsForm() {
   const renderField = (field) => {
     const value = isEditing ? editForm[field.apiKey] : getFieldValue(field.apiKey);
     return (
-      <div key={field.apiKey} className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-surface-container/30 p-2.5 rounded-lg border border-slate-200/80 dark:border-border-light/60">
-        <div className="flex items-center justify-between gap-1">
-          <label className="text-[11px] font-bold text-slate-600 dark:text-on-surface-variant uppercase tracking-wider truncate flex items-center gap-1">
-            <span className="material-symbols-outlined text-[15px] text-secondary">{field.icon}</span>
-            {t(field.label.vi, field.label.en)}
-          </label>
-        </div>
+      <div key={field.apiKey} className="flex items-center gap-3 bg-slate-50/50 dark:bg-surface-container/30 px-3 py-2.5 rounded-lg border border-slate-200/80 dark:border-border-light/60">
+        <label className="text-[11px] font-bold text-slate-600 dark:text-on-surface-variant uppercase tracking-wider whitespace-nowrap flex items-center gap-1 min-w-0 shrink-0">
+          <span className="material-symbols-outlined text-[15px] text-secondary">{field.icon}</span>
+          {t(field.label.vi, field.label.en)}
+        </label>
         {isEditing ? (
           <NumberInput
-            className="w-full bg-white dark:bg-surface-container-lowest border-2 border-secondary/50 focus:border-secondary focus:ring-2 focus:ring-secondary/20 rounded-md py-1.5 px-3 text-body-md font-bold text-on-surface shadow-sm outline-none transition-all"
+            className="flex-1 min-w-0 bg-white dark:bg-surface-container-lowest border-2 border-secondary/50 focus:border-secondary focus:ring-2 focus:ring-secondary/20 rounded-md py-1.5 px-3 text-body-md font-bold text-on-surface shadow-sm outline-none transition-all"
             value={value}
             onChange={(e) => setEditForm(prev => ({ ...prev, [field.apiKey]: e.target.value }))}
             placeholder="0"
             disabled={isSaving}
           />
         ) : (
-          <div className="bg-white dark:bg-surface-container-lowest border border-border-light rounded-md py-1.5 px-3 font-bold text-primary text-body-lg tabular-nums shadow-2xs">
+          <div className="flex-1 min-w-0 bg-white dark:bg-surface-container-lowest border border-border-light rounded-md py-1.5 px-3 font-bold text-primary text-body-md tabular-nums shadow-2xs text-right">
             {fmt(value)}
           </div>
         )}
@@ -206,7 +204,7 @@ export default function PlanKPIsForm() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="flex flex-col gap-2">
             {FIELD_DEFS.map(renderField)}
           </div>
 

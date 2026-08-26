@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { deleteInventoryTransaction } from '../../services/api';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -11,32 +10,13 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-GB');
 }
 
-export default function BatchHistoryModal({ item, batch, rows, error, onClose, onRestored }) {
+export default function BatchHistoryModal({ item, batch, rows, error, onClose, onRestore, restoringId }) {
   const { locale } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
-  const [restoringId, setRestoringId] = useState(null);
 
   const typeMeta = {
     in: { vi: 'Nhập', en: 'In', badge: 'bg-success/10 text-success border-success/20' },
     out: { vi: 'Xuất', en: 'Out', badge: 'bg-warning/10 text-warning border-warning/20' },
-  };
-
-  const handleRestore = async (row) => {
-    const msg = t(
-      `Hoàn tác giao dịch ${row.type === 'out' ? 'xuất' : 'nhập'} ${row.quantity} sản phẩm?`,
-      `Reverse this ${row.type} transaction (${row.quantity} units)?`
-    );
-    if (!window.confirm(msg)) return;
-    setRestoringId(row.id);
-    try {
-      await deleteInventoryTransaction(row.id);
-      if (onRestored) onRestored();
-    } catch (err) {
-      console.error('[BatchHistoryModal] restore failed:', err?.response?.data || err);
-      alert(t('Lỗi khi hoàn tác. Vui lòng thử lại.', 'Restore failed. Please try again.'));
-    } finally {
-      setRestoringId(null);
-    }
   };
 
   return (
@@ -93,8 +73,8 @@ export default function BatchHistoryModal({ item, batch, rows, error, onClose, o
                         <td className="px-3 py-2.5 text-on-surface-variant max-w-[220px] truncate">{row.note || '—'}</td>
                         <td className="px-3 py-2.5 text-right">
                           <button
-                            disabled={restoringId === row.id}
-                            onClick={() => handleRestore(row)}
+                            disabled={!!restoringId}
+                            onClick={() => onRestore && onRestore(row)}
                             title={t('Hoàn tác giao dịch này', 'Reverse this transaction')}
                             className="text-danger hover:text-danger/80 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                           >

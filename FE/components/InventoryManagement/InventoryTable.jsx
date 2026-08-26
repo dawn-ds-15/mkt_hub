@@ -5,7 +5,11 @@ import {
   getItemBatches,
   deleteInventoryItem,
   getInventoryTransactions,
+  deleteInventoryTransaction,
+  getExpenseList,
+  deleteExpense,
 } from '../../services/api';
+import { parseExpenseLines } from '../../utils/expenseMeta';
 import BatchHistoryModal from './BatchHistoryModal';
 import StockOutModal from './StockOutModal';
 
@@ -72,10 +76,74 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
   const [historyFor, setHistoryFor] = useState(null);
   const [stockOutFor, setStockOutFor] = useState(null);
   const [toast, setToast] = useState(null);
+  const [restoringId, setRestoringId] = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 2500);
+  };
+
+  const handleRestoreTransaction = async (row) => {
+    const periodMatch = row.note?.match(/chi phí\s*\(([^)]+)\)/i);
+    const txPeriod = periodMatch ? periodMatch[1] : null;
+
+    let matchedExpense = null;
+    if (txPeriod || row.projectId) {
+      try {
+        const res = await getExpenseList();
+        const list = Array.isArray(res.data) ? res.data : [];
+        matchedExpense = list.find((exp) => {
+          const matchPeriod = txPeriod ? String(exp.period || '').includes(txPeriod) : true;
+          const matchProject = row.projectId ? String(exp.projectId || '') === String(row.projectId) : true;
+          if (!matchPeriod || !matchProject) return false;
+          const note = String(exp.directNote || exp.note || '');
+          return note.includes(`ItemID: ${row.itemId}`);
+        });
+      } catch (e) {
+        console.error('[InventoryTable] getExpenseList for restore:', e);
+      }
+    }
+
+    const warnParts = [
+      t(
+        `Hoàn tác giao dịch ${row.type === 'out' ? 'xuất' : 'nhập'} ${row.quantity} ${item?.name || ''}?`,
+        `Reverse this ${row.type} transaction (${row.quantity} ${item?.name || ''})?`
+      ),
+    ];
+    if (matchedExpense) {
+      warnParts.push('');
+      warnParts.push(t(
+        `⚠️ Bản ghi chi phí "${matchedExpense.period} — ${matchedExpense.project?.name || matchedExpense.projectId || ''}" sẽ bị xóa.`,
+        `⚠️ Expense record "${matchedExpense.period} — ${matchedExpense.project?.name || matchedExpense.projectId || ''}" will be deleted.`
+      ));
+      warnParts.push(t('Thao tác này không thể hoàn tác.', 'This action cannot be undone.'));
+    }
+    if (!window.confirm(warnParts.join('\n'))) return;
+
+    setRestoringId(row.id);
+    try {
+      if (matchedExpense) {
+        try {
+          await deleteExpense(matchedExpense.id);
+        } catch (delErr) {
+          console.error('[InventoryTable] deleteExpense during restore:', delErr?.response?.data || delErr);
+          showToast(t('Không xóa được bản ghi chi phí liên quan', 'Could not delete associated expense'), 'error');
+          setRestoringId(null);
+          return;
+        }
+      }
+
+      await deleteInventoryTransaction(row.id);
+      showToast(t('Đã hoàn tác giao dịch và xóa chi phí liên quan', 'Transaction reversed, associated expense deleted'));
+
+      openHistory(historyFor.item, historyFor.batch);
+      loadItems();
+    } catch (err) {
+      console.error('[InventoryTable] restore transaction failed:', err?.response?.data || err);
+      showToast(t('Lỗi khi hoàn tác. Vui lòng thử lại.', 'Restore failed. Please try again.'), 'error');
+    } finally {
+      setRestoringId(null);
+    }
   };
 
   const loadItems = useCallback(async () => {
@@ -377,11 +445,9 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
           batch={historyFor.batch}
           rows={historyFor.rows}
           error={historyFor.error}
+          restoringId={restoringId}
           onClose={() => setHistoryFor(null)}
-          onRestored={() => {
-            openHistory(historyFor.item, historyFor.batch);
-            loadItems();
-          }}
+          onRestore={handleRestoreTransaction}
         />
       )}
 

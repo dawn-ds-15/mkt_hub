@@ -35,16 +35,20 @@ export default function ExpenseHistory({ refreshKey, onSaved, onEdit }) {
     const meta = metaOf(exp) || {};
     const rawLines = Array.isArray(meta.lines) ? meta.lines : null;
     if (rawLines && rawLines.length > 0) {
-      return rawLines.map((ln, i) => ({
-        no: i + 1,
-        event: ln.event || '',
-        planned: Number(ln.planned) || 0,
-        unitPrice: Number(ln.actual) || 0,
-        qty: Number(ln.qty) || 1,
-        amount: (Number(ln.actual) || 0) * (Number(ln.qty) || 1),
-        note: ln.note || '',
-        contractFile: ln.contractFile || '',
-      }));
+      return rawLines.map((ln, i) => {
+        const qty = Number(ln.actualQty) || Number(ln.qty) || 1;
+        const unitPrice = Number(ln.actual) || Number(ln.unitPriceAfterVat) || 0;
+        return {
+          no: i + 1,
+          event: ln.event || '',
+          planned: Number(ln.planned) || 0,
+          unitPrice: unitPrice,
+          qty,
+          amount: unitPrice * qty,
+          note: ln.note || '',
+          contractFile: ln.contractFile || '',
+        };
+      });
     }
     // Fallback: tách trực tiếp từ ghi chú trên BE — phân bổ thực tế theo trọng số kế hoạch
     const parsedLines = parseExpenseLines(exp.directNote || exp.note || '');
@@ -57,12 +61,13 @@ export default function ExpenseHistory({ refreshKey, onSaved, onEdit }) {
         const w = sumPlanned > 0 ? ln.planned / sumPlanned : 1 / parsedLines.length;
         const amount = isLast ? Math.max(direct - allocated, 0) : Math.round(direct * w);
         if (!isLast) allocated += amount;
+        const qty = Number(ln.actualQty) || ln.qty || 1;
         return {
           no: i + 1,
           event: ln.event,
           planned: ln.planned,
-          unitPrice: ln.qty > 1 ? Math.round(amount / ln.qty) : amount,
-          qty: ln.qty,
+          unitPrice: qty > 1 ? Math.round(amount / qty) : amount,
+          qty,
           amount,
           note: ln.note,
           contractFile: '',

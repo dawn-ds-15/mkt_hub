@@ -201,7 +201,34 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
     setHistoryFor(null);
     try {
       const res = await getInventoryTransactions({ batchId: batch?.id, itemId: item.id });
-      setHistoryFor({ item, batch, rows: res.data || [] });
+      const allRows = res.data || [];
+
+      // Lọc bỏ giao dịch đã bị reverse (đã xóa/chỉnh sửa chi phí):
+      // Bước 1: tìm các transaction type='in' có note chứa "Hoàn kho từ" → đánh dấu là reverse
+      const reverseRows = allRows.filter(
+        (r) => r.type === 'in' && /hoàn kho từ/i.test(r.note || '')
+      );
+      // Bước 2: tìm transaction type='out' gốc đã bị reverse (cùng itemId + số lượng)
+      const reversedKeys = new Set();
+      for (const rev of reverseRows) {
+        for (const orig of allRows) {
+          if (
+            orig.type === 'out' &&
+            orig.itemId === rev.itemId &&
+            Number(orig.quantity) === Number(rev.quantity)
+          ) {
+            reversedKeys.add(orig.id);
+            reversedKeys.add(rev.id);
+          }
+        }
+      }
+      // Bước 3: nếu reverse không match quantity nào → vẫn ẩn reverse (bookkeeping entry)
+      for (const rev of reverseRows) {
+        reversedKeys.add(rev.id);
+      }
+
+      const filteredRows = allRows.filter((r) => !reversedKeys.has(r.id));
+      setHistoryFor({ item, batch, rows: filteredRows });
     } catch (e) {
       console.error('[Inventory] getInventoryTransactions:', e);
       setHistoryFor({ item, batch, rows: [], error: true });

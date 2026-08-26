@@ -106,8 +106,8 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
 
     const warnParts = [
       t(
-        `Hoàn tác giao dịch ${row.type === 'out' ? 'xuất' : 'nhập'} ${row.quantity} ${item?.name || ''}?`,
-        `Reverse this ${row.type} transaction (${row.quantity} ${item?.name || ''})?`
+        `Hoàn tác giao dịch ${row.type === 'out' ? 'xuất' : 'nhập'} ${row.quantity} ${historyFor?.item?.name || ''}?`,
+        `Reverse this ${row.type} transaction (${row.quantity} ${historyFor?.item?.name || ''})?`
       ),
     ];
     if (matchedExpense) {

@@ -27,6 +27,7 @@ export default function ExpenseManagement() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'budget';
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editingExpense, setEditingExpense] = useState(null);
   const role = getUserRole();
 
   const tabs = allTabs.filter(tab => !tab.managerOnly || role === 'manager');
@@ -53,8 +54,16 @@ export default function ExpenseManagement() {
       case 'input':
         return (
           <div className="space-y-6">
-            <ExpenseEntryForm onSaved={handleSaved} />
-            <ExpenseHistory refreshKey={refreshKey} onSaved={handleSaved} />
+            <ExpenseEntryForm
+              onSaved={handleSaved}
+              editingExpense={editingExpense}
+              onEditDone={() => { setEditingExpense(null); handleSaved(); }}
+            />
+            <ExpenseHistory
+              refreshKey={refreshKey}
+              onSaved={handleSaved}
+              onEdit={(exp) => { setEditingExpense(exp); }}
+            />
           </div>
         );
       case 'overview':

@@ -52,7 +52,7 @@ function normPeriod(p) {
   return str;
 }
 
-export default function ExpenseEntryForm({ onSaved }) {
+export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone }) {
   const { locale } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
   const role = getUserRole();
@@ -83,6 +83,95 @@ export default function ExpenseEntryForm({ onSaved }) {
   }, []);
 
   const prevProjectIdRef = useRef('');
+
+  // Edit mode: populate form from editingExpense
+  useEffect(() => {
+    if (!editingExpense) return;
+    const exp = editingExpense;
+    setProjectId(exp.projectId || '');
+    const p = normPeriod(exp.period);
+    if (p) setPeriod(p);
+
+    const meta = getExpenseMeta(exp.id) || {};
+    const parsed = parseExpenseLines(String(exp.directNote || exp.note || ''));
+
+    let lines;
+    if (Array.isArray(meta.lines) && meta.lines.length > 0) {
+      lines = meta.lines.map((ln, i) => ({
+        event: ln.event || parsed[i]?.event || '',
+        planned: ln.planned != null && ln.planned !== '' ? String(ln.planned) : (parsed[i]?.planned ? String(parsed[i].planned) : ''),
+        actual: lineActualToTotal(ln) || lineActualToTotal(parsed[i] || {}),
+        expenseCategory: ln.expenseCategory || parsed[i]?.expenseCategory || '',
+        inventoryItemId: ln.inventoryItemId || parsed[i]?.inventoryItemId || '',
+        plannedQty: ln.plannedQty != null && ln.plannedQty !== '' ? String(ln.plannedQty) : (parsed[i]?.plannedQty ? String(parsed[i].plannedQty) : ''),
+        actualQty: ln.actualQty != null && ln.actualQty !== '' ? String(ln.actualQty) : (parsed[i]?.actualQty ? String(parsed[i].actualQty) : ''),
+        unitPriceAfterVat: ln.unitPriceAfterVat || parsed[i]?.unitPriceAfterVat || 0,
+        isOther: Boolean(ln.isOther || parsed[i]?.isOther),
+        otherName: ln.otherName || parsed[i]?.otherName || '',
+        note: ln.note != null && ln.note !== '' ? String(ln.note) : (parsed[i]?.note || ''),
+        contractFile: ln.contractFile || '',
+        contractDataUrl: ln.contractDataUrl || null,
+        contractDocId: ln.contractDocId || null,
+      }));
+    } else if (parsed.length > 0) {
+      lines = parsed.map((ln) => ({
+        event: ln.event || '',
+        planned: ln.planned ? String(ln.planned) : '',
+        actual: lineActualToTotal(ln),
+        expenseCategory: ln.expenseCategory || '',
+        inventoryItemId: ln.inventoryItemId || '',
+        plannedQty: ln.plannedQty ? String(ln.plannedQty) : '',
+        actualQty: ln.actualQty ? String(ln.actualQty) : '',
+        unitPriceAfterVat: ln.unitPriceAfterVat || 0,
+        isOther: Boolean(ln.isOther),
+        otherName: ln.otherName || '',
+        note: ln.note || '',
+        contractFile: '',
+        contractDataUrl: null,
+        contractDocId: null,
+      }));
+      if (lines.length === 1 && !lines[0].actual && Number(exp.directCost)) {
+        lines[0].actual = String(Number(exp.directCost));
+      }
+    } else {
+      const direct = Number(exp.directCost) || 0;
+      lines = [{
+        event: meta.event || '',
+        planned: meta.planned != null && meta.planned !== '' ? String(meta.planned) : '',
+        actual: direct ? String(direct) : '',
+        expenseCategory: meta.expenseCategory || '',
+        inventoryItemId: meta.inventoryItemId || '',
+        plannedQty: meta.plannedQty != null && meta.plannedQty !== '' ? String(meta.plannedQty) : '',
+        actualQty: meta.actualQty != null && meta.actualQty !== '' ? String(meta.actualQty) : '',
+        unitPriceAfterVat: meta.unitPriceAfterVat || 0,
+        isOther: Boolean(meta.isOther),
+        otherName: meta.otherName || '',
+        note: meta.note != null && meta.note !== '' ? String(meta.note) : '',
+        contractFile: meta.contractFile || '',
+        contractDataUrl: meta.contractDataUrl || null,
+        contractDocId: meta.contractDocId || null,
+      }];
+    }
+
+    setRows(lines.map((ln) => ({
+      ...emptyRow(),
+      expenseId: exp.id,
+      event: ln.event || '',
+      planned: ln.planned != null && ln.planned !== '' ? String(ln.planned) : '',
+      actual: ln.actual != null && ln.actual !== '' ? String(ln.actual) : '',
+      expenseCategory: ln.expenseCategory || '',
+      inventoryItemId: ln.inventoryItemId || '',
+      plannedQty: ln.plannedQty != null && ln.plannedQty !== '' ? String(ln.plannedQty) : '',
+      actualQty: ln.actualQty != null && ln.actualQty !== '' ? String(ln.actualQty) : '',
+      unitPriceAfterVat: ln.unitPriceAfterVat || 0,
+      isOther: Boolean(ln.isOther),
+      otherName: ln.otherName || '',
+      contractFile: ln.contractFile || '',
+      contractDataUrl: ln.contractDataUrl || null,
+      contractDocId: ln.contractDocId || null,
+      note: ln.note || '',
+    })));
+  }, [editingExpense]);
 
   // Tự động load phiên nhập gần nhất của Dự án khi chuyển Dự án / mở Tab
   useEffect(() => {
@@ -414,6 +503,27 @@ export default function ExpenseEntryForm({ onSaved }) {
         savedId = res?.data?.id || null;
       }
 
+      // Edit mode: reverse old inventory before creating new
+      if (editingExpense && savedId) {
+        const oldLines = parseExpenseLines(String(editingExpense.directNote || editingExpense.note || ''));
+        for (const ln of oldLines) {
+          if (ln.inventoryItemId && Number(ln.actualQty) > 0) {
+            try {
+              await createInventoryTransaction({
+                itemId: ln.inventoryItemId,
+                projectId: editingExpense.projectId || projectId,
+                type: 'in',
+                quantity: Number(ln.actualQty),
+                date: new Date().toISOString().slice(0, 10),
+                note: `Hoàn kho từ chỉnh sửa chi phí (${period})`,
+              });
+            } catch (txErr) {
+              console.error('[ExpenseEntryForm] reverse old inventory failed:', txErr?.response?.data || txErr);
+            }
+          }
+        }
+      }
+
       if (savedId) {
         const inventoryRows = validRows.filter((r) => r.inventoryItemId && Number(r.actualQty) > 0);
         for (const r of inventoryRows) {
@@ -478,14 +588,17 @@ export default function ExpenseEntryForm({ onSaved }) {
       }
 
       showToast(
-        existedBefore
-          ? t(`Đã cập nhật chi phí kỳ ${period}`, `Updated expense for period ${period}`)
-          : validRows.length > 1
-            ? t(`Đã lưu ${validRows.length} dòng (gộp thành một khoản theo kỳ ${period})`, `Saved ${validRows.length} line(s) combined into one record for ${period}`)
-            : t('Đã lưu chi phí thành công', 'Expense saved successfully')
+        editingExpense
+          ? t(`Đã cập nhật chi phí kỳ ${period} (kho đã điều chỉnh)`, `Updated expense for period ${period} (inventory adjusted)`)
+          : existedBefore
+            ? t(`Đã cập nhật chi phí kỳ ${period}`, `Updated expense for period ${period}`)
+            : validRows.length > 1
+              ? t(`Đã lưu ${validRows.length} dòng (gộp thành một khoản theo kỳ ${period})`, `Saved ${validRows.length} line(s) combined into one record for ${period}`)
+              : t('Đã lưu chi phí thành công', 'Expense saved successfully')
       );
       resetForm();
       setReloadKey((v) => v + 1);
+      if (editingExpense && onEditDone) onEditDone();
       if (onSaved) onSaved();
     } catch (err) {
       console.error('[ExpenseEntryForm] Lưu chi phí thất bại:', {
@@ -509,6 +622,21 @@ export default function ExpenseEntryForm({ onSaved }) {
 
   return (
     <div className="bg-surface-container-lowest border border-border-light rounded-xl relative">
+      {editingExpense && (
+        <div className="bg-warning/10 border-b border-warning/30 px-4 py-2.5 flex items-center justify-between rounded-t-xl">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-warning">edit</span>
+            <span className="font-label-md text-on-surface">{t('Đang chỉnh sửa chi phí', 'Editing expense')} — {editingExpense.period} — {(editingExpense.project?.name || '')}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => { resetForm(); if (onEditDone) onEditDone(); }}
+            className="text-xs px-3 py-1 rounded border border-outline-variant hover:bg-surface-container-high transition-colors text-on-surface-variant cursor-pointer"
+          >
+            {t('Hủy chỉnh sửa', 'Cancel editing')}
+          </button>
+        </div>
+      )}
       <div className="absolute top-0 left-0 w-full h-1 bg-primary rounded-t-xl" />
       <form onSubmit={handleSubmit}>
         <div className="p-widget-padding">

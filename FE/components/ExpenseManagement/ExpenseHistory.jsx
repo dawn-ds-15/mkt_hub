@@ -7,7 +7,7 @@ function formatCurrency(val) {
   return (val ?? 0).toLocaleString('vi-VN');
 }
 
-export default function ExpenseHistory({ refreshKey, onSaved }) {
+export default function ExpenseHistory({ refreshKey, onSaved, onEdit }) {
   const { locale } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
   const [expenses, setExpenses] = useState([]);
@@ -185,6 +185,9 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
                     <button onClick={(e) => { e.stopPropagation(); openDetail(exp); }} className="p-1 text-on-surface-variant hover:text-primary transition-colors hover:bg-primary/10 rounded cursor-pointer" title={t('Xem chi tiết', 'View details')}>
                       <span className="material-symbols-outlined text-[16px]">visibility</span>
                     </button>
+                    <button onClick={(e) => { e.stopPropagation(); if (onEdit) onEdit(exp); }} className="p-1 text-on-surface-variant hover:text-secondary transition-colors hover:bg-secondary/10 rounded cursor-pointer" title={t('Chỉnh sửa', 'Edit')}>
+                      <span className="material-symbols-outlined text-[16px]">edit</span>
+                    </button>
                     <button onClick={(e) => { e.stopPropagation(); handleDelete(exp.id); }} className="p-1 text-on-surface-variant hover:text-danger transition-colors hover:bg-danger/10 rounded cursor-pointer" title={locale === 'vi' ? 'Xóa' : 'Delete'}>
                       <span className="material-symbols-outlined text-[16px]">delete</span>
                     </button>
@@ -246,6 +249,9 @@ export default function ExpenseHistory({ refreshKey, onSaved }) {
                             {renderContractBtn(exp)}
                             <button onClick={(e) => { e.stopPropagation(); openDetail(exp); }} className="p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50" title={t('Xem chi tiết', 'View details')}>
                               <span className="material-symbols-outlined text-[16px]">visibility</span>
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); if (onEdit) onEdit(exp); }} className="p-1 text-gray-400 hover:text-purple-600 rounded hover:bg-purple-50" title={t('Chỉnh sửa', 'Edit')}>
+                              <span className="material-symbols-outlined text-[16px]">edit</span>
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); handleDelete(exp.id); }} className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50" title={locale === 'vi' ? 'Xóa' : 'Delete'}>
                               <span className="material-symbols-outlined text-[16px]">delete</span>

@@ -342,15 +342,15 @@ CREATE INDEX idx_kpi_definitions_active_order
     ON marketing.kpi_definitions (is_active, sort_order);
 
 INSERT INTO marketing.kpi_definitions
-    (kpi_key, label, value_type, sort_order)
+    (kpi_key, label, value_type, sort_order, is_active)
 VALUES
-    ('raw_leads', 'Raw Leads', 'COUNT', 1),
-    ('mql', 'MQL', 'COUNT', 2),
-    ('sql', 'SQL', 'COUNT', 3),
-    ('opportunity', 'Opportunity', 'COUNT', 4),
-    ('closed_deal', 'Closed Deal', 'COUNT', 5),
-    ('pipeline_value', 'Pipeline Value', 'MONEY', 6),
-    ('won_value', 'Won Value', 'MONEY', 7);
+    ('raw_leads', 'Raw Leads', 'COUNT', 1, false),
+    ('mql', 'MQL', 'COUNT', 2, true),
+    ('sql', 'SQL', 'COUNT', 3, true),
+    ('opportunity', 'Opportunity', 'COUNT', 4, true),
+    ('closed_deal', 'Closed Deal', 'COUNT', 5, true),
+    ('pipeline_value', 'Pipeline Value', 'MONEY', 6, true),
+    ('won_value', 'Won Value', 'MONEY', 7, true);
 
 CREATE SEQUENCE "marketing".kpi_monthly_plan_values_id_seq
     INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;
@@ -574,6 +574,9 @@ CREATE TABLE "marketing"."opportunities" (
     "expected_close_date" date,
     "status_id" bigint,
     "remark" text,
+    "opportunity_date" date,
+    "idempotency_key" character varying(100),
+    "row_version" bigint NOT NULL DEFAULT 1,
     "created_at" timestamp DEFAULT CURRENT_TIMESTAMP,
     "updated_at" timestamp DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "opportunities_pkey" PRIMARY KEY ("id")
@@ -734,6 +737,40 @@ ALTER TABLE marketing.closed_deals ADD CONSTRAINT closed_deals_monthly_fee_nonne
 ALTER TABLE marketing.opportunities DROP CONSTRAINT IF EXISTS opportunities_pipeline_value_nonnegative;
 ALTER TABLE marketing.opportunities ADD CONSTRAINT opportunities_pipeline_value_nonnegative CHECK (pipeline_value >= 0);
 
+ALTER TABLE marketing.opportunities
+    ALTER COLUMN project_id SET NOT NULL,
+    ALTER COLUMN owner_id SET NOT NULL,
+    ALTER COLUMN status_id SET NOT NULL;
+
+ALTER TABLE marketing.opportunities ADD CONSTRAINT opportunities_idempotency_key_not_blank
+    CHECK (idempotency_key IS NULL OR btrim(idempotency_key) <> '');
+
+CREATE UNIQUE INDEX opportunities_project_idempotency_unique
+    ON marketing.opportunities (project_id, idempotency_key)
+    WHERE idempotency_key IS NOT NULL;
+
+CREATE INDEX idx_opportunities_opportunity_date
+    ON marketing.opportunities (opportunity_date);
+
+CREATE OR REPLACE FUNCTION marketing.bump_opportunity_row_version()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.row_version <> OLD.row_version THEN
+        RAISE EXCEPTION 'row_version is managed by the database';
+    END IF;
+    NEW.row_version := OLD.row_version + 1;
+    NEW.updated_at := CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_bump_opportunity_row_version
+BEFORE UPDATE ON marketing.opportunities
+FOR EACH ROW
+EXECUTE FUNCTION marketing.bump_opportunity_row_version();
+
 UPDATE marketing.opportunities o
 SET expected_close_date = d.closed_date
 FROM marketing.closed_deals d
@@ -767,6 +804,19 @@ ALTER TABLE marketing.opportunities
     USING created_at AT TIME ZONE 'Asia/Ho_Chi_Minh',
     ALTER COLUMN updated_at TYPE timestamp with time zone
     USING updated_at AT TIME ZONE 'Asia/Ho_Chi_Minh';
+
+CREATE OR REPLACE VIEW marketing.opportunity_duplicate_candidates AS
+SELECT project_id, owner_id,
+       lower(btrim(company_name)) AS normalized_company_name,
+       pipeline_value, opportunity_date,
+       count(*) AS candidate_count,
+       array_agg(id ORDER BY created_at, id) AS opportunity_ids,
+       min(created_at) AS first_created_at,
+       max(created_at) AS last_created_at
+FROM marketing.opportunities
+GROUP BY project_id, owner_id, lower(btrim(company_name)),
+         pipeline_value, opportunity_date
+HAVING count(*) > 1;
 
 SELECT setval('marketing.closed_deals_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM marketing.closed_deals;
 SELECT setval('marketing.kpi_actuals_id_seq', COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM marketing.kpi_actuals;

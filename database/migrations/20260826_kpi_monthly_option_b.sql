@@ -20,19 +20,20 @@ CREATE INDEX IF NOT EXISTS idx_kpi_definitions_active_order
     ON marketing.kpi_definitions (is_active, sort_order);
 
 INSERT INTO marketing.kpi_definitions
-    (kpi_key, label, value_type, sort_order)
+    (kpi_key, label, value_type, sort_order, is_active)
 VALUES
-    ('raw_leads', 'Raw Leads', 'COUNT', 1),
-    ('mql', 'MQL', 'COUNT', 2),
-    ('sql', 'SQL', 'COUNT', 3),
-    ('opportunity', 'Opportunity', 'COUNT', 4),
-    ('closed_deal', 'Closed Deal', 'COUNT', 5),
-    ('pipeline_value', 'Pipeline Value', 'MONEY', 6),
-    ('won_value', 'Won Value', 'MONEY', 7)
+    ('raw_leads', 'Raw Leads', 'COUNT', 1, false),
+    ('mql', 'MQL', 'COUNT', 2, true),
+    ('sql', 'SQL', 'COUNT', 3, true),
+    ('opportunity', 'Opportunity', 'COUNT', 4, true),
+    ('closed_deal', 'Closed Deal', 'COUNT', 5, true),
+    ('pipeline_value', 'Pipeline Value', 'MONEY', 6, true),
+    ('won_value', 'Won Value', 'MONEY', 7, true)
 ON CONFLICT (kpi_key) DO UPDATE
 SET label = EXCLUDED.label,
     value_type = EXCLUDED.value_type,
     sort_order = EXCLUDED.sort_order,
+    is_active = EXCLUDED.is_active,
     updated_at = CURRENT_TIMESTAMP;
 
 CREATE SEQUENCE IF NOT EXISTS marketing.kpi_monthly_plan_values_id_seq

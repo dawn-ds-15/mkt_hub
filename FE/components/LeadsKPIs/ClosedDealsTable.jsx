@@ -12,6 +12,7 @@ export default function ClosedDealsTable() {
   const [loading, setLoading] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   useEffect(() => {
     loadClosedDeals();
@@ -62,12 +63,68 @@ export default function ClosedDealsTable() {
     return Number(value).toLocaleString('en-US');
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const allRowsSelected = (list) => list.length > 0 && list.every(d => selectedIds.has(d.id));
+
+  const toggleSelectAll = (list) => {
+    const ids = list.map(d => d.id);
+    setSelectedIds(prev => (allRowsSelected(list) ? new Set() : new Set([...prev, ...ids])));
+  };
+
+  const handleBulkDelete = async () => {
+    const selectedDeals = deals.filter(d => selectedIds.has(d.id));
+    if (!selectedDeals.length) return;
+    const ok = window.confirm(locale === 'vi'
+      ? `Xoá ${selectedDeals.length} closed deal đã chọn? (Có thể khôi phục từ dữ liệu)`
+      : `Delete ${selectedDeals.length} selected closed deals? (can be restored from backup data)`);
+    if (!ok) return;
+    setLoading(true);
+    try {
+      const selectedSet = new Set(selectedDeals.map(d => d.id));
+      const results = await Promise.allSettled(selectedDeals.map(d => deleteClosedDeal(d.id)));
+      const failed = selectedDeals.filter((_, i) => results[i].status === 'rejected');
+      setDeals(prev => prev.filter(d => !selectedSet.has(d.id) && !failed.some(f => f.id === d.id)));
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        selectedDeals.forEach(d => next.delete(d.id));
+        return next;
+      });
+      if (failed.length) {
+        addToast(locale === 'vi' ? `Xoá closed deal thất bại ${failed.length} bản ghi.` : `Failed to delete ${failed.length} closed deals.`, 'error');
+      } else {
+        addToast(locale === 'vi' ? 'Đã xoá các closed deal đã chọn.' : 'Selected closed deals deleted.');
+      }
+      await loadClosedDeals();
+    } catch (error) {
+      console.error('Error bulk deleting closed deals:', error);
+      addToast(locale === 'vi' ? 'Xoá closed deal thất bại.' : 'Failed to delete closed deals.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const displayedDeals = deals.slice(0, INITIAL_DISPLAY);
 
   const renderTable = (list, allowDelete = false) => (
     <table className="w-full text-left border-collapse">
       <thead className="bg-surface-container-low border-b border-border-light">
         <tr>
+          <th className="p-3 w-10">
+            <input
+              type="checkbox"
+              checked={allRowsSelected(list)}
+              onChange={() => toggleSelectAll(list)}
+              className="cursor-pointer"
+              aria-label={locale === 'vi' ? 'Chọn tất cả' : 'Select all'}
+            />
+          </th>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Khách hàng' : 'Customer'}</th>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Hợp đồng' : 'Contract'}</th>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Final Fees</th>
@@ -81,6 +138,15 @@ export default function ClosedDealsTable() {
       <tbody className="divide-y divide-border-light">
         {list.map((deal) => (
           <tr key={deal.id} className={`hover:bg-surface-container-lowest transition-colors ${deletingId === deal.id ? 'opacity-50' : ''}`}>
+            <td className="p-3 w-10">
+              <input
+                type="checkbox"
+                checked={selectedIds.has(deal.id)}
+                onChange={() => toggleSelect(deal.id)}
+                className="cursor-pointer"
+                aria-label={locale === 'vi' ? 'Chọn closed deal' : 'Select closed deal'}
+              />
+            </td>
             <td className="p-3 text-body-md font-medium">{deal.customer}</td>
             <td className="p-3 text-body-md">{deal.contract}</td>
             <td className="p-3 text-data-display">{formatCurrency(deal.finalFees)}</td>
@@ -115,12 +181,23 @@ export default function ClosedDealsTable() {
         <h4 className="text-label-md font-semibold text-on-surface uppercase tracking-wider">
           {locale === 'vi' ? 'Chi tiết Closed Deal' : 'Closed Deal Detail'} {!loading && `(${deals.length})`}
         </h4>
-        {deals.length > INITIAL_DISPLAY && (
-          <button onClick={() => setShowAll(true)} className="text-primary flex items-center gap-1 text-body-sm font-semibold hover:underline">
-            <span className="material-symbols-outlined text-[18px]">open_in_full</span>
-            {locale === 'vi' ? 'Xem tất cả' : 'View all'}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="text-error flex items-center gap-1 text-body-sm font-semibold hover:underline"
+            >
+              <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+              {locale === 'vi' ? `Xóa đã chọn (${selectedIds.size})` : `Delete selected (${selectedIds.size})`}
+            </button>
+          )}
+          {deals.length > INITIAL_DISPLAY && (
+            <button onClick={() => setShowAll(true)} className="text-primary flex items-center gap-1 text-body-sm font-semibold hover:underline">
+              <span className="material-symbols-outlined text-[18px]">open_in_full</span>
+              {locale === 'vi' ? 'Xem tất cả' : 'View all'}
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (

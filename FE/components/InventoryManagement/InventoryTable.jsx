@@ -31,7 +31,7 @@ const BATCH_STATUS_META = {
 };
 
 function formatNumber(val) {
-  return (Number(val) || 0).toLocaleString('vi-VN');
+  return Math.round(Number(val) || 0).toLocaleString('vi-VN');
 }
 
 function formatDate(iso) {

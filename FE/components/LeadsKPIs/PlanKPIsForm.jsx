@@ -4,7 +4,8 @@ import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 import NumberInput from '../common/NumberInput';
 
-const years = [2024, 2025, 2026];
+const curYear = new Date().getFullYear();
+const years = [curYear - 2, curYear - 1, curYear];
 
 const FIELD_DEFS = [
   { apiKey: 'targetLeads', label: { vi: 'MỤC TIÊU RAW LEADS', en: 'RAW LEADS TARGET' }, icon: 'groups' },
@@ -26,7 +27,7 @@ export default function PlanKPIsForm() {
   const addToast = useToast();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
 
-  const [selectedYear, setSelectedYear] = useState(2026);
+  const [selectedYear, setSelectedYear] = useState(curYear);
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(false);
 

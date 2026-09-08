@@ -328,28 +328,7 @@ export default function Dashboard() {
         {data.kpis.map((kpi) => (
           <KPICard key={kpi.id || kpi.label} {...kpi} />
         ))}
-        <KPICard
-          key="roas"
-          emoji="📈"
-          label={({ vi: 'ROAS', en: 'ROAS' })[locale]}
-          accent="green"
-          value={data.roas?.ratio != null ? `${data.roas.ratio.toFixed(2)}x` : '—'}
-          planLabel={({ vi: 'Tổng chi phí', en: 'Total cost' })[locale]}
-          planValue={data.roas?.totalExpense ? formatCompactMoney(data.roas.totalExpense) : '—'}
-        />
-        <KPICard
-          key="cac"
-          emoji="💸"
-          label={({ vi: 'CAC', en: 'CAC' })[locale]}
-          accent="purple"
-          value={data.cac?.value != null ? formatCompactMoney(data.cac.value) : '—'}
-          planLabel={({ vi: 'Chi phí / Won deal', en: 'Cost / Won deals' })[locale]}
-          planValue={
-            data.cac?.totalExpense != null && data.cac?.wonCount != null
-              ? `${formatCompactMoney(data.cac.totalExpense)} / ${data.cac.wonCount}`
-              : '—'
-          }
-        />
+        
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">

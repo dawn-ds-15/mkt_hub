@@ -68,6 +68,10 @@ export default {
         surface: "#f8f9ff",
         "surface-muted": "#F9FAFB",
         "border-subtle": "#E5E7EB",
+        navy: {
+          800: '#153163',
+          900: '#0c2247',
+        },
       },
       borderRadius: {
         DEFAULT: "0.125rem",

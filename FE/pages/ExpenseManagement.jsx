@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ExpenseEntryForm from '../components/ExpenseManagement/ExpenseEntryForm';
@@ -6,6 +6,7 @@ import ExpenseHistory from '../components/ExpenseManagement/ExpenseHistory';
 import ExpenseReports from '../components/ExpenseManagement/ExpenseReports';
 import ExpenseOverview from '../components/ExpenseManagement/ExpenseOverview';
 import ExpenseBudget from '../components/ExpenseManagement/ExpenseBudget';
+import CategoryBudgetEntry from '../components/ExpenseManagement/CategoryBudgetEntry';
 import { useDashboard } from '../contexts/DashboardContext';
 
 function getUserRole() {
@@ -19,21 +20,37 @@ const allTabs = [
   { vi: 'Tổng quan', en: 'Overview', key: 'overview' },
   { vi: 'Ngân sách', en: 'Budget', key: 'budget' },
   { vi: 'Nhập chi phí', en: 'Input Expense', key: 'input' },
-  { vi: 'Báo cáo', en: 'Reports', key: 'reports', managerOnly: true },
 ];
+
+const tabKeys = allTabs.map((t) => t.key);
 
 export default function ExpenseManagement() {
   const { locale } = useDashboard();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'budget';
+  const rawTab = searchParams.get('tab');
+  const activeTab = tabKeys.includes(rawTab) ? rawTab : 'budget';
   const [refreshKey, setRefreshKey] = useState(0);
   const [editingExpense, setEditingExpense] = useState(null);
+  const [inputView, setInputView] = useState('project');
+  const dirtyRef = useRef(false);
   const role = getUserRole();
 
   const tabs = allTabs.filter(tab => !tab.managerOnly || role === 'manager');
 
+  const confirmDiscard = () => window.confirm(locale === 'vi'
+    ? 'Bạn có thay đổi ngân sách chưa lưu. Bỏ thay đổi và chuyển tab?'
+    : 'You have unsaved budget changes. Discard changes and switch tab?');
+
   const setActiveTab = (key) => {
+    if (key !== activeTab && dirtyRef.current && !confirmDiscard()) return;
+    dirtyRef.current = false;
     setSearchParams({ tab: key }, { replace: true });
+  };
+
+  const setInputViewSafe = (view) => {
+    if (view !== inputView && dirtyRef.current && !confirmDiscard()) return;
+    dirtyRef.current = false;
+    setInputView(view);
   };
 
   const handleSaved = () => {
@@ -41,37 +58,66 @@ export default function ExpenseManagement() {
   };
 
   const renderContent = () => {
-    if (activeTab === 'reports' && role !== 'manager') {
-      return (
-        <div className="flex flex-col items-center justify-center h-80 gap-4 text-on-surface-variant">
-          <span className="material-symbols-outlined text-[64px] text-outline-variant">lock</span>
-          <p className="font-headline-sm">{locale === 'vi' ? 'Bạn không có quyền xem báo cáo' : 'You do not have permission to view reports'}</p>
-          <p className="text-body-md text-outline">{locale === 'vi' ? 'Chỉ quản lý mới có thể xem báo cáo chi phí.' : 'Only managers can view expense reports.'}</p>
-        </div>
-      );
-    }
     switch (activeTab) {
       case 'input':
         return (
           <div className="space-y-6">
-            <ExpenseEntryForm
-              onSaved={handleSaved}
-              editingExpense={editingExpense}
-              onEditDone={() => { setEditingExpense(null); handleSaved(); }}
-            />
-            <ExpenseHistory
-              refreshKey={refreshKey}
-              onSaved={handleSaved}
-              onEdit={(exp) => { setEditingExpense(exp); }}
-            />
+            <div className="flex border-b border-outline-variant">
+              <button
+                onClick={() => setInputViewSafe('project')}
+                className={`px-6 py-3 text-[14px] leading-[20px] font-medium transition-colors ${
+                  inputView === 'project' ? 'text-primary border-b-2 border-primary bg-surface-container-lowest' : 'text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                {locale === 'vi' ? 'Nhập chi phí dự án' : 'Project Expense Entry'}
+              </button>
+              <button
+                onClick={() => setInputViewSafe('category')}
+                className={`px-6 py-3 text-[14px] leading-[20px] font-medium transition-colors ${
+                  inputView === 'category' ? 'text-primary border-b-2 border-primary bg-surface-container-lowest' : 'text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                {locale === 'vi' ? 'Nhập chi phí tổng hạng mục' : 'Category Budget Entry'}
+              </button>
+            </div>
+            {inputView === 'project' ? (
+              <>
+                <ExpenseEntryForm
+                  onSaved={handleSaved}
+                  editingExpense={editingExpense}
+                  onEditDone={() => { setEditingExpense(null); handleSaved(); }}
+                />
+                <ExpenseHistory
+                  refreshKey={refreshKey}
+                  onSaved={handleSaved}
+                  onEdit={(exp) => { setInputView('project'); setEditingExpense(exp); }}
+                />
+              </>
+            ) : (
+              <CategoryBudgetEntry
+                refreshKey={refreshKey}
+                onSaved={handleSaved}
+                onDirtyChange={(d) => { dirtyRef.current = d; }}
+              />
+            )}
           </div>
         );
       case 'overview':
-        return <ExpenseOverview refreshKey={refreshKey} />;
+        return (
+          <div className="space-y-8">
+            <ExpenseOverview refreshKey={refreshKey} />
+            {role === 'manager' && (
+              <div className="border-t border-border-light pt-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-headline-sm text-headline-sm text-on-surface">{locale === 'vi' ? 'Báo cáo Chi phí' : 'Expense Reports'}</h2>
+                </div>
+                <ExpenseReports refreshKey={refreshKey} />
+              </div>
+            )}
+          </div>
+        );
       case 'budget':
         return <ExpenseBudget refreshKey={refreshKey} onSaved={handleSaved} onAddExpense={() => setActiveTab('input')} />;
-      case 'reports':
-        return <ExpenseReports refreshKey={refreshKey} />;
       default:
         return null;
     }

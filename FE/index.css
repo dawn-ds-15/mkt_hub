@@ -52,3 +52,40 @@ body {
 .animate-slide-in {
   animation: slide-in 0.25s ease-out;
 }
+
+/* Budget table: sticky columns */
+.budget-table .budget-col-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+}
+.budget-table .budget-col-sticky-2 {
+  position: sticky;
+  left: 280px;
+  z-index: 20;
+}
+.budget-table .budget-col-sticky-3 {
+  position: sticky;
+  left: 360px;
+  z-index: 20;
+}
+.budget-table .sticky-border-right {
+  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.07);
+}
+
+/* Budget table: custom scrollbar */
+.custom-scrollbar-budget::-webkit-scrollbar {
+  height: 10px;
+  width: 8px;
+}
+.custom-scrollbar-budget::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.custom-scrollbar-budget::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.custom-scrollbar-budget::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

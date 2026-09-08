@@ -1,7 +1,7 @@
 import { useDashboard } from '../../contexts/DashboardContext';
 
 function formatCurrency(val) {
-  return (Number(val) || 0).toLocaleString('vi-VN');
+  return Math.round(Number(val) || 0).toLocaleString('vi-VN');
 }
 
 const METRIC_META = {

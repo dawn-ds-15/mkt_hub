@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { saveActuals, getActuals, saveMonthlyActuals, getMonthlyActuals, getPeriodPlan, getProjects, savePeriodPlanEstimate } from '../../services/api';
+import { saveActuals, getActuals, getProjects, getProjectKPIPlan, saveProjectKPIPlan } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
-import EventsModal from '../ExpenseManagement/EventsModal';
-import { getEvents, getAllEventsByWeek, fetchEvents, updateEvent } from '../../services/eventsStore';
 import NumberInput from '../common/NumberInput';
 
 function fmt(n) {
@@ -46,44 +44,39 @@ function EntryField({ label, value, onChange, disabled, placeholder, theme = 'ac
 
 export default function ActualsForm() {
   const addToast = useToast();
-  const { locale } = useDashboard();
+  const { locale, year } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
-  const getCurrentWeek = () => {
+  const getCurrentDate = () => {
     const now = new Date();
-    const week = getISOWeek(now);
-    return `${now.getFullYear()}-W${String(week).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   };
-  const getCurrentMonth = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  };
-  const [selectedWeek, setSelectedWeek] = useState(getCurrentWeek());
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const [selectedDate, setSelectedDate] = useState(getCurrentDate());
   const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [selectedEventId, setSelectedEventId] = useState('');
   const [projects, setProjects] = useState([]);
   const [savingActual, setSavingActual] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
-  const [eventsModal, setEventsModal] = useState(null);
-  const [editingEvent, setEditingEvent] = useState(null);
-  const [eventsVersion, setEventsVersion] = useState(0);
 
-  const [actualForm, setActualForm] = useState({ rawLeads: '', mql: '', sql: '', oppCount: '', closedCount: '' });
+  const [actualForm, setActualForm] = useState({ rawLeads: '', mql: '', sql: '' });
   const actualDirtyRef = useRef(false);
   const editActual = (field, value) => {
     actualDirtyRef.current = true;
     setActualForm((p) => ({ ...p, [field]: value }));
   };
   const clearActualDirty = () => { actualDirtyRef.current = false; };
-  const [savedWeekly, setSavedWeekly] = useState(null);
-  const [weeklyVersion, setWeeklyVersion] = useState(0);
-  const [periodPlan, setPeriodPlan] = useState(null);
+  const [savedActual, setSavedActual] = useState(null);
+  const [actualVersion, setActualVersion] = useState(0);
   const [estimatedPlan, setEstimatedPlan] = useState({ rawLeads: '', mql: '', sql: '', oppCount: '', closedCount: '' });
   const estimatedDirtyRef = useRef(false);
+  const [allocation, setAllocation] = useState(null);
+  const [savedProjectPlan, setSavedProjectPlan] = useState(null);
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
-  const isLeadGen = !!selectedProject && String(selectedProject.type || '').trim().toLowerCase() === 'lead generation';
-  const activePeriod = isLeadGen ? selectedMonth : selectedWeek;
+  const isoWeekLabel = (() => {
+    if (!selectedDate) return '';
+    const d = new Date(`${selectedDate}T00:00:00`);
+    const w = getISOWeek(d);
+    return `${d.getFullYear()}-W${String(w).padStart(2, '0')}`;
+  })();
+  const isoMonthLabel = selectedDate ? selectedDate.slice(0, 7) : '';
 
   useEffect(() => {
     getProjects()
@@ -91,176 +84,91 @@ export default function ActualsForm() {
       .catch(() => setProjects([]));
   }, []);
 
-  useEffect(() => {
-    setPeriodPlan(null);
-    if (!selectedProjectId || !activePeriod) return undefined;
-    let cancelled = false;
-    getPeriodPlan(activePeriod, selectedProjectId, isLeadGen)
-      .then((r) => { if (!cancelled) setPeriodPlan(r.data); })
-      .catch(() => { if (!cancelled) setPeriodPlan(null); });
-    return () => { cancelled = true; };
-  }, [selectedProjectId, activePeriod, isLeadGen]);
-
-  useEffect(() => {
-    if (estimatedDirtyRef.current) return;
-    if (periodPlan?.effectivePlan) {
-      const ep = periodPlan.effectivePlan;
-      setEstimatedPlan({
-        rawLeads: ep.rawLeads != null ? String(ep.rawLeads) : '',
-        mql: ep.mql != null ? String(ep.mql) : '',
-        sql: ep.sql != null ? String(ep.sql) : '',
-        oppCount: ep.oppCount != null ? String(ep.oppCount) : '',
-        closedCount: ep.closedCount != null ? String(ep.closedCount) : '',
-      });
-    }
-  }, [periodPlan]);
-
-  const loadEvents = async () => {
-    if (isLeadGen) return;
-    if (selectedProjectId) {
-      await fetchEvents(selectedProjectId, selectedWeek);
-    } else if (projects.length > 0) {
-      await Promise.all(projects.map(p => fetchEvents(p.id, selectedWeek)));
-    }
-    setEventsVersion(v => v + 1);
+  const PLAN_METRIC_MAP = {
+    rawLeads: 'raw_leads',
+    mql: 'mql',
+    sql: 'sql',
+    oppCount: 'opp',
+    closedCount: 'closed_deal',
   };
 
+  const planLoadKey = `${year}|${selectedProjectId}`;
   useEffect(() => {
-    loadEvents();
-  }, [selectedProjectId, selectedWeek, projects, isLeadGen]);
-
-  useEffect(() => {
-    setSelectedEventId('');
-  }, [selectedProjectId, selectedWeek]);
-
-  const events = selectedProjectId ? getEvents(selectedProjectId, selectedWeek) : getAllEventsByWeek(selectedWeek);
-  const eventTotals = events.reduce((acc, e) => ({
-    rawLeads: acc.rawLeads + (Number(e.rawLeads) || 0),
-    mql: acc.mql + (Number(e.mql) || 0),
-    sql: acc.sql + (Number(e.sql) || 0),
-  }), { rawLeads: 0, mql: 0, sql: 0 });
-
-  useEffect(() => {
-    if (!isLeadGen) return;
+    setAllocation(null);
+    setSavedProjectPlan(null);
+    setEstimatedPlan({ rawLeads: '', mql: '', sql: '', oppCount: '', closedCount: '' });
+    estimatedDirtyRef.current = false;
+    if (!selectedProjectId) return undefined;
     let cancelled = false;
-    setActualForm({ rawLeads: '', mql: '', sql: '', oppCount: '', closedCount: '' });
-    getMonthlyActuals(selectedMonth, selectedProjectId)
-      .then((r) => {
-        if (cancelled || actualDirtyRef.current) return;
-        const d = r.data || {};
-        setActualForm({
-          rawLeads: Number(d.rawLeads) || '',
-          mql: Number(d.mql) || '',
-          sql: Number(d.sql) || '',
-          oppCount: Number(d.oppCount) || '',
-          closedCount: Number(d.closedCount) || '',
+    getProjectKPIPlan(year, selectedProjectId)
+      .then((res) => {
+        if (cancelled) return;
+        const p = res.data || {};
+        setEstimatedPlan({
+          rawLeads: p.rawLeads != null ? String(p.rawLeads) : '',
+          mql: p.mql != null ? String(p.mql) : '',
+          sql: p.sql != null ? String(p.sql) : '',
+          oppCount: p.oppCount != null ? String(p.oppCount) : '',
+          closedCount: p.closedCount != null ? String(p.closedCount) : '',
         });
+        setSavedProjectPlan(p);
+        setAllocation(res.allocation);
       })
-      .catch(() => {});
+      .catch(() => { if (!cancelled) setAllocation(null); });
     return () => { cancelled = true; };
-  }, [isLeadGen, selectedMonth, selectedProjectId]);
+  }, [planLoadKey]);
 
   useEffect(() => {
-    if (isLeadGen || !selectedProjectId) {
-      setSavedWeekly(null);
+    if (!selectedProjectId) {
+      setSavedActual(null);
+      setActualForm({ rawLeads: '', mql: '', sql: '' });
       return;
     }
     let cancelled = false;
-    setSavedWeekly(null);
-    getActuals(selectedWeek, selectedProjectId)
-      .then((r) => { if (!cancelled) setSavedWeekly(r.data || null); })
-      .catch(() => { if (!cancelled) setSavedWeekly(null); });
+    setSavedActual(null);
+    setActualForm({ rawLeads: '', mql: '', sql: '' });
+    getActuals(selectedDate, selectedProjectId)
+      .then((r) => { if (!cancelled) setSavedActual(r.data || null); })
+      .catch(() => { if (!cancelled) setSavedActual(null); });
     return () => { cancelled = true; };
-  }, [isLeadGen, selectedProjectId, selectedWeek, weeklyVersion]);
+  }, [selectedProjectId, selectedDate, actualVersion]);
 
   useEffect(() => {
-    if (isLeadGen) return;
     if (actualDirtyRef.current) return;
-    if (selectedEventId) {
-      const evt = events.find(e => e.id === selectedEventId);
-      if (evt) {
-        setActualForm({
-          rawLeads: evt.rawLeads || '',
-          mql: evt.mql || '',
-          sql: evt.sql || '',
-          oppCount: evt.oppCount || '',
-          closedCount: evt.closedCount || '',
-        });
-      }
-      return;
-    }
-    const s = savedWeekly;
-    if (s && ((Number(s.rawLeads) || 0) || (Number(s.mqlActual) || 0) || (Number(s.sqlActual) || 0) || (Number(s.oppCount) || 0) || (Number(s.closedCount) || 0))) {
+    const s = savedActual;
+    if (s && ((Number(s.rawLeads) || 0) || (Number(s.mql ?? s.mqlActual) || 0) || (Number(s.sql ?? s.sqlActual) || 0))) {
       setActualForm({
         rawLeads: Number(s.rawLeads) || '',
-        mql: Number(s.mqlActual) || '',
-        sql: Number(s.sqlActual) || '',
-        oppCount: Number(s.oppCount) || '',
-        closedCount: Number(s.closedCount) || '',
+        mql: Number(s.mql ?? s.mqlActual) || '',
+        sql: Number(s.sql ?? s.sqlActual) || '',
       });
     } else {
-      setActualForm({
-        rawLeads: eventTotals.rawLeads || '',
-        mql: eventTotals.mql || '',
-        sql: eventTotals.sql || '',
-        oppCount: '',
-        closedCount: '',
-      });
+      setActualForm({ rawLeads: '', mql: '', sql: '' });
     }
-  }, [isLeadGen, selectedEventId, savedWeekly, eventsVersion, selectedWeek, selectedProjectId]);
-
-  const refreshEvents = () => loadEvents();
+  }, [savedActual, selectedDate, selectedProjectId]);
 
   const handleSaveActual = async () => {
+    if (!selectedProjectId) {
+      addToast(t('Vui lòng chọn dự án trước khi lưu Thực tế!', 'Please select a project before saving actuals!'), 'error');
+      return;
+    }
+    if (!selectedDate) {
+      addToast(t('Vui lòng chọn Ngày phát sinh trước khi lưu Thực tế!', 'Please select a record date before saving actuals!'), 'error');
+      return;
+    }
     setSavingActual(true);
     try {
-      if (isLeadGen) {
-        if (!selectedProjectId) {
-          addToast(t('Vui lòng chọn dự án trước khi lưu Thực tế!', 'Please select a project before saving actuals!'), 'error');
-          return;
-        }
-        await saveMonthlyActuals({
-          period: selectedMonth,
-          projectId: selectedProjectId,
-          rawLeads: actualForm.rawLeads,
-          mql: actualForm.mql,
-          sql: actualForm.sql,
-          oppCount: actualForm.oppCount,
-          closedCount: actualForm.closedCount,
-        });
-        clearActualDirty();
-        addToast(t('Đã lưu Thực tế tháng thành công!', 'Monthly actuals saved successfully!'), 'success');
-      } else if (selectedEventId && selectedProjectId) {
-        const evt = events.find(e => e.id === selectedEventId);
-        if (evt) {
-          await updateEvent(selectedProjectId, selectedWeek, selectedEventId, {
-            name: evt.name,
-            date: evt.date,
-            description: evt.description,
-            rawLeads: actualForm.rawLeads,
-            mql: actualForm.mql,
-            sql: actualForm.sql,
-            oppCount: actualForm.oppCount,
-            closedCount: actualForm.closedCount,
-          });
-          clearActualDirty();
-          addToast(t('Đã cập nhật sự kiện thành công!', 'Event updated successfully!'), 'success');
-          refreshEvents();
-        }
-      } else {
-        await saveActuals({
-          rawLeads: actualForm.rawLeads,
-          mqlActual: actualForm.mql,
-          sqlActual: actualForm.sql,
-          oppCount: actualForm.oppCount,
-          closedCount: actualForm.closedCount,
-          week: selectedWeek,
-          projectId: selectedProjectId,
-        });
-        clearActualDirty();
-        addToast(t('Đã lưu Thực tế thành công!', 'Actuals saved successfully!'), 'success');
-        setWeeklyVersion(v => v + 1);
-      }
+      await saveActuals({
+        rawLeads: actualForm.rawLeads,
+        mql: actualForm.mql,
+        sql: actualForm.sql,
+        date: selectedDate,
+        projectId: selectedProjectId,
+        actualId: savedActual?.actualId || null,
+      });
+      clearActualDirty();
+      addToast(t('Đã lưu Thực tế thành công!', 'Actuals saved successfully!'), 'success');
+      setActualVersion(v => v + 1);
     } catch (error) {
       console.error('Error saving actuals:', error);
       addToast(t('Có lỗi xảy ra khi lưu!', 'An error occurred while saving!'), 'error');
@@ -276,10 +184,7 @@ export default function ActualsForm() {
     }
     setSavingPlan(true);
     try {
-      await savePeriodPlanEstimate({
-        period: activePeriod,
-        projectId: selectedProjectId,
-        monthly: isLeadGen,
+      await saveProjectKPIPlan(year, selectedProjectId, {
         rawLeads: estimatedPlan.rawLeads,
         mql: estimatedPlan.mql,
         sql: estimatedPlan.sql,
@@ -287,11 +192,18 @@ export default function ActualsForm() {
         closedCount: estimatedPlan.closedCount,
       });
       estimatedDirtyRef.current = false;
-      addToast(t('Đã lưu Kế hoạch dự kiến thành công!', 'Estimated plan saved successfully!'), 'success');
-      setPeriodPlan(null);
-      getPeriodPlan(activePeriod, selectedProjectId, isLeadGen)
-        .then((r) => setPeriodPlan(r.data))
-        .catch(() => {});
+      addToast(t('Đã lưu Kế hoạch KPI dự án thành công!', 'Project KPI plan saved successfully!'), 'success');
+      const res = await getProjectKPIPlan(year, selectedProjectId);
+      const p = res.data || {};
+      setEstimatedPlan({
+        rawLeads: p.rawLeads != null ? String(p.rawLeads) : estimatedPlan.rawLeads,
+        mql: p.mql != null ? String(p.mql) : estimatedPlan.mql,
+        sql: p.sql != null ? String(p.sql) : estimatedPlan.sql,
+        oppCount: p.oppCount != null ? String(p.oppCount) : estimatedPlan.oppCount,
+        closedCount: p.closedCount != null ? String(p.closedCount) : estimatedPlan.closedCount,
+      });
+      setSavedProjectPlan(p);
+      setAllocation(res.allocation);
     } catch (error) {
       console.error('Error saving plan estimate:', error);
       addToast(t('Có lỗi xảy ra khi lưu Kế hoạch!', 'An error occurred while saving plan!'), 'error');
@@ -299,6 +211,51 @@ export default function ActualsForm() {
       setSavingPlan(false);
     }
   };
+
+  const confirmLeaveDirty = () => {
+    if (actualDirtyRef.current || estimatedDirtyRef.current) {
+      const ok = window.confirm(t('Dữ liệu chưa lưu sẽ bị mất khi đổi lựa chọn. Tiếp tục?', 'Unsaved data will be lost when changing selection. Continue?'));
+      if (!ok) return false;
+    }
+    actualDirtyRef.current = false;
+    estimatedDirtyRef.current = false;
+    return true;
+  };
+
+  const planWarningLines = (() => {
+    const lines = [];
+    const saved = savedProjectPlan || {};
+    const warningFields = [
+      { key: 'rawLeads', label: 'RAW LEADS' },
+      { key: 'mql', label: 'MQL' },
+      { key: 'sql', label: 'SQL' },
+      { key: 'oppCount', label: 'OPP' },
+      { key: 'closedCount', label: 'CLOSED DEAL' },
+    ];
+    warningFields.forEach((pf) => {
+      const mk = PLAN_METRIC_MAP[pf.key];
+      const base = allocation && allocation[mk];
+      if (!base) return;
+      let { projects_total: total, annual_target: annual, difference: diff, status } = base;
+      total = Number(total) || 0;
+      annual = Number(annual) || 0;
+      if (estimatedDirtyRef.current) {
+        const currentContribution = Number(saved[pf.key]) || 0;
+        const draftContribution = Number(estimatedPlan[pf.key]) || 0;
+        total = total - currentContribution + draftContribution;
+      }
+      diff = total - annual;
+      status = diff > 0 ? 'OVER_ALLOCATED' : (diff < 0 ? 'UNDER_ALLOCATED' : 'EQUAL');
+      const value = Number(estimatedPlan[pf.key]) || 0;
+      const label = pf.label;
+      if (status === 'OVER_ALLOCATED') {
+        lines.push({ severity: 'over', text: t(`${label}: vượt kế hoạch năm ${value > 0 ? diff : Math.abs(diff)}`, `${label}: exceeds annual plan by ${value > 0 ? diff : Math.abs(diff)}`) });
+      } else if (status === 'UNDER_ALLOCATED' && (Number(estimatedPlan[pf.key]) > 0 || annual > 0)) {
+        lines.push({ severity: 'under', text: t(`${label}: thiếu ${Math.abs(diff)} so với kế hoạch năm`, `${label}: short ${Math.abs(diff)} of annual plan`) });
+      }
+    });
+    return lines;
+  })();
 
   const selectCls = "form-select font-body-md text-body-md border-outline-variant rounded-lg p-2 text-on-surface bg-surface focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none cursor-pointer";
 
@@ -319,13 +276,13 @@ export default function ActualsForm() {
               <span className="material-symbols-outlined text-secondary text-2xl">edit_document</span>
               <span className="whitespace-nowrap font-bold">{t('Nhập Dữ Liệu', 'Data Entry')}</span>
             </h2>
-            <span className="text-body-sm text-on-surface-variant italic whitespace-nowrap">{t('Lựa chọn áp dụng cho cả Kế hoạch và Thực tế', 'Selection applies to both Plan and Actual')}</span>
+            <span className="text-body-sm text-on-surface-variant italic whitespace-nowrap">{t('Ngày phát sinh chỉ tác động tới số liệu Thực tế; Kế hoạch dự án cố định theo Năm', 'Record date only affects Actuals; Project Plan is fixed by Year')}</span>
           </div>
 
-          <div className="p-3 bg-slate-50/80 dark:bg-surface-container/40 rounded-xl border border-slate-200 dark:border-border-light/80 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="p-3 bg-slate-50/80 dark:bg-surface-container/40 rounded-xl border border-slate-200 dark:border-border-light/80 grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-[11px] font-bold text-slate-600 dark:text-on-surface-variant uppercase tracking-wider whitespace-nowrap">{t('Dự án', 'Project')}</label>
-              <select className={selectCls} value={selectedProjectId} onChange={(e) => { setSelectedProjectId(e.target.value); clearActualDirty(); }}>
+              <select className={selectCls} value={selectedProjectId} onChange={(e) => { if (!confirmLeaveDirty()) return; setSelectedProjectId(e.target.value); }}>
                 <option value="">{t('Chọn dự án...', 'Select project...')}</option>
                 {projects.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -333,46 +290,20 @@ export default function ActualsForm() {
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-bold text-slate-600 dark:text-on-surface-variant uppercase tracking-wider whitespace-nowrap">{t('Sự kiện', 'Event')}</label>
-              {isLeadGen ? (
-                <p className="text-xs text-on-surface-variant italic px-1 py-1.5">{t('Dự án Lead Generation nhập theo tháng — không dùng sự kiện', 'Lead Generation projects are entered monthly — no events')}</p>
-              ) : (
-                <div className="flex items-center gap-1.5">
-                  <select className={`${selectCls} flex-1`} value={selectedEventId} onChange={(e) => { setSelectedEventId(e.target.value); clearActualDirty(); }} disabled={!selectedProjectId}>
-                    <option value="">{t('Chọn sự kiện...', 'Select event...')}</option>
-                    {events.map(e => (
-                      <option key={e.id} value={e.id}>{e.name}</option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setEventsModal('add')}
-                    disabled={!selectedProjectId}
-                    className="p-1.5 border border-outline-variant rounded-lg text-on-surface-variant hover:text-secondary hover:bg-secondary/10 transition-colors disabled:opacity-40 disabled:pointer-events-none cursor-pointer shrink-0"
-                    title={t('Thêm sự kiện', 'Add event')}
-                  >
-                    <span className="material-symbols-outlined text-[20px]">add</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEventsModal('list')}
-                    disabled={!selectedProjectId}
-                    className="p-1.5 border border-outline-variant rounded-lg text-on-surface-variant hover:text-secondary hover:bg-secondary/10 transition-colors disabled:opacity-40 disabled:pointer-events-none cursor-pointer shrink-0"
-                    title={t('Danh sách sự kiện', 'Event list')}
-                  >
-                    <span className="material-symbols-outlined text-[20px]">event_note</span>
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-bold text-slate-600 dark:text-on-surface-variant uppercase tracking-wider whitespace-nowrap">{isLeadGen ? t('Chọn tháng', 'Select month') : t('Chọn kỳ', 'Select period')}</label>
+              <label className="text-[11px] font-bold text-slate-600 dark:text-on-surface-variant uppercase tracking-wider whitespace-nowrap">{t('Ngày phát sinh', 'Record date')}</label>
               <input
                 className={`${selectCls} w-full`}
-                type={isLeadGen ? 'month' : 'week'}
-                value={activePeriod}
-                onChange={(e) => { clearActualDirty(); if (isLeadGen) setSelectedMonth(e.target.value); else setSelectedWeek(e.target.value); }}
+                type="date"
+                value={selectedDate}
+                min={`${year}-01-01`}
+                max={`${year}-12-31`}
+                onChange={(e) => { if (!confirmLeaveDirty()) return; setSelectedDate(e.target.value); }}
               />
+              {selectedDate && (
+                <p className="text-[11px] text-on-surface-variant italic mt-0.5">
+                  {t('Tuần báo cáo:', 'Reporting week:')} <span className="font-semibold">{isoWeekLabel}</span> · {t('Tháng báo cáo:', 'Reporting month:')} <span className="font-semibold">{isoMonthLabel}</span>
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -404,6 +335,22 @@ export default function ActualsForm() {
                 ))}
               </div>
             </div>
+
+            {allocation && Object.keys(allocation).length > 0 && (
+              <div className="p-2.5 bg-amber-50/80 dark:bg-surface-container/40 border border-amber-300/70 dark:border-border-light/60 rounded-xl flex flex-col gap-1">
+                <div className="text-[11px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
+                  <span className="material-symbols-outlined text-[15px]">gpp_maybe</span>
+                  <span className="whitespace-nowrap">{t('Cảnh báo phân bổ so với KPI năm', 'Allocation vs annual KPI')}</span>
+                </div>
+                {planWarningLines.length === 0 ? (
+                  <p className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">{t('Đã phân bổ đủ các chỉ tiêu so với KPI năm.', 'All metrics match the annual KPI plan.')}</p>
+                ) : (
+                  planWarningLines.slice(0, 3).map((l, i) => (
+                    <p key={i} className={`text-[12px] font-medium ${l.severity === 'over' ? 'text-red-600 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>{l.text}</p>
+                  ))
+                )}
+              </div>
+            )}
 
             {/* Các ô nhập kế hoạch (Highlight màu phụ) */}
             <div className="flex flex-col gap-2.5">
@@ -471,20 +418,6 @@ export default function ActualsForm() {
                 onChange={(e) => editActual('sql', e.target.value)}
                 theme="actual"
               />
-              <EntryField
-                disabled={!selectedProjectId}
-                label="OPP"
-                value={actualForm.oppCount}
-                onChange={(e) => editActual('oppCount', e.target.value)}
-                theme="actual"
-              />
-              <EntryField
-                disabled={!selectedProjectId}
-                label={t('CLOSED DEAL', 'CLOSED DEAL')}
-                value={actualForm.closedCount}
-                onChange={(e) => editActual('closedCount', e.target.value)}
-                theme="actual"
-              />
             </div>
 
             {/* Nút lưu Thực tế */}
@@ -506,26 +439,6 @@ export default function ActualsForm() {
           </div>
         </div>
       </section>
-
-      {eventsModal && (
-        <EventsModal
-          projectId={selectedProjectId}
-          week={selectedWeek}
-          projectName={projects.find(p => p.id === selectedProjectId)?.name}
-          initialMode={eventsModal}
-          onClose={() => { setEventsModal(null); refreshEvents(); }}
-        />
-      )}
-
-      {editingEvent && (
-        <EventsModal
-          projectId={editingEvent.projectId || selectedProjectId}
-          week={selectedWeek}
-          projectName={projects.find(p => p.id === (editingEvent.projectId || selectedProjectId))?.name}
-          initialEvent={editingEvent}
-          onClose={() => { setEditingEvent(null); refreshEvents(); }}
-        />
-      )}
     </>
   );
 }

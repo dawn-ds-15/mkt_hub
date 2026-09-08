@@ -3,7 +3,7 @@ import { useDashboard } from '../../contexts/DashboardContext';
 import { getInventoryItems, getInventoryItem } from '../../services/api';
 
 function formatNumber(val) {
-  return (Number(val) || 0).toLocaleString('vi-VN');
+  return Math.round(Number(val) || 0).toLocaleString('vi-VN');
 }
 
 const STATUS_META = {

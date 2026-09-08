@@ -12,6 +12,7 @@ import {
 import { useDashboard } from '../contexts/DashboardContext';
 import { useToast } from '../contexts/ToastContext';
 import CreateProjectForm from '../components/Projects/CreateProjectForm';
+import ProjectExpenses from '../components/ExpenseManagement/ProjectExpenses';
 
 const statusConfig = {
   near_deadline: { label: 'Sắp hết hạn', bg: 'bg-amber-100', text: 'text-amber-700', icon: 'schedule' },
@@ -96,7 +97,8 @@ function CircularProgress({ value }) {
   );
 }
 
-function KpiMiniCard({ label, actual, plan, locale }) {
+function KpiMiniCard({ label, actual, plan, locale, isMoney, planLabel }) {
+  const fmt = isMoney ? fmtVND : fmtNum;
   const hasActual = actual != null && !isNaN(actual);
   const hasPlan = plan != null && !isNaN(plan);
   let delta = null;
@@ -106,15 +108,15 @@ function KpiMiniCard({ label, actual, plan, locale }) {
     delta = `${pct >= 100 ? '+' : ''}${pct - 100}%`;
     deltaColor = pct >= 100 ? 'text-success' : 'text-warning';
   }
-  const display = hasActual ? fmtNum(actual) : '\u2014';
+  const display = hasActual ? fmt(actual) : '\u2014';
   return (
     <div className="flex flex-col p-2 rounded-lg bg-background border border-surface-container-high">
       <span className="font-label-md text-label-md text-on-surface-variant mb-1">{label}</span>
       <div className="flex items-end gap-2">
-        <span className="text-[24px] leading-[32px] font-semibold text-on-surface">{display}</span>
+        <span className="text-[20px] leading-[28px] font-semibold text-on-surface truncate">{display}</span>
         {delta && <span className={`font-data-mono text-data-mono ${deltaColor} text-xs mb-[2px]`}>{delta}</span>}
       </div>
-      {hasPlan && <span className="font-label-md text-label-md text-on-surface-variant mt-1">{locale === 'vi' ? 'Kế hoạch: ' : 'Plan: '}{fmtNum(plan)}</span>}
+      {hasPlan && <span className="font-label-md text-label-md text-on-surface-variant mt-1">{planLabel || (locale === 'vi' ? 'Kế hoạch: ' : 'Plan: ')}{fmt(plan)}</span>}
     </div>
   );
 }
@@ -294,9 +296,6 @@ export default function ProjectDetail() {
           <div className="col-span-12 md:col-span-8 bg-surface-container-lowest border border-border-light rounded-lg p-4 flex flex-col group">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Chỉ số cốt lõi (KPIs)' : 'Core KPIs'}</h3>
-              <button onClick={() => navigate('/leads')} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Mở module KPI' : 'Open KPI module'}>
-                <span className="material-symbols-outlined">arrow_forward</span>
-              </button>
             </div>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
               <KpiMiniCard
@@ -307,6 +306,21 @@ export default function ProjectDetail() {
               />
               <KpiMiniCard label="MQL" actual={project.kpiMqlActual} plan={project.kpiMqlPlan} locale={locale} />
               <KpiMiniCard label="SQL" actual={project.kpiSqlActual} plan={project.kpiSqlPlan} locale={locale} />
+              <KpiMiniCard label="OPP" actual={project.kpiOppActual} plan={project.kpiOppPlan} locale={locale} />
+              <KpiMiniCard
+                label="Closed Deal"
+                actual={project.kpiClosedDealActual}
+                plan={project.kpiClosedDealPlan}
+                locale={locale}
+              />
+              <KpiMiniCard
+                label={locale === 'vi' ? 'Giá trị Pipeline' : 'Pipeline Value'}
+                actual={project.kpiPipelineValueActual}
+                plan={project.kpiPipelineValuePlan}
+                locale={locale}
+                isMoney
+                planLabel={locale === 'vi' ? 'Kế hoạch: ' : 'Plan: '}
+              />
             </div>
           </div>
 
@@ -369,6 +383,17 @@ export default function ProjectDetail() {
                 {locale === 'vi' ? 'Chưa có công việc nào.' : 'No tasks yet.'}
               </div>
             )}
+          </div>
+
+          {/* Incurred Expenses (Span 12) */}
+          <div className="col-span-12 bg-surface-container-lowest border border-border-light rounded-lg p-4 flex flex-col group">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Chi phí phát sinh' : 'Incurred Expenses'}</h3>
+              <button onClick={() => navigate('/expense')} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Mở module Chi phí' : 'Open Expense module'}>
+                <span className="material-symbols-outlined">arrow_forward</span>
+              </button>
+            </div>
+            <ProjectExpenses projectId={project.id} />
           </div>
 
           {/* Contracts & Documents (Span 12) */}

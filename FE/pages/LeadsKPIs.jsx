@@ -8,11 +8,9 @@ import ClosedDealsTable from '../components/LeadsKPIs/ClosedDealsTable';
 import LeadsKPIsFooter from '../components/LeadsKPIs/LeadsKPIsFooter';
 import ViewAnalytics from '../components/LeadsKPIs/ViewAnalytics';
 import ComparePeriods from '../components/LeadsKPIs/ComparePeriods';
-import PerformanceDashboard from '../components/LeadsKPIs/PerformanceDashboard';
 import { useDashboard } from '../contexts/DashboardContext';
 
 const tabs = [
-  { vi: 'Hiệu suất', en: 'Performance', key: 'performance' },
   { vi: 'Xem & Phân tích', en: 'View & Analytics', key: 'view' },
   { vi: 'Nhập số liệu', en: 'Input Data', key: 'input' },
   { vi: 'So sánh kỳ', en: 'Compare Periods', key: 'compare' },
@@ -21,7 +19,7 @@ const tabs = [
 export default function LeadsKPIs() {
   const { locale } = useDashboard();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'performance';
+  const activeTab = searchParams.get('tab') || 'view';
 
   const setActiveTab = (key) => {
     setSearchParams({ tab: key }, { replace: true });
@@ -31,16 +29,18 @@ export default function LeadsKPIs() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'performance':
-        return <PerformanceDashboard onViewAll={() => setActiveTab('view')} />;
       case 'input':
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg flex-1">
-            <div className="lg:col-span-4">
-              <PlanKPIsForm />
+          <div className="flex flex-col gap-lg flex-1">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+              <div className="lg:col-span-4">
+                <PlanKPIsForm />
+              </div>
+              <div className="lg:col-span-8">
+                <ActualsForm />
+              </div>
             </div>
-            <div className="lg:col-span-8 flex flex-col gap-lg">
-              <ActualsForm />
+            <div className="flex flex-col gap-lg">
               <OpportunitiesTable />
               <ClosedDealsTable />
               <LeadsKPIsFooter />

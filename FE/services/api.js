@@ -821,18 +821,18 @@ function getWeekNumbersFromPeriod(periodType, periodValue, year) {
   return [...new Set(weeks)].sort((a, b) => a - b);
 }
 
-export const getKpiCardsData = async (periodType = 'year', periodValue = '2026', year = '2026') => {
-  const res = await api.get('/v1/dashboard/kpi-cards', {
-    params: { period_type: periodType, period_value: periodValue, year },
-  });
+export const getKpiCardsData = async (periodType = 'year', periodValue = '2026', year = '2026', projectId) => {
+  const params = { period_type: periodType, period_value: periodValue, year };
+  if (projectId) params.projectId = projectId;
+  const res = await api.get('/v1/dashboard/kpi-cards', { params });
   const apiCards = res.data?.data ?? res.data ?? [];
   return { data: apiCards };
 };
 
-export const getFunnelData = async (periodType = 'year', periodValue = '2026', year = '2026') => {
-  const res = await api.get('/v1/dashboard/funnel', {
-    params: { period_type: periodType, period_value: periodValue, year },
-  });
+export const getFunnelData = async (periodType = 'year', periodValue = '2026', year = '2026', projectId) => {
+  const params = { period_type: periodType, period_value: periodValue, year };
+  if (projectId) params.projectId = projectId;
+  const res = await api.get('/v1/dashboard/funnel', { params });
   const apiData = res.data?.data ?? res.data ?? [];
   return { data: apiData };
 };
@@ -976,124 +976,212 @@ function parseWeekString(weekStr) {
   return { year: new Date().getFullYear(), week: 1 };
 }
 
-export const getActuals = async (week, projectId) => {
-  const { year, week: weekNum } = parseWeekString(week);
-  const res = await api.get('/v1/leads-kpis/weekly', { params: { year, week: weekNum, projectId: projectId || undefined } });
-  const d = res.data?.data ?? res.data ?? {};
-  const actual = d.actual ?? {};
-  return {
-    data: {
-      week,
-      projectId: projectId || d.projectId || '',
-      rawLeads: actual.rawLeads ?? d.rawLeads ?? 0,
-      mqlActual: actual.mql ?? d.mql ?? d.mqlActual ?? 0,
-      sqlActual: actual.sql ?? d.sql ?? d.sqlActual ?? 0,
-    }
-  };
-};
+function dailyStorageKey(projectId) {
+  return `mkt_hub_daily_actuals_${projectId}`;
+}
 
-export const saveActuals = async (data) => {
-  const { year, week: weekNum } = parseWeekString(data.week);
-  const payload = {
-    year,
-    week: weekNum,
-    projectId: data.projectId || undefined,
-    rawLeads: Number(data.rawLeads) || 0,
-    mql: Number(data.mqlActual) || 0,
-    sql: Number(data.sqlActual) || 0,
-    oppCount: Number(data.oppCount) || 0,
-    closedCount: Number(data.closedCount) || 0,
-  };
-  const res = await api.post('/v1/leads-kpis/weekly', payload);
-  return { data: res.data?.data ?? res.data };
-};
-
-// Kế hoạch phân bổ theo kỳ (BE tự tính: planGoc + rollover = effectivePlan) — GET /v1/leads-kpis/weekly
-export const getPeriodPlan = async (period, projectId, monthly) => {
-  const params = { projectId: projectId || undefined };
-  if (monthly) {
-    const [y, m] = String(period || '').split('-');
-    params.year = parseInt(y, 10) || new Date().getFullYear();
-    params.month = parseInt(m, 10) || new Date().getMonth() + 1;
-  } else {
-    const { year, week } = parseWeekString(period);
-    params.year = year;
-    params.week = week;
-  }
-
-  const cacheKey = `mkt_hub_period_plan_${projectId}_${period}`;
-  let savedLocal = null;
+function readDailyActuals(projectId) {
   try {
-    const raw = localStorage.getItem(cacheKey);
-    if (raw) savedLocal = JSON.parse(raw);
+    const raw = localStorage.getItem(dailyStorageKey(projectId));
+    return raw ? JSON.parse(raw) : {};
   } catch (e) {
-    savedLocal = null;
+    return {};
   }
+}
 
+function writeDailyActuals(projectId, entries) {
   try {
-    const res = await api.get('/v1/leads-kpis/weekly', { params });
-    const d = res.data?.data ?? res.data ?? {};
-    const effectivePlan = savedLocal || d.effectivePlan || d.planGoc || null;
-    return {
-      data: {
-        planGoc: d.planGoc || null,
-        rollover: d.rollover || null,
-        effectivePlan,
-      },
-    };
-  } catch (err) {
-    if (savedLocal) {
-      return {
-        data: {
-          planGoc: savedLocal,
-          rollover: null,
-          effectivePlan: savedLocal,
-        },
-      };
-    }
-    throw err;
-  }
-};
-
-export const savePeriodPlanEstimate = async (data) => {
-  const { period, projectId, monthly, rawLeads, mql, sql, oppCount, closedCount } = data;
-  const payload = {
-    projectId: projectId || undefined,
-    rawLeads: Number(rawLeads) || 0,
-    mql: Number(mql) || 0,
-    sql: Number(sql) || 0,
-    oppCount: Number(oppCount) || 0,
-    closedCount: Number(closedCount) || 0,
-  };
-  if (monthly) {
-    const [y, m] = String(period || '').split('-');
-    payload.year = parseInt(y, 10) || new Date().getFullYear();
-    payload.month = parseInt(m, 10) || new Date().getMonth() + 1;
-  } else {
-    const { year, week } = parseWeekString(period);
-    payload.year = year;
-    payload.week = week;
-  }
-
-  const cacheKey = `mkt_hub_period_plan_${projectId}_${period}`;
-  try {
-    localStorage.setItem(cacheKey, JSON.stringify(payload));
+    localStorage.setItem(dailyStorageKey(projectId), JSON.stringify(entries));
   } catch (e) {
     /* ignore */
   }
+}
 
-  try {
-    const res = await api.put('/v1/leads-kpis/weekly', payload);
-    return { data: res.data?.data ?? res.data };
-  } catch (err1) {
+export const getActuals = async (dateStr, projectId) => {
+  if (projectId) {
     try {
-      const res = await api.post('/v1/leads-kpis/weekly', payload);
-      return { data: res.data?.data ?? res.data };
-    } catch (err2) {
-      // Return cached local fallback data if backend endpoint rejects PUT/POST
-      return { data: payload };
+      const res = await api.get(`/v1/leads-kpis/projects/${projectId}/actual`, { params: { date: dateStr } });
+      const d = res.data?.data ?? res.data;
+      if (d && (d.actualId || d.id || d.rawLeads !== undefined || d.raw_leads !== undefined)) {
+        return {
+          data: {
+            actualId: d.actualId ?? d.id ?? null,
+            date: d.actualDate ?? d.actual_date ?? dateStr,
+            projectId,
+            rawLeads: d.rawLeads ?? d.raw_leads ?? 0,
+            mql: d.mql ?? 0,
+            sql: d.sql ?? 0,
+            oppCount: d.opp ?? d.oppCount ?? 0,
+            closedCount: d.closedDeal ?? d.closed_deal ?? d.closedCount ?? 0,
+          },
+        };
+      }
+    } catch (e) {
+      /* fall back to localStorage */
+    }
+    const entries = readDailyActuals(projectId);
+    const rec = entries[dateStr];
+    if (rec) {
+      return {
+        data: {
+          actualId: rec.actualId ?? rec.id ?? null,
+          date: dateStr,
+          projectId,
+          rawLeads: rec.rawLeads ?? 0,
+          mql: rec.mql ?? 0,
+          sql: rec.sql ?? 0,
+          oppCount: rec.oppCount ?? 0,
+          closedCount: rec.closedCount ?? 0,
+        }
+      };
     }
   }
+  return { data: null };
+};
+
+export const saveActuals = async (data) => {
+  const payload = {
+    projectId: data.projectId,
+    actualDate: data.date,
+    rawLeads: Number(data.rawLeads) || 0,
+    mql: Number(data.mql) || 0,
+    sql: Number(data.sql) || 0,
+    opp: Number(data.oppCount) || 0,
+    closedDeal: Number(data.closedCount) || 0,
+  };
+  let saved = null;
+  try {
+    if (data.actualId) {
+      const res = await api.patch(`/v1/leads-kpis/projects/${data.projectId}/actual/${data.actualId}`, payload);
+      saved = res.data?.data ?? res.data;
+    } else {
+      const existing = await getActuals(data.date, data.projectId);
+      if (existing?.data?.actualId) {
+        const res = await api.patch(`/v1/leads-kpis/projects/${data.projectId}/actual/${existing.data.actualId}`, payload);
+        saved = res.data?.data ?? res.data;
+      } else {
+        const res = await api.post(`/v1/leads-kpis/projects/${data.projectId}/actual`, payload);
+        saved = res.data?.data ?? res.data;
+      }
+    }
+  } catch (e) {
+    saved = null;
+  }
+  if (data.projectId && data.date) {
+    const entries = readDailyActuals(data.projectId);
+    entries[data.date] = {
+      actualId: saved?.actualId ?? saved?.id ?? null,
+      rawLeads: payload.rawLeads,
+      mql: payload.mql,
+      sql: payload.sql,
+      oppCount: payload.opp,
+      closedCount: payload.closedDeal,
+      needSync: !saved,
+    };
+    writeDailyActuals(data.projectId, entries);
+  }
+  return { data: { date: data.date, projectId: data.projectId, actualId: saved?.actualId ?? saved?.id ?? data.actualId ?? null, rawLeads: payload.rawLeads, mql: payload.mql, sql: payload.sql, oppCount: payload.opp, closedCount: payload.closedDeal } };
+};
+
+export const getCumulativeActuals = async (projectId) => {
+  if (!projectId) {
+    return { data: { rawLeads: 0, mql: 0, sql: 0, oppCount: 0, closedCount: 0 } };
+  }
+  try {
+    const res = await api.get(`/v1/leads-kpis/projects/${projectId}/progress`);
+    const d = res.data?.data ?? res.data;
+    const act = d?.actualCumulative ?? d?.actual_cumulative ?? d ?? {};
+    return {
+      data: {
+        rawLeads: Number(act.rawLeads ?? act.raw_leads ?? 0),
+        mql: Number(act.mql ?? 0),
+        sql: Number(act.sql ?? 0),
+        oppCount: Number(act.opp ?? act.oppCount ?? 0),
+        closedCount: Number(act.closedDeal ?? act.closed_deal ?? act.closedCount ?? 0),
+      },
+    };
+  } catch (e) {
+    /* fall back to localStorage aggregate */
+  }
+  const entries = readDailyActuals(projectId);
+  const totals = Object.keys(entries).reduce(
+    (acc, date) => {
+      const e = entries[date];
+      acc.rawLeads += Number(e.rawLeads) || 0;
+      acc.mql += Number(e.mql) || 0;
+      acc.sql += Number(e.sql) || 0;
+      acc.oppCount += Number(e.oppCount) || 0;
+      acc.closedCount += Number(e.closedCount) || 0;
+      return acc;
+    },
+    { rawLeads: 0, mql: 0, sql: 0, oppCount: 0, closedCount: 0 }
+  );
+  return { data: totals };
+};
+
+export const getProjectKPIs = async (projectId) => {
+  if (!projectId) {
+    return { data: null };
+  }
+  try {
+    const res = await api.get(`/v1/leads-kpis/projects/${projectId}/kpi`);
+    const d = res.data?.data ?? res.data ?? {};
+    const p = d.plan ?? d;
+    return {
+      data: {
+        projectId,
+        targetLeads: Number(p.rawLeads ?? p.raw_leads ?? p.targetLeads ?? 0),
+        mqlTarget: Number(p.mql ?? p.mqlTarget ?? 0),
+        sqlTarget: Number(p.sql ?? p.sqlTarget ?? 0),
+        opportunityCount: Number(p.opp ?? p.oppCount ?? p.opportunityCount ?? 0),
+        closedDealCount: Number(p.closedDeal ?? p.closed_deal ?? p.closedDealCount ?? 0),
+      },
+    };
+  } catch (e) {
+    return { data: null };
+  }
+};
+
+// Kế hoạch KPI dự án theo (Dự án + Năm) — cố định, không phân bổ theo tuần/tháng, không rollover
+export const getProjectKPIPlan = async (year, projectId) => {
+  if (!projectId) return { data: null, allocation: null };
+  const res = await api.get(`/v1/leads-kpis/projects/${projectId}/kpi`, {
+    params: { year: Number(year) || new Date().getFullYear() },
+  });
+  const d = res.data?.data ?? res.data ?? {};
+  const plan = d.plan ?? d.metrics ?? {};
+  return {
+    data: {
+      projectId: d.projectId ?? projectId,
+      projectName: d.projectName ?? '',
+      year: Number(d.year) || Number(year),
+      rawLeads: plan.rawLeads ?? plan.raw_leads ?? 0,
+      mql: plan.mql ?? 0,
+      sql: plan.sql ?? 0,
+      oppCount: plan.opp ?? plan.oppCount ?? 0,
+      closedCount: plan.closedDeal ?? plan.closed_deal ?? 0,
+      pipelineValue: plan.pipelineValue ?? plan.pipeline_value ?? 0,
+    },
+    allocation: d.allocationStatus ?? d.allocation_status ?? null,
+    updatedAt: d.updated_at ?? d.updatedAt ?? null,
+  };
+};
+
+export const saveProjectKPIPlan = async (year, projectId, values) => {
+  const payload = {
+    rawLeadsPlan: Number(values.rawLeads) || 0,
+    mqlPlan: Number(values.mql) || 0,
+    sqlPlan: Number(values.sql) || 0,
+    oppPlan: Number(values.oppCount) || 0,
+    closedDealPlan: Number(values.closedCount) || 0,
+    pipelineValuePlan: Number(values.pipelineValue) || 0,
+  };
+  const res = await api.put(`/v1/leads-kpis/projects/${projectId}/kpi-plan/${year}`, payload);
+  const body = res.data?.data ?? res.data ?? {};
+  return {
+    data: body,
+    allocation: body?.allocationStatus ?? body?.allocation_status ?? null,
+  };
 };
 
 // Lead Generation projects — monthly entry (BE: GET/POST /leads-kpis/weekly hỗ trợ `month`)
@@ -1146,14 +1234,16 @@ function mapOppFromBE(o) {
     contractName: o.contractName || o.contract || '',
     fees: o.setupFee ?? 0,
     expectedCloseDate: o.expectedCloseDate || '',
+    initiationDate: o.initiationDate || '',
     status: o.status || 'active',
   };
 }
 
 export const getOpportunities = async (year) => {
   try {
-    const res = await api.get('/v1/leads-kpis/opportunities', { params: { year } });
-    const list = res.data?.data ?? res.data ?? [];
+    const res = await api.get('/v1/leads-kpis/weekly', { params: { year } });
+    const d = res.data?.data ?? res.data ?? {};
+    const list = d.opportunities ?? [];
     return { data: Array.isArray(list) ? list.map(mapOppFromBE) : [] };
   } catch {
     return { data: [] };
@@ -1169,6 +1259,7 @@ export const addOpportunity = async (data) => {
     contractName: data.contractName || undefined,
     setupFee: Number(data.fees) || 0,
     expectedCloseDate: data.expectedCloseDate || undefined,
+    initiationDate: data.initiationDate || undefined,
   });
   return { data: mapOppFromBE(res.data?.data ?? res.data) };
 };
@@ -1182,6 +1273,7 @@ export const updateOpportunity = async (id, data) => {
     contractName: data.contractName || undefined,
     setupFee: Number(data.fees) || 0,
     expectedCloseDate: data.expectedCloseDate || undefined,
+    initiationDate: data.initiationDate || undefined,
   });
   return { data: res.data?.data ?? data };
 };
@@ -1202,9 +1294,11 @@ export const convertOpportunityToWon = async (id, signedDate, contractName) => {
 
 // ===================== CLOSED DEALS =====================
 
-export const getClosedDeals = async () => {
+export const getClosedDeals = async (projectId) => {
   try {
-    const res = await api.get('/v1/leads-kpis/closed-deals');
+    const params = {};
+    if (projectId) params.projectId = projectId;
+    const res = await api.get('/v1/leads-kpis/closed-deals', { params });
     const list = res.data?.data ?? res.data ?? [];
     const mapped = Array.isArray(list) ? list.map(d => ({
       id: d.id,
@@ -1233,7 +1327,7 @@ export const updateClosedDeal = async (id, data) => {
 };
 
 export const deleteClosedDeal = async (id) => {
-  const res = await api.delete(`/v1/leads-kpis/closed-deals/${id}/delete`);
+  const res = await api.delete(`/v1/leads-kpis/closed-deals/${id}`);
   markDeleted('closed_deals', id);
   return { data: res.data };
 };
@@ -1364,29 +1458,52 @@ function normalizeExpenseItem(item) {
     directNote: item.directNote ?? item.directNotes ?? '',
     overheadNote: item.overheadNote ?? item.overheadNotes ?? '',
     status: item.status ?? 'pending',
+    recognizedDate: item.recognizedDate ?? item.expenseDate ?? item.recognized_date ?? item.expense_date ?? '',
+    expenseDate: item.expenseDate ?? item.recognizedDate ?? item.recognized_date ?? item.expense_date ?? '',
+    lines: Array.isArray(item.lines) ? item.lines : null,
   };
 }
 
-export const getExpenseList = async (project) => {
+export const getExpenseList = async (project, month, year) => {
   const params = {};
   if (project) params.projectId = project;
+  if (month) params.month = month;
+  if (year) params.year = year;
   const res = await api.get('/v1/expenses', { params });
   const raw = res.data?.data ?? res.data ?? [];
   const list = Array.isArray(raw) ? raw : [];
   return { data: list.map(normalizeExpenseItem) };
 };
 
+export const getExpenseById = async (id) => {
+  const res = await api.get(`/v1/expenses/${id}`);
+  return { data: res.data?.data ?? res.data };
+};
+
 export const saveExpense = async (data) => {
   const periodParts = (data.period || '').split('-');
+  const fromPeriod = periodParts.length === 2
+    ? { month: parseInt(periodParts[1], 10), year: parseInt(periodParts[0], 10) }
+    : {};
   const payload = {
     projectId: data.projectId || data.project,
-    month: parseInt(periodParts[1], 10) || new Date().getMonth() + 1,
-    year: parseInt(periodParts[0], 10) || new Date().getFullYear(),
+    month: data.month || fromPeriod.month || new Date().getMonth() + 1,
+    year: data.year || fromPeriod.year || new Date().getFullYear(),
+    recognizedDate: data.recognizedDate || data.expenseDate || undefined,
+    expenseDate: data.expenseDate || data.recognizedDate || undefined,
+    isUnplanned: !!data.isUnplanned,
+    unplannedItemName: data.unplannedItemName || undefined,
+    projectExpenseItemId: data.projectExpenseItemId || undefined,
+    annualExpenseItemId: data.annualExpenseItemId || undefined,
+    action: data.action || undefined,
+    supplierName: data.supplierName || data.supplier || undefined,
+    receiptUrl: data.receiptUrl || undefined,
     directCost: Number(data.directCost) || 0,
     directNotes: data.directNote || '',
     overheadCost: Number(data.overhead) || 0,
     overheadNotes: data.overheadNote || '',
   };
+  if (Array.isArray(data.lines) && data.lines.length > 0) payload.lines = data.lines;
   const res = await api.post('/v1/expenses', payload);
   return { data: res.data?.data ?? res.data };
 };
@@ -1397,6 +1514,8 @@ export const updateExpense = async (id, data) => {
     projectId: data.projectId || data.project,
     month: parseInt(periodParts[1], 10) || new Date().getMonth() + 1,
     year: parseInt(periodParts[0], 10) || new Date().getFullYear(),
+    recognizedDate: data.recognizedDate || data.expenseDate || undefined,
+    expenseDate: data.expenseDate || data.recognizedDate || undefined,
     directCost: Number(data.directCost) || 0,
     directNotes: data.directNote || '',
     overheadCost: Number(data.overhead) || 0,
@@ -1416,16 +1535,161 @@ export const addExpenseLine = async (expenseId, data) => {
   return { data: res.data?.data ?? res.data };
 };
 
+export const updateExpenseLine = async (lineId, data) => {
+  const res = await api.patch(`/v1/expenses/lines/${lineId}`, data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const deleteExpenseLine = async (lineId) => {
+  const res = await api.delete(`/v1/expenses/lines/${lineId}`);
+  return { data: res.data };
+};
+
 export const getExpenseReports = async (period) => {
   const res = await api.get('/v1/expenses/report', { params: { period: period || String(new Date().getFullYear()) } });
   const raw = res.data?.data ?? res.data;
   return { data: raw };
 };
 
+const monthOf = (v) => {
+  const s = String(v || '');
+  const m = Number(s.substring(5, 7).replace(/^0/, '')) || Number(s) || 0;
+  return m >= 1 && m <= 12 ? m : 0;
+};
+
+// BE chưa cung c c c aggregate Actual theo hạng mục/tháng (dashboard trả chi budget per category).
+// FE tổng hợp fallback dari expense project (line: hangMucLon + actualQuantity × đơn giá TRƯỚC VAT).
+export const getCategoryBudgetActuals = async (year) => {
+  const y = parseInt(year, 10) || new Date().getFullYear();
+  const actualByCat = {}; // name_lower -> { [month]: amount, total }
+  const track = (hbName, month, amount) => {
+    if (!hbName) return;
+    const cat = actualByCat[hbName.toLowerCase()] ||= { [month]: 0, total: 0 };
+    cat[month] = (cat[month] || 0) + amount;
+    cat.total += amount;
+  };
+  const preVatPrice = (ln) => {
+    if (ln.unitPriceBeforeVat != null && ln.unitPriceBeforeVat !== '') return Number(ln.unitPriceBeforeVat) || 0;
+    const base = Number(ln.actualUnitPrice ?? ln.unitPriceAfterVat ?? ln.unitPriceAfterVatSnapshot ?? 0);
+    const vatRate = ln.vatRateSnapshot != null ? Number(ln.vatRateSnapshot) : (ln.vatRate != null ? Number(ln.vatRate) : 0);
+    return vatRate > 0 ? Math.round(base / (1 + vatRate / 100)) : base;
+  };
+  try {
+    const projectsRes = await getProjects();
+    const projects = Array.isArray(projectsRes.data) ? projectsRes.data : [];
+    for (const p of projects) {
+      try {
+        const res = await api.get('/v1/expenses', { params: { projectId: p.id, year: y } });
+        const raw = res.data?.data ?? res.data ?? [];
+        for (const exp of Array.isArray(raw) ? raw : []) {
+          const expMonth = monthOf(exp.expenseDate) || monthOf(exp.period) || exp.month;
+          for (const ln of Array.isArray(exp.lines) ? exp.lines : []) {
+            const qty = Number(ln.actualQuantity ?? 0);
+            const price = preVatPrice(ln);
+            const month = monthOf(ln.expenseDate) || expMonth;
+            track(ln.hangMucLon || ln.categoryName, month, qty * price);
+          }
+        }
+      } catch { /* skip project */ }
+    }
+  } catch { /* no projects */ }
+  return { data: actualByCat };
+};
+
 export const getExpenseOverview = async (period) => {
   const res = await api.get('/v1/expenses/overview', { params: { period: period || String(new Date().getFullYear()) } });
   const raw = res.data?.data ?? res.data;
   return { data: raw };
+};
+
+// --- Annual Expense Plan (USER-FLOW-04 Flow 1) ---
+
+export const getAnnualPlans = async (year) => {
+  const params = {};
+  if (year) params.year = year;
+  const res = await api.get('/v1/annual-plans', { params });
+  const raw = res.data?.data ?? res.data ?? [];
+  return { data: Array.isArray(raw) ? raw : [] };
+};
+
+export const getActiveAnnualPlan = async (year) => {
+  const params = {};
+  if (year) params.year = year;
+  const res = await api.get('/v1/annual-plans/active', { params });
+  return { data: res.data?.data ?? res.data ?? null, permissions: res.data?.permissions ?? null };
+};
+
+export const createAnnualPlan = async (data) => {
+  const res = await api.post('/v1/annual-plans', data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const getAnnualPlanTree = async (id) => {
+  const res = await api.get(`/v1/annual-plans/${id}/tree`);
+  const raw = res.data?.data ?? res.data;
+  return { data: raw };
+};
+
+export const updateAnnualPlanItems = async (id, year, items) => {
+  const res = await api.put(`/v1/annual-plans/${id}/items`, { year, items });
+  return { data: res.data?.data ?? res.data };
+};
+
+export const addAnnualPlanNode = async (id, node) => {
+  const res = await api.post(`/v1/annual-plans/${id}/nodes`, node);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const activateAnnualPlan = async (id, opts = {}) => {
+  const res = await api.post(`/v1/annual-plans/${id}/activate`, { confirmReplace: !!opts.confirmReplace });
+  return { data: res.data?.data ?? res.data };
+};
+
+// --- Project Expense Plan (USER-FLOW-04 Flow 2) ---
+
+export const getProjectExpensePlan = async (projectId) => {
+  const res = await api.get(`/v1/projects/${projectId}/expense-plan`);
+  return { data: res.data?.data ?? res.data ?? null };
+};
+
+export const saveProjectExpensePlan = async (projectId, data) => {
+  const res = await api.put(`/v1/projects/${projectId}/expense-plan`, data);
+  return { data: res.data?.data ?? res.data };
+};
+
+// --- Actual Expense (USER-FLOW-04 Flow 3/4; status gắn ở từng line) ---
+
+export const getExpenseActuals = async (params = {}) => {
+  const res = await api.get('/v1/expenses/actuals', { params });
+  const raw = res.data?.items ?? res.data?.data ?? res.data ?? [];
+  return { data: Array.isArray(raw) ? raw : [], total: res.data?.total ?? raw.length, pagination: res.data ?? null };
+};
+
+export const getExpenseActualById = async (id) => {
+  const res = await api.get(`/v1/expenses/actuals/${id}`);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const confirmExpenseLine = async (lineId) => {
+  const res = await api.post(`/v1/expenses/lines/${lineId}/confirm`);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const cancelExpenseLine = async (lineId, reason) => {
+  const res = await api.post(`/v1/expenses/lines/${lineId}/cancel`, { reason });
+  return { data: res.data?.data ?? res.data };
+};
+
+// --- Overview drill-down (USER-FLOW-04 Flow 5) ---
+
+export const getAnnualOverviewTree = async (year) => {
+  const res = await api.get('/v1/expenses/overview/tree/annual', { params: { year: year || new Date().getFullYear() } });
+  return { data: res.data?.data ?? res.data };
+};
+
+export const getProjectOverviewTree = async (params = {}) => {
+  const res = await api.get('/v1/expenses/overview/tree/project', { params });
+  return { data: res.data?.data ?? res.data };
 };
 
 // ===================== DATA MANAGEMENT =====================
@@ -1910,16 +2174,114 @@ export const createInventoryTransaction = async (data) => {
   return { data: res.data?.data ?? res.data };
 };
 
-export const getPipelineBySegment = async (periodType, periodValue, year) => {
-  const res = await api.get('/v1/dashboard/pipeline-by-segment', {
-    params: {
-      period_type: periodType,
-      period_value: periodType === 'year' ? undefined : periodValue,
-      year,
-    },
-  });
+export const getPipelineBySegment = async (periodType, periodValue, year, projectId) => {
+  const params = {
+    period_type: periodType,
+    period_value: periodType === 'year' ? undefined : periodValue,
+    year,
+  };
+  if (projectId) params.projectId = projectId;
+  const res = await api.get('/v1/dashboard/pipeline-by-segment', { params });
   const raw = res.data?.data ?? res.data ?? [];
   return { data: Array.isArray(raw) ? raw : [] };
+};
+
+// ===================== CATEGORY BUDGETS =====================
+
+export const getCategoryBudgetTree = async (year, projectId) => {
+  const params = { year };
+  if (projectId === 'all' || !projectId) params.projectId = 'all';
+  else params.projectId = projectId;
+  const res = await api.get('/v1/expense-budgets/tree', { params });
+  const body = res.data?.data ?? res.data ?? {};
+  const categories = body?.categories ?? [];
+  return { data: { categories, updatedAt: body?.updatedAt ?? null }, updatedAt: body?.updatedAt ?? null, permissions: body?.permissions ?? res.data?.permissions ?? null };
+};
+
+export const getCategoryBudgetDashboard = async (year, projectId) => {
+  const params = { year };
+  if (projectId === 'all' || !projectId) params.projectId = 'all';
+  else params.projectId = projectId;
+  const res = await api.get('/v1/expense-budgets/dashboard', { params });
+  const body = res.data?.data ?? res.data ?? {};
+  return {
+    data: body?.data ?? body ?? {},
+    permissions: body?.permissions ?? res.data?.permissions ?? null,
+  };
+};
+
+export const getCategoryBudgetSummary = async (year, projectId) => {
+  const params = { year };
+  if (projectId) params.projectId = projectId;
+  const res = await api.get('/v1/expense-budgets/summary', { params });
+  const body = res.data?.data ?? res.data?.summary ?? res.data ?? {};
+  return {
+    data: {
+      categories: body?.categories ?? [],
+      yearTotal: body?.grand_total ?? body?.yearTotal ?? null,
+      currency: body?.currency ?? null,
+      calculatedAt: body?.calculated_at ?? body?.calculatedAt ?? null,
+    },
+    permissions: body?.permissions ?? res.data?.permissions ?? null,
+  };
+};
+
+export const getCategoryBudgetCategories = async (year) => {
+  const res = await api.get('/v1/expense-budgets/categories', { params: { year } });
+  return { data: res.data?.data ?? res.data ?? [] };
+};
+
+export const createCategoryBudgetCategory = async (data) => {
+  const res = await api.post('/v1/expense-budgets/categories', data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const updateCategoryBudgetCategory = async (id, data) => {
+  const res = await api.patch(`/v1/expense-budgets/categories/${id}`, data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const deleteCategoryBudgetCategory = async (id) => {
+  await api.delete(`/v1/expense-budgets/categories/${id}`);
+  return { success: true };
+};
+
+export const createCategoryBudgetSubcategory = async (data) => {
+  const res = await api.post('/v1/expense-budgets/subcategories', data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const updateCategoryBudgetSubcategory = async (id, data) => {
+  const res = await api.patch(`/v1/expense-budgets/subcategories/${id}`, data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const deleteCategoryBudgetSubcategory = async (id) => {
+  await api.delete(`/v1/expense-budgets/subcategories/${id}`);
+  return { success: true };
+};
+
+export const createCategoryBudgetItem = async (data) => {
+  const res = await api.post('/v1/expense-budget-items', data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const updateCategoryBudgetItem = async (id, data) => {
+  const res = await api.patch(`/v1/expense-budget-items/${id}`, data);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const deleteCategoryBudgetItem = async (id) => {
+  await api.delete(`/v1/expense-budget-items/${id}`);
+  return { success: true };
+};
+
+export const saveCategoryBudgetValues = async (year, values, { projectId, baseUpdatedAt } = {}) => {
+  const body = { year, values };
+  if (projectId) body.projectId = projectId;
+  if (baseUpdatedAt) body.baseUpdatedAt = baseUpdatedAt;
+  const res = await api.put('/v1/expense-budgets/values', body);
+  return { data: res.data?.data ?? res.data };
 };
 
 export default {
@@ -1943,8 +2305,10 @@ export default {
   savePlanKPIs,
   getActuals,
   getMonthlyActuals,
-  getPeriodPlan,
+  getProjectKPIPlan,
+  saveProjectKPIPlan,
   saveActuals,
+  getProjectKPIs,
   getOpportunities,
   addOpportunity,
   updateOpportunity,
@@ -1962,12 +2326,18 @@ export default {
   deleteMember,
   deleteExpense,
   updateExpense,
+  addExpenseLine,
+  updateExpenseLine,
+  deleteExpenseLine,
+  getExpenseById,
   getExpenseSystemParams,
   saveExpenseSystemParam,
   getExpenseList,
   saveExpense,
   getExpenseReports,
   getExpenseOverview,
+  getCategoryBudgetActuals,
+  getCategoryBudgetSummary,
   importTasks,
   importKPIHistory,
   importClosedDeals,

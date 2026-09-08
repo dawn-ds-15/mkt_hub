@@ -12,6 +12,7 @@ const emptyRow = {
   projectId: '',
   contractName: '',
   fees: '',
+  initiationDate: '',
   expectedCloseDate: '',
 };
 
@@ -33,6 +34,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
   const [loading, setLoading] = useState(false);
   const [convertingIndex, setConvertingIndex] = useState(null);
   const [removingIds, setRemovingIds] = useState(new Set());
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const saveTimers = useRef({});
   const [projects, setProjects] = useState([]);
 
@@ -93,6 +95,71 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
   };
 
   const handleRowChange = (index, field, value) => patchRow(index, { [field]: value });
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const allRowsSelected = rows.length > 0 && rows.every(r => selectedIds.has(r.id));
+
+  const toggleSelectAll = () => {
+    const ids = rows.map(r => r.id);
+    setSelectedIds(allRowsSelected ? new Set() : new Set(ids));
+  };
+
+  const handleBulkDelete = async () => {
+    const selectedRows = rows.filter(r => selectedIds.has(r.id));
+    if (!selectedRows.length) return;
+    const ok = window.confirm(locale === 'vi'
+      ? `Xóa ${selectedRows.length} cơ hội đã chọn?`
+      : `Delete ${selectedRows.length} selected opportunities?`);
+    if (!ok) return;
+    const removeSet = new Set(selectedRows.map(r => r.id));
+    Object.keys(saveTimers.current).forEach((idx) => {
+      const row = rows[Number(idx)];
+      if (row && removeSet.has(row.id)) {
+        clearTimeout(saveTimers.current[idx]);
+        delete saveTimers.current[idx];
+      }
+    });
+    const real = selectedRows.filter(r => typeof r.id !== 'number');
+    const temp = selectedRows.filter(r => typeof r.id === 'number');
+    if (real.length) {
+      setRemovingIds(prev => new Set([...prev, ...real.map(r => r.id)]));
+      const results = await Promise.allSettled(real.map(r => deleteOpportunity(r.id)));
+      const failed = real.filter((_, i) => results[i].status === 'rejected');
+      setRows(prev => prev.filter(r => !removeSet.has(r.id) && !failed.some(f => f.id === r.id)));
+      setRemovingIds(prev => {
+        const next = new Set(prev);
+        real.forEach(r => next.delete(r.id));
+        return next;
+      });
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        real.forEach(r => next.delete(r.id));
+        return next;
+      });
+      if (failed.length) {
+        addToast(locale === 'vi'
+          ? `Xóa thất bại ${failed.length} cơ hội.`
+          : `Failed to delete ${failed.length} opportunities.`, 'error');
+      } else {
+        addToast(locale === 'vi' ? 'Đã xóa các cơ hội đã chọn.' : 'Selected opportunities deleted.', 'success');
+      }
+    }
+    if (temp.length) {
+      setRows(prev => prev.filter(r => !temp.some(x => x.id === r.id)));
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        temp.forEach(r => next.delete(r.id));
+        return next;
+      });
+    }
+  };
 
   const openConvertModal = (index) => {
     setModalIndex(index);
@@ -176,24 +243,45 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
         <h4 className="text-label-md font-semibold text-on-surface uppercase tracking-wider">
           {locale === 'vi' ? 'Chi tiết Opportunities' : 'Opportunities Detail'}
         </h4>
-        <button
-          onClick={addRow}
-          className="text-primary flex items-center gap-1 text-body-sm font-semibold hover:underline"
-        >
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          {locale === 'vi' ? 'Thêm dòng' : 'Add row'}
-        </button>
+        <div className="flex items-center gap-3">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="text-error flex items-center gap-1 text-body-sm font-semibold hover:underline"
+            >
+              <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+              {locale === 'vi' ? `Xóa đã chọn (${selectedIds.size})` : `Delete selected (${selectedIds.size})`}
+            </button>
+          )}
+          <button
+            onClick={addRow}
+            className="text-primary flex items-center gap-1 text-body-sm font-semibold hover:underline"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            {locale === 'vi' ? 'Thêm dòng' : 'Add row'}
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto border border-border-light rounded-lg">
         <table className="w-full text-left border-collapse">
           <thead className="bg-surface-container-low border-b border-border-light">
             <tr>
+              <th className="px-2 py-2.5 w-10">
+                <input
+                  type="checkbox"
+                  checked={allRowsSelected}
+                  onChange={toggleSelectAll}
+                  className="cursor-pointer"
+                  aria-label={locale === 'vi' ? 'Chọn tất cả' : 'Select all'}
+                />
+              </th>
               <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Tên DN / Khách hàng' : 'Company / Customer'}</th>
               <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Size' : 'Size'}</th>
               <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Project' : 'Project'}</th>
               <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Hợp đồng' : 'Contract'}</th>
               <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Fees</th>
+              <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Ngày bắt đầu' : 'Start Date'}</th>
               <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Dự kiến đóng' : 'Expected Close'}</th>
               <th className="px-2 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
             </tr>
@@ -208,6 +296,15 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                     isRemoving ? 'opacity-0 -translate-x-8 scale-95' : 'opacity-100 translate-x-0 scale-100'
                   }`}
                 >
+                  <td className="px-2 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(row.id)}
+                      onChange={() => toggleSelect(row.id)}
+                      className="cursor-pointer"
+                      aria-label={locale === 'vi' ? 'Chọn cơ hội' : 'Select opportunity'}
+                    />
+                  </td>
                   <td className="px-2 py-2">
                     <input
                       className="w-full border-0 focus:ring-0 px-2 py-1.5 text-body-md outline-none rounded-md hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
@@ -258,6 +355,14 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       placeholder="5,000"
                       value={row.fees}
                       onChange={(e) => handleRowChange(index, 'fees', e.target.value)}
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input
+                      className="w-full max-w-[150px] border-0 focus:ring-0 px-2 py-1.5 text-body-md outline-none rounded-md hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
+                      type="date"
+                      value={row.initiationDate}
+                      onChange={(e) => handleRowChange(index, 'initiationDate', e.target.value)}
                     />
                   </td>
                   <td className="px-2 py-2">

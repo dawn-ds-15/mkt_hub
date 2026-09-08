@@ -132,18 +132,6 @@ export default function PerformanceDashboard({ refreshKey, onViewAll }) {
   const prevRoa = prevTotalCost > 0 ? prevWonValue.actual / prevTotalCost : null;
   const roaDelta = roa != null && prevRoa != null ? roa - prevRoa : null;
 
-  const plan = Number(closedDeal.plan) || 0;
-  const actual = Number(closedDeal.actual) || 0;
-  const debt = Math.max(0, (Number(prevClosedDeal.plan) || 0) - (Number(prevClosedDeal.actual) || 0));
-  const totalTarget = plan + debt;
-  const progress = totalTarget > 0 ? Math.min(100, Math.round((actual / totalTarget) * 100)) : 0;
-
-  const periodLabel = t({
-    month: { vi: 'Tháng', en: 'Month' },
-    quarter: { vi: 'Quý', en: 'Quarter' },
-    year: { vi: 'Năm', en: 'Year' },
-  });
-
   const avgCac = useMemo(() => {
     const withSql = projects.filter((p) => (p.kpiSqlActual || 0) > 0);
     if (!withSql.length) return null;
@@ -254,50 +242,6 @@ export default function PerformanceDashboard({ refreshKey, onViewAll }) {
                 <span className="text-[12px] text-on-surface-variant">{t({ vi: 'so với kỳ trước', en: 'vs previous period' })}</span>
               </div>
               <div className="text-[12px] text-on-surface-variant mt-2">{t({ vi: 'Công thức: Doanh thu / Tổng chi phí', en: 'Formula: Revenue / Total cost' })}</div>
-            </div>
-
-            {/* Cumulative KPI Card (Highlight) */}
-            <div className="bg-surface-container-lowest rounded-xl border-2 border-secondary-container p-4 shadow-[0_4px_12px_rgba(0,0,0,0.04)] relative overflow-hidden">
-              <div className="absolute -right-6 -top-6 w-24 h-24 bg-secondary-fixed-dim rounded-full opacity-20 blur-xl" />
-              <div className="flex justify-between items-start mb-2 relative z-10">
-                <div>
-                  <div className="text-[12px] leading-[16px] text-on-surface-variant uppercase tracking-wider mb-1">{t({ vi: `KPI Deal Cộng Dồn (${periodLabel})`, en: `Cumulative Deal KPI (${periodLabel})` })}</div>
-                  <div className="text-[24px] leading-[32px] font-semibold text-on-surface tabular-nums">
-                    {formatMoney(actual)} / {formatMoney(totalTarget)} Deal
-                  </div>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-sm">
-                  <span className="material-symbols-outlined">assignment_turned_in</span>
-                </div>
-              </div>
-              <div className="relative z-10">
-                <div className="flex justify-between text-[12px] text-on-surface-variant mb-1 mt-3">
-                  <span>{t({ vi: 'Tiến độ', en: 'Progress' })}</span>
-                  <span className="font-medium text-on-surface">{progress}%</span>
-                </div>
-                <div className="w-full bg-surface-container-high rounded-full h-2 mb-3">
-                  <div className="bg-secondary h-2 rounded-full" style={{ width: `${progress}%` }} />
-                </div>
-                <div className="bg-surface-container-low p-2 rounded-lg border border-border-light">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[12px] text-on-surface-variant">{t({ vi: 'Chỉ tiêu kỳ này:', en: 'This period target:' })}</span>
-                    <span className="font-data-mono text-[12px] font-medium tabular-nums">{formatMoney(plan)} Deal</span>
-                  </div>
-                  {debt > 0 && (
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[12px] text-warning flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">warning</span>{t({ vi: 'Nợ kỳ trước:', en: 'Carry-over debt:' })}
-                      </span>
-                      <span className="font-data-mono text-[12px] font-medium text-warning tabular-nums">+ {formatMoney(debt)} Deal</span>
-                    </div>
-                  )}
-                  <div className="h-px bg-border-light w-full my-1" />
-                  <div className="flex justify-between items-center">
-                    <span className="text-[12px] font-semibold">{t({ vi: 'Tổng KPI cần đạt:', en: 'Total KPI target:' })}</span>
-                    <span className="font-data-mono text-[12px] font-bold text-on-surface tabular-nums">{formatMoney(totalTarget)} Deal</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 

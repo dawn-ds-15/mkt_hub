@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { createInventoryItem, updateInventoryItem, createBatch, updateBatch, getItemBatches } from '../../services/api';
+import { createInventoryItem, updateInventoryItem, updateBatch, getItemBatches, createInventoryEntry } from '../../services/api';
 import NumberInput from '../common/NumberInput';
 
 const CATEGORY_META = {
@@ -43,7 +43,12 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
           setBatchCode(latest.batchCode || '');
           setReceivedDate(latest.receivedDate || new Date().toISOString().slice(0, 10));
           setQuantity(latest.quantityIn != null ? String(latest.quantityIn) : '');
-          setUnitPriceBeforeVat(latest.unitPrice != null ? String(latest.unitPrice) : '');
+          const seededBeforeVat = latest.unitPriceBeforeVat != null
+            ? Number(latest.unitPriceBeforeVat)
+            : (latest.unitPriceAfterVat != null && Number(latest.vatRate) > 0
+                ? Math.round(Number(latest.unitPriceAfterVat) / (1 + Number(latest.vatRate) / 100))
+                : latest.unitPrice);
+          setUnitPriceBeforeVat(seededBeforeVat != null && !isNaN(seededBeforeVat) ? String(seededBeforeVat) : '');
           setVatRate(latest.vatRate != null ? String(latest.vatRate) : '0');
           setSupplier(latest.supplier || '');
           setContractCode(latest.contractCode || '');
@@ -106,32 +111,42 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
       setFormError(t('Số lượng không được âm.', 'Quantity cannot be negative.'));
       return;
     }
+    if (Number(quantity) === 0) {
+      setFormError(t('Số lượng phải lớn hơn 0 khi nhập kho.', 'Quantity must be greater than 0 for stock-in.'));
+      return;
+    }
 
+    setSaving(true);
     try {
       const entryPayload = {
         batchCode: batchCode.trim(),
         receivedDate,
-        quantityIn: Number(quantity) || 0,
-        unitPrice: Number(unitPriceBeforeVat) || 0,
+        quantity: Number(quantity) || 0,
+        unitPrice: unitPriceAfterVat || 0,
         vatRate: Number(vatRate) || 0,
         supplier: supplier.trim(),
         contractCode: contractCode.trim(),
         note: note.trim(),
+        unitPriceBeforeVat: Number(unitPriceBeforeVat) || 0,
+        unitPriceAfterVat: unitPriceAfterVat || 0,
       };
 
       if (isCreate) {
         const itemPayload = {
           code: generateCode(name),
           name: name.trim(),
-          category,
+          category: category.trim().toLowerCase(),
           unit: unit.trim(),
+          batchCode: batchCode.trim(),
+          receivedDate,
+          quantityIn: Number(quantity) || 0,
+          unitPriceBeforeVat: Number(unitPriceBeforeVat) || 0,
+          vatRate: Number(vatRate) || 0,
+          unitPriceAfterVat: unitPriceAfterVat || 0,
+          supplier: supplier.trim(),
+          contractCode: contractCode.trim(),
         };
-        const res = await createInventoryItem(itemPayload);
-        const newItem = res.data;
-        const itemId = newItem?.id;
-        if (itemId) {
-          await createBatch(itemId, entryPayload);
-        }
+        await createInventoryItem(itemPayload);
         onSaved(t('Đã tạo vật phẩm mới', 'Item created'));
       } else {
         await updateInventoryItem(item.id, {
@@ -142,13 +157,19 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
         if (entryId) {
           await updateBatch(entryId, entryPayload);
         } else {
-          await createBatch(item.id, entryPayload);
+          await createInventoryEntry({ itemId: item.id, ...entryPayload });
         }
         onSaved(t('Đã cập nhật vật phẩm', 'Item updated'));
       }
     } catch (e) {
       console.error('[Inventory] save:', e);
-      setFormError(t('Lưu không thành công. Vui lòng kiểm tra backend.', 'Save failed. Check backend connection.'));
+      const raw = e?.response?.data?.message;
+      const detail = Array.isArray(raw) ? raw.join(', ') : (typeof raw === 'string' && raw ? raw : '');
+      setFormError(detail
+        ? t(`Lưu không thành công. ${detail}`, `Save failed. ${detail}`)
+        : t('Lưu không thành công. Vui lòng kiểm tra backend.', 'Save failed. Check backend connection.'));
+    } finally {
+      setSaving(false);
     }
   };
 

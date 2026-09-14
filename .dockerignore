@@ -1,5 +1,12 @@
 node_modules
+dist
 .git
 .gitignore
 *.md
 *.tar
+.env
+.env.local
+.dockerignore
+Dockerfile
+docker-compose.yml
+specification

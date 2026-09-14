@@ -1,4 +1,4 @@
-# Yêu cầu cho Backend — Ngày 31/08/2026
+opencode# Yêu cầu cho Backend — Ngày 31/08/2026
 
 > File tổng hợp các yêu cầu dành cho backend phát sinh ngày 31/08/2026.
 > Mọi yêu cầu BE viết sau ngày này cũng được thêm vào file này (có ngày kèm theo).

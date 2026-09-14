@@ -425,7 +425,7 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
             <div className="mt-sm flex justify-end">
               <button
                 onClick={() => openHistory(expandedItem, null)}
-                className="text-secondary font-title-lg text-title-lg flex items-center gap-1 hover:underline cursor-pointer"
+                className="text-secondary font-body-md text-body-md font-semibold flex items-center gap-1 hover:underline cursor-pointer"
               >
                 {t('Xem lịch sử xuất nhập', 'View in/out history')} <span className="material-symbols-outlined text-sm">history</span>
               </button>
@@ -517,7 +517,7 @@ function ItemRow({ item, st, isExpanded, locale, t, onToggle, onEdit, onDelete, 
               )}
             </div>
             <div>
-              <div className="font-title-lg text-title-lg font-semibold text-on-surface">{item.name}</div>
+              <div className="font-body-md text-body-md font-semibold text-on-surface">{item.name}</div>
             </div>
           </div>
         </td>
@@ -535,7 +535,7 @@ function ItemRow({ item, st, isExpanded, locale, t, onToggle, onEdit, onDelete, 
           <div className="flex items-center justify-center gap-1 mx-auto">
             <button
               onClick={onToggle}
-              className={`flex items-center gap-1 font-title-lg text-title-lg hover:underline cursor-pointer ${isExpanded ? 'text-on-surface-variant' : 'text-secondary'}`}
+              className={`flex items-center gap-1 font-body-sm text-body-sm font-semibold hover:underline cursor-pointer ${isExpanded ? 'text-on-surface-variant' : 'text-secondary'}`}
             >
               {isExpanded ? t('Đóng', 'Close') : t('Chi tiết', 'Detail')}
               <span className="material-symbols-outlined text-sm">{isExpanded ? 'expand_less' : 'arrow_forward'}</span>

@@ -1,4 +1,5 @@
 import { filterDeleted, markDeleted, getDeletedIds, restoreDeleted } from '../utils/softDelete';
+import { clearEvents } from '../services/eventsStore';
 import axios from 'axios';
 
 const TOKEN_KEY = 'mkt_hub_token';
@@ -472,6 +473,8 @@ export const updateProject = async (id, data) => {
 export const deleteProject = async (id) => {
   await api.delete(`/v1/projects/${id}`);
   markDeleted('projects', id);
+  try { clearEvents(id); } catch { /* noop */ }
+  try { localStorage.removeItem(`mkt_hub_daily_actuals_${id}`); } catch { /* noop */ }
   return { success: true };
 };
 
@@ -855,9 +858,9 @@ export const getKPIRollover = async (year, week) => {
 
 // ===================== COMPARE PERIODS =====================
 
-export const getCompareData = async (years = ['2026', '2025'], periodType = 'year', periodValue = '2026') => {
+export const getCompareData = async (years = ['2026', '2025'], periodType = 'year', periodValue = '2026', projectId) => {
   const res = await api.get('/v1/leads-kpis/comparison', {
-    params: { periodType, currentPeriodValue: periodValue, year1: years[0], year2: years[1], year3: years[2] }
+    params: { periodType, currentPeriodValue: periodValue, year1: years[0], year2: years[1], year3: years[2], ...(projectId ? { projectId } : {}) }
   });
   const raw = res.data?.data ?? res.data ?? {};
   const source = (raw && typeof raw === 'object') ? raw : {};
@@ -866,6 +869,9 @@ export const getCompareData = async (years = ['2026', '2025'], periodType = 'yea
     'Raw Leads': 'rawLeads',
     'MQL': 'mql',
     'SQL': 'sql',
+    'OPP': 'oppCount',
+    'Closed Deal': 'closedCount',
+    'Pipeline Value': 'pipelineValue',
     'Won Value': 'wonValue',
   };
   const result = {};
@@ -887,20 +893,20 @@ export const getCompareData = async (years = ['2026', '2025'], periodType = 'yea
   return { data: result };
 };
 
-export const getQuarterlyCompareData = async (selectedYears, metric = 'Raw Leads') => {
+export const getQuarterlyCompareData = async (selectedYears, metric = 'Raw Leads', projectId) => {
   const colors = ['bg-primary', 'bg-secondary-fixed-dim', 'bg-surface-container-highest', 'bg-gray-300'];
   const labelToKey = { 'Raw Leads': 'Raw Leads', 'MQL': 'MQL', 'SQL': 'SQL', 'Won Value': 'Won Value', 'Closed Deal': 'Closed Deal', 'OPP': 'OPP' };
   const apiMetric = labelToKey[metric] || 'Raw Leads';
 
   const datasets = await Promise.all(selectedYears.map(async (year, idx) => {
     const res = await api.get('/v1/dashboard/kpi-cards', {
-      params: { period_type: 'year', period_value: year, year },
+      params: { period_type: 'year', period_value: year, year, ...(projectId ? { projectId } : {}) },
     });
     const cards = res.data?.data ?? res.data ?? [];
     const total = cards.find(c => c.label === apiMetric)?.actual || 0;
     const qVals = await Promise.all([1, 2, 3, 4].map(async (q) => {
       const qRes = await api.get('/v1/dashboard/kpi-cards', {
-        params: { period_type: 'quarter', period_value: q, year },
+        params: { period_type: 'quarter', period_value: q, year, ...(projectId ? { projectId } : {}) },
       });
       const qCards = qRes.data?.data ?? qRes.data ?? [];
       return qCards.find(c => c.label === apiMetric)?.actual || 0;
@@ -1458,9 +1464,10 @@ function normalizeExpenseItem(item) {
     directNote: item.directNote ?? item.directNotes ?? '',
     overheadNote: item.overheadNote ?? item.overheadNotes ?? '',
     status: item.status ?? 'pending',
+    createdAt: item.createdAt ?? '',
     recognizedDate: item.recognizedDate ?? item.expenseDate ?? item.recognized_date ?? item.expense_date ?? '',
     expenseDate: item.expenseDate ?? item.recognizedDate ?? item.recognized_date ?? item.expense_date ?? '',
-    lines: Array.isArray(item.lines) ? item.lines : null,
+    lines: Array.isArray(item.lines) ? item.lines.filter((ln) => !ln.archivedAt && !ln.archived) : null,
   };
 }
 
@@ -1472,12 +1479,21 @@ export const getExpenseList = async (project, month, year) => {
   const res = await api.get('/v1/expenses', { params });
   const raw = res.data?.data ?? res.data ?? [];
   const list = Array.isArray(raw) ? raw : [];
-  return { data: list.map(normalizeExpenseItem) };
+  const active = list.filter((e) => !e.archivedAt && !e.archived);
+  return { data: filterDeleted('expenses', active).map(normalizeExpenseItem) };
 };
 
 export const getExpenseById = async (id) => {
   const res = await api.get(`/v1/expenses/${id}`);
   return { data: res.data?.data ?? res.data };
+};
+
+// Lịch sử các lần sửa đổi của 1 bản ghi (BE: GET /v1/expenses/:id/history — mảng phiên bản sắp at ASC)
+// Nếu BE chưa triển khai (lỗi/404) → ném lỗi để FE rơi vào fallback so giữa các bản ghi.
+export const getExpenseHistory = async (id) => {
+  const res = await api.get(`/v1/expenses/${id}/history`);
+  const raw = res.data?.data ?? res.data ?? [];
+  return Array.isArray(raw) ? raw : [];
 };
 
 export const saveExpense = async (data) => {
@@ -1527,6 +1543,7 @@ export const updateExpense = async (id, data) => {
 
 export const deleteExpense = async (id) => {
   const res = await api.delete(`/v1/expenses/${id}`);
+  markDeleted('expenses', id);
   return { data: res.data };
 };
 
@@ -1545,9 +1562,119 @@ export const deleteExpenseLine = async (lineId) => {
   return { data: res.data };
 };
 
+// BE report trả actual = 0 vì header directCost/overheadCost = 0; thực tế chỉ nằm ở lines.
+// FE roll-up fallback từ lines (giống ProjectExpenses: ưu tiên actualAmount/totalAmount).
+const amountOfLine = (ln) => {
+  const direct = Number(ln.actualAmount ?? ln.totalAmount ?? ln.amount ?? 0);
+  if (direct > 0) return Math.round(direct);
+  const qty = Number(ln.actualQuantity ?? 0);
+  const preVat = ln.unitPriceBeforeVat != null && ln.unitPriceBeforeVat !== '' ? Number(ln.unitPriceBeforeVat) || 0 : Number(ln.unitPriceAfterVat ?? ln.unitPriceAfterVatSnapshot ?? 0);
+  const vatRate = ln.vatRateSnapshot != null ? Number(ln.vatRateSnapshot) : (ln.vatRate != null ? Number(ln.vatRate) : 0);
+  const after = vatRate > 0 ? Math.round(preVat * (1 + vatRate / 100)) : preVat;
+  return Math.round(qty * after);
+};
+
+export const getExpenseReportActuals = async (year) => {
+  const y = parseInt(year, 10) || new Date().getFullYear();
+  const byProject = {}; // projectId -> { projectId, projectName, projectType, months: {m: amount} }
+  const monthTotals = {}; // m -> amount
+  try {
+    const projectsRes = await getProjects();
+    const projects = Array.isArray(projectsRes.data) ? projectsRes.data : [];
+    for (const p of projects) {
+      const key = p.id || p.name;
+      if (!byProject[key]) byProject[key] = { projectId: p.id, projectName: p.name, projectType: p.type || 'N/A', months: {} };
+      try {
+        const res = await api.get('/v1/expenses', { params: { projectId: p.id, year: y } });
+        const raw = res.data?.data ?? res.data ?? [];
+        for (const exp of Array.isArray(raw) ? raw : []) {
+          const expMonth = monthOf(exp.expenseDate) || monthOf(exp.period) || exp.month;
+          for (const ln of Array.isArray(exp.lines) ? exp.lines : []) {
+            if (ln.cancelledAt || ln.archivedAt) continue;
+            const amount = amountOfLine(ln);
+            const month = monthOf(ln.expenseDate) || expMonth;
+            if (!month || month < 1 || month > 12) continue;
+            byProject[key].months[month] = (byProject[key].months[month] || 0) + amount;
+            monthTotals[month] = (monthTotals[month] || 0) + amount;
+          }
+        }
+      } catch { /* skip project */ }
+    }
+  } catch { /* no projects */ }
+  const projectList = Object.values(byProject).map((pp) => ({
+    projectId: pp.projectId,
+    projectName: pp.projectName,
+    projectType: pp.projectType,
+    months: pp.months,
+    total: Object.values(pp.months).reduce((s, v) => s + v, 0),
+  }));
+  return {
+    data: {
+      projects: projectList,
+      monthTotals,
+      total: Object.values(monthTotals).reduce((s, v) => s + v, 0),
+    },
+  };
+};
+
+const periodScopeMonths = (period) => {
+  const s = String(period || '');
+  const y = Number(s.substring(0, 4)) || new Date().getFullYear();
+  const m = Number(s.substring(5, 7).replace(/^0/, '')) || 0;
+  const q = Number((s.match(/-Q(\d)/i) || [])[1]) || 0;
+  let months;
+  if (m >= 1 && m <= 12) months = [m];
+  else if (q >= 1 && q <= 4) months = [q * 3 - 2, q * 3 - 1, q * 3];
+  else months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  return { year: y, months };
+};
+
 export const getExpenseReports = async (period) => {
   const res = await api.get('/v1/expenses/report', { params: { period: period || String(new Date().getFullYear()) } });
   const raw = res.data?.data ?? res.data;
+  const reported = (raw?.overview?.metrics?.totalExpense ?? 0) > 0;
+  if (!reported) {
+    try {
+      const { year, months } = periodScopeMonths(period);
+      const fb = await getExpenseReportActuals(year);
+      const scopeSet = new Set(months);
+      const inScope = (monthsMap) => Object.entries(monthsMap || {}).reduce((s, [mStr, v]) => (scopeSet.has(Number(mStr)) ? s + v : s), 0);
+      const fbProjects = Array.isArray(fb.data.projects) ? fb.data.projects : [];
+      if (raw?.overview) {
+        const metricTotal = fbProjects.reduce((s, p) => s + inScope(p.months), 0);
+        if (raw.overview.metrics) {
+          raw.overview.metrics.totalExpense = metricTotal;
+          raw.overview.metrics.actualTotalBeforeVat = metricTotal;
+        }
+        if (Array.isArray(raw.overview.projects)) {
+          for (const pr of raw.overview.projects) {
+            const match = fbProjects.find((f) => (pr.projectId && f.projectId === pr.projectId) || (!pr.projectId && f.projectName === pr.projectName));
+            const actual = match ? inScope(match.months) : 0;
+            pr.actualTotal = actual;
+            pr.actualDirect = actual;
+            pr.actualOverhead = 0;
+          }
+        }
+      }
+      if (Array.isArray(raw.trend)) {
+        for (const d of raw.trend) {
+          const m = monthOf(d.period);
+          if (m >= 1 && m <= 12) d.totalExpense = fb.data.monthTotals[m] || 0;
+        }
+      }
+      if (Array.isArray(raw.distribution)) {
+        const typeTotals = {};
+        for (const p of fbProjects) {
+          const amt = inScope(p.months);
+          if (amt > 0) typeTotals[p.projectType] = (typeTotals[p.projectType] || 0) + amt;
+        }
+        const overall = Object.values(typeTotals).reduce((s, v) => s + v, 0) || 1;
+        raw.distribution = Object.entries(typeTotals)
+          .map(([projectType, cost]) => ({ projectType, cost, percentage: Math.round((cost / overall) * 1000) / 10 }))
+          .sort((a, b) => b.cost - a.cost);
+      }
+    } catch { /* gi? nguyên d? li?u BE */ }
+  }
   return { data: raw };
 };
 
@@ -2190,8 +2317,7 @@ export const getPipelineBySegment = async (periodType, periodValue, year, projec
 
 export const getCategoryBudgetTree = async (year, projectId) => {
   const params = { year };
-  if (projectId === 'all' || !projectId) params.projectId = 'all';
-  else params.projectId = projectId;
+  if (projectId === 'all' || projectId) params.projectId = projectId;
   const res = await api.get('/v1/expense-budgets/tree', { params });
   const body = res.data?.data ?? res.data ?? {};
   const categories = body?.categories ?? [];

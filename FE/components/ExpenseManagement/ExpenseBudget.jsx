@@ -121,7 +121,8 @@ export default function ExpenseBudget({ refreshKey, onSaved }) {
   const categoryRows = useMemo(() => {
     if (dashboard?.categories && Array.isArray(dashboard.categories) && dashboard.categories.length > 0) {
       return dashboard.categories.map((c) => {
-        const budgetPlan = totalBudget > 0 ? Math.round(totalBudget * (Number(c.percentage) || 0) / 100) : 0;
+        const budgetPlan = Number(c.budget) != null && !Number.isNaN(Number(c.budget)) ? Number(c.budget)
+          : (totalBudget > 0 ? Math.round(totalBudget * (Number(c.percentage) || 0) / 100) : 0);
         // Chi phí thực tế đã trừ vào nhóm: khớp line chi phí dự án theo categoryId/hạng mục lớn (trước VAT)
         const actual = (expenseFiltered || []).reduce((sum, exp) => {
           const lines = Array.isArray(exp.lines) ? exp.lines : [];

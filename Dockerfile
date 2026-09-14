@@ -1,4 +1,5 @@
-FROM node:18-alpine AS build-frontend
+# ---------- Stage 1: build frontend (Vite) ----------
+FROM node:18-alpine AS build
 
 WORKDIR /app
 
@@ -6,25 +7,20 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+
+ARG VITE_API_URL=https://mkt-hub.onrender.com/api
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 
-FROM node:18-alpine
+# ---------- Stage 2: serve with Nginx ----------
+FROM nginx:alpine
 
-WORKDIR /app
+ENV BE_UPSTREAM=https://mkt-hub.onrender.com
 
-COPY BE/package*.json ./BE/
-RUN cd BE && npm install --omit=dev
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+COPY --from=build /app/dist /usr/share/nginx/html
 
-COPY BE/dist ./BE/dist
-COPY BE/prisma ./BE/prisma
-COPY BE/.env ./BE/.env
+EXPOSE 80
 
-RUN cd BE && npx prisma generate
-
-COPY --from=build-frontend /app/BE/public ./BE/public
-
-EXPOSE 3000
-
-WORKDIR /app/BE
-
-CMD ["node", "dist/src/main.js"]
+CMD ["nginx", "-g", "daemon off;"]

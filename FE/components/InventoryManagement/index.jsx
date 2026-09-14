@@ -66,7 +66,7 @@ export default function InventoryManagement() {
     <>
       <div className="mt-lg flex flex-col md:flex-row justify-between items-start md:items-center mb-lg gap-md">
         <div>
-          <h1 className="font-display-lg text-display-lg font-bold text-on-surface mb-xs">
+          <h1 className="font-headline-md text-headline-md font-bold text-on-surface mb-xs">
             {t('Quản lý Kho Vật Phẩm', 'Inventory Management')}
           </h1>
           <p className="font-body-sm text-body-sm text-on-surface-variant">
@@ -75,7 +75,7 @@ export default function InventoryManagement() {
         </div>
         <button
           onClick={() => openForm('create', null)}
-          className="bg-secondary text-on-secondary px-lg py-sm rounded-lg font-title-lg text-title-lg font-semibold flex items-center gap-xs hover:bg-secondary/90 transition-colors shadow-sm cursor-pointer"
+          className="bg-secondary text-on-secondary px-lg py-sm rounded-lg font-body-md text-body-md font-semibold flex items-center gap-xs hover:bg-secondary/90 transition-colors shadow-sm cursor-pointer"
         >
           <span className="material-symbols-outlined">add_circle</span>
           {t('Nhập kho mới', 'New inventory')}

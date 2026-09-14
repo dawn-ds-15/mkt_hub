@@ -448,3 +448,43 @@ Values: ["POSM", "Quà tặng", "Ấn phẩm in", "Khác"]
 - [ ] `PUT values` với `categoryId` upsert đúng cấp category; không đụng item/subcategory cũ.
 - [ ] `PUT values` với `projectId` UUID hoặc thiếu → hợp lệ; với `projectId=all` → **400** "projectId must be a UUID" (FE không gửi `all`).
 - [ ] Lỗi validation trả `categoryId` + `month` để FE gắn đúng ô.
+
+---
+
+## 9. 🔄 Thay đổi 11/09/2026 — Khôi phục nhóm con / hạng mục con / BACK UP trong UI
+
+> Đảo ngược một phần mục 8: FE tab "Nhập chi phí tổng hạng mục" **khôi phục** dòng nhóm con (`subcategory`), hạng mục nhỏ (`item`) và hàng **BACK UP**, gồm cả nút thêm/sửa/xóa. Vẫn giữ giá trị cấp **category** (nhóm lớn) như mục 8.
+
+### 9.1 Đọc — `GET /v1/expense-budgets/tree`
+
+- FE dùng lại full tree cũ: `categories[].subcategories[]` với `backup: { percent, months }`, `items[].months`, `actuals`, `planTotal`, `actualTotal`.
+- Vẫn trả `categories[].months` (cấp nhóm lớn).
+
+### 9.2 Lưu — `PUT /v1/expense-budgets/values`
+
+- FE gửi **1 request** gồm cả 3 loại row (theo contract mục 3.4 + khóa tương thích ngược mục 8.2):
+
+```json
+{
+  "year": 2026,
+  "values": [
+    { "categoryId": "cat_01",                "month": 1, "amount": 10000000 },
+    { "subcategoryId": "sub_01", "isBackup": true,  "month": 1, "amount": 5000000 },
+    { "itemId": "item_01",       "isBackup": false, "month": 1, "amount": 3000000 }
+  ]
+}
+```
+
+- ⚠️ Dòng cấp con chỉ hợp lệ khi có `itemId` **hoặc** `categoryId` (BE hiện 400 nếu chỉ có `subcategoryId`).
+- ⚠️ **BE cần persist đầy đủ 3 loại row** — xem `BE_REQUIREMENT_11-09-26.md`. Hiện tại (live) chỉ giá trị `categoryId` được lưu; `subcategoryId`/`itemId` bị bỏ (ghi nhận 11/09).
+
+### 9.3 Test chấp nhận
+
+- [ ] Tree trả `categories[].subcategories[]` + `backup.months` + `items[].months` có giá trị.
+- [ ] `PUT values` (3 loại row) → tree trả đúng cả 3 loại sau khi GET lại.
+- [ ] Thêm/sửa/xóa subcategory, item qua các CRUD API hoạt động.
+
+### 9.4 Lịch sử
+
+- 08/09/2026 (mục 8): bỏ subcategory/item/BACK UP khỏi UI, BE chỉ persist cấp category.
+- 11/09/2026: khôi phục UI 3 tầng theo yêu cầu; cần BE fix persist cấp con (`BE_REQUIREMENT_11-09-26.md`).

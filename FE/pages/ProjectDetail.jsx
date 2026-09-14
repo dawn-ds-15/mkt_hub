@@ -7,6 +7,8 @@ import {
   uploadProjectDocuments,
   updateProjectDocument,
   deleteProjectDocument,
+  getKpiCardsData,
+  getCategoryBudgetTree,
   DOC_CATEGORY,
 } from '../services/api';
 import { useDashboard } from '../contexts/DashboardContext';
@@ -124,7 +126,7 @@ function KpiMiniCard({ label, actual, plan, locale, isMoney, planLabel }) {
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { locale } = useDashboard();
+  const { locale, year } = useDashboard();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -133,6 +135,8 @@ export default function ProjectDetail() {
   const [docsLoading, setDocsLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [expenseTotals, setExpenseTotals] = useState({ directCost: 0, overheadCost: 0, total: 0, usedCategoryIds: [], usedCategoryNames: [] });
+  const [categoryBudgetTree, setCategoryBudgetTree] = useState(null);
   const fileInputRef = useRef(null);
   const addToast = useToast();
 
@@ -144,6 +148,12 @@ export default function ProjectDetail() {
   }, [id]);
 
   useEffect(() => { reloadDocs(); }, [reloadDocs]);
+
+  useEffect(() => {
+    getCategoryBudgetTree(year)
+      .then((res) => setCategoryBudgetTree(res.data))
+      .catch(() => setCategoryBudgetTree(null));
+  }, [year]);
 
   const handleFiles = async (fileList) => {
     const files = Array.from(fileList || []);
@@ -186,20 +196,38 @@ export default function ProjectDetail() {
     }
   };
 
-  const load = useCallback(() => {
+const load = useCallback(() => {
     setLoading(true);
     getProject(id)
       .then((res) => {
         if (res.data) {
           setProject(res.data);
           setNotFound(false);
+          enrichKpis();
         } else {
           setNotFound(true);
         }
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, year]);
+
+  const enrichKpis = useCallback(async () => {
+    const cards = await getKpiCardsData('year', year, year, id).catch(() => ({ data: [] }));
+    const byLabel = Object.fromEntries((cards.data || []).map(c => [c.label, c]));
+    setProject((prev) => {
+      if (!prev) return prev;
+      const opp = byLabel['OPP'];
+      const closed = byLabel['Closed Deal'];
+      const pipe = byLabel['Pipeline Value'];
+      return {
+        ...prev,
+        kpiOppActual: opp ? (Number(opp.actual ?? 0) || 0) : prev.kpiOppActual,
+        kpiClosedDealActual: closed ? (Number(closed.actual ?? 0) || 0) : prev.kpiClosedDealActual,
+        kpiPipelineValueActual: pipe ? (Number(pipe.actual ?? 0) || 0) : prev.kpiPipelineValueActual,
+      };
+    });
+  }, [id, year]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -208,8 +236,29 @@ export default function ProjectDetail() {
     ? { label: locale === 'vi' ? 'Chậm tiến độ' : 'Behind schedule', color: 'text-danger', icon: 'error' }
     : { label: locale === 'vi' ? 'Tốt (Đúng hạn)' : 'Healthy (On track)', color: 'text-success', icon: 'health_and_safety' };
 
-  const plannedTotal = (project?.budgetPlanDirect || 0) + (project?.budgetPlanOverhead || 0);
-  const actualTotal = (project?.actualCostDirect || 0) + (project?.actualCostOverhead || 0);
+  const projectPlanFromCategories = (() => {
+    if (!categoryBudgetTree || !Array.isArray(categoryBudgetTree.categories)) return 0;
+    const usedIds = new Set(expenseTotals.usedCategoryIds || []);
+    const usedNames = new Set(expenseTotals.usedCategoryNames || []);
+    if (usedIds.size === 0 && usedNames.size === 0) return 0;
+    const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    let total = 0;
+    for (const cat of categoryBudgetTree.categories) {
+      const catId = String(cat.id || cat.categoryId || '');
+      const catName = String(cat.name || '').trim().toLowerCase();
+      const matchedById = usedIds.has(catId) && catId;
+      const matchedByName = usedNames.has(catName) && catName;
+      if (!matchedById && !matchedByName) continue;
+      const months = cat.months || {};
+      for (const m of MONTHS) {
+        total += Number(months[m]) || 0;
+      }
+    }
+    return total;
+  })();
+
+  const plannedTotal = projectPlanFromCategories || ((project?.budgetPlanDirect || 0) + (project?.budgetPlanOverhead || 0));
+  const actualTotal = expenseTotals.directCost + expenseTotals.overheadCost;
   const spendPct = plannedTotal ? Math.min(100, Math.round((actualTotal / plannedTotal) * 100)) : 0;
 
   const recentTasks = project?.tasks || [];
@@ -389,11 +438,11 @@ export default function ProjectDetail() {
           <div className="col-span-12 bg-surface-container-lowest border border-border-light rounded-lg p-4 flex flex-col group">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Chi phí phát sinh' : 'Incurred Expenses'}</h3>
-              <button onClick={() => navigate('/expense')} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Mở module Chi phí' : 'Open Expense module'}>
+              <button onClick={() => navigate(`/expense?tab=input&projectId=${id}`)} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Xem lịch sử chi phí dự án' : 'View project expense history'}>
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
             </div>
-            <ProjectExpenses projectId={project.id} />
+            <ProjectExpenses projectId={project.id} onDataLoaded={setExpenseTotals} />
           </div>
 
           {/* Contracts & Documents (Span 12) */}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getOpportunities, addOpportunity, updateOpportunity, deleteOpportunity, convertOpportunityToWon, getProjects } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -32,10 +32,11 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
     : [{ value: 'S', label: 'S (Enterprise)' }, { value: 'M', label: 'M (Medium)' }, { value: 'L', label: 'L (Enterprise)' }];
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [convertingIndex, setConvertingIndex] = useState(null);
   const [removingIds, setRemovingIds] = useState(new Set());
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const saveTimers = useRef({});
+  const [dirtyIndices, setDirtyIndices] = useState(new Set());
   const [projects, setProjects] = useState([]);
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
     try {
       const response = await getOpportunities();
       setRows(response.data);
+      setDirtyIndices(new Set());
     } catch (error) {
       console.error('Error loading opportunities:', error);
     } finally {
@@ -67,34 +69,66 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
     setRows(prev => [...prev, { ...emptyRow, id: Date.now() }]);
   };
 
-  const patchRow = (index, patch) => {
-    const prevRow = rows[index];
-    const updatedRow = { ...prevRow, ...patch };
+  const handleRowChange = (index, field, value) => {
     setRows(prev => {
       const copy = [...prev];
-      copy[index] = updatedRow;
+      copy[index] = { ...copy[index], [field]: value };
       return copy;
     });
-    if (saveTimers.current[index]) clearTimeout(saveTimers.current[index]);
-    saveTimers.current[index] = setTimeout(async () => {
-      try {
-        const isTempId = typeof updatedRow.id === 'number';
-        if (isTempId) {
-          if (!updatedRow.companyName) return;
-          const res = await addOpportunity(updatedRow);
-          setRows(prev => {
-            const copy = [...prev];
-            copy[index] = { ...updatedRow, id: res.data.id };
-            return copy;
-          });
-        } else {
-          await updateOpportunity(updatedRow.id, updatedRow);
-        }
-      } catch {}
-    }, 500);
+    setDirtyIndices(prev => new Set([...prev, index]));
   };
 
-  const handleRowChange = (index, field, value) => patchRow(index, { [field]: value });
+  const handleRowChangeMulti = (index, patch) => {
+    setRows(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], ...patch };
+      return copy;
+    });
+    setDirtyIndices(prev => new Set([...prev, index]));
+  };
+
+  const handleSave = async () => {
+    if (dirtyIndices.size === 0) return;
+    setSaving(true);
+    try {
+      const indices = [...dirtyIndices];
+      const results = await Promise.allSettled(indices.map(async (idx) => {
+        const row = rows[idx];
+        if (!row) return;
+        const isTempId = typeof row.id === 'number';
+        if (isTempId) {
+          if (!row.companyName) return;
+          const res = await addOpportunity(row);
+          return { idx, newId: res.data.id };
+        } else {
+          await updateOpportunity(row.id, row);
+          return { idx };
+        }
+      }));
+      const failed = results.filter(r => r.status === 'rejected');
+      if (failed.length) {
+        addToast(locale === 'vi'
+          ? `Lưu thất bại ${failed.length} dòng.`
+          : `Failed to save ${failed.length} row(s).`, 'error');
+      } else {
+        addToast(locale === 'vi' ? 'Đã lưu tất cả thay đổi.' : 'All changes saved.', 'success');
+      }
+      setRows(prev => {
+        const copy = [...prev];
+        results.forEach((r) => {
+          if (r.status === 'fulfilled' && r.value?.newId != null) {
+            copy[r.value.idx] = { ...copy[r.value.idx], id: r.value.newId };
+          }
+        });
+        return copy;
+      });
+      setDirtyIndices(new Set());
+    } catch {
+      addToast(locale === 'vi' ? 'Có lỗi khi lưu!' : 'An error occurred while saving!', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
@@ -119,13 +153,6 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
       : `Delete ${selectedRows.length} selected opportunities?`);
     if (!ok) return;
     const removeSet = new Set(selectedRows.map(r => r.id));
-    Object.keys(saveTimers.current).forEach((idx) => {
-      const row = rows[Number(idx)];
-      if (row && removeSet.has(row.id)) {
-        clearTimeout(saveTimers.current[idx]);
-        delete saveTimers.current[idx];
-      }
-    });
     const real = selectedRows.filter(r => typeof r.id !== 'number');
     const temp = selectedRows.filter(r => typeof r.id === 'number');
     if (real.length) {
@@ -141,6 +168,13 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
       setSelectedIds(prev => {
         const next = new Set(prev);
         real.forEach(r => next.delete(r.id));
+        return next;
+      });
+      setDirtyIndices(prev => {
+        const next = new Set(prev);
+        const toRemove = [];
+        real.forEach(r => { next.forEach(i => { if (rows[i]?.id === r.id) toRemove.push(i); }); });
+        toRemove.forEach(i => next.delete(i));
         return next;
       });
       if (failed.length) {
@@ -215,7 +249,6 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
 
   const handleDeleteRow = async (index, row) => {
     const isTempId = typeof row.id === 'number';
-    if (saveTimers.current[index]) clearTimeout(saveTimers.current[index]);
     if (isTempId) {
       setRows(prev => prev.filter((_, i) => i !== index));
       return;
@@ -251,6 +284,18 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
             >
               <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
               {locale === 'vi' ? `Xóa đã chọn (${selectedIds.size})` : `Delete selected (${selectedIds.size})`}
+            </button>
+          )}
+          {dirtyIndices.size > 0 && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1 px-4 py-2 bg-primary text-on-primary rounded-lg text-body-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[18px]">save</span>
+              {saving
+                ? (locale === 'vi' ? 'Đang lưu...' : 'Saving...')
+                : (locale === 'vi' ? `Lưu (${dirtyIndices.size})` : `Save (${dirtyIndices.size})`)}
             </button>
           )}
           <button
@@ -330,7 +375,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       onChange={(e) => {
                         const pid = e.target.value;
                         const pName = projects.find(p => p.id === pid)?.name || '';
-                        patchRow(index, { projectId: pid, project: pName });
+                        handleRowChangeMulti(index, { projectId: pid, project: pName });
                       }}
                     >
                       <option value="">{locale === 'vi' ? 'Chọn dự án' : 'Select project'}</option>

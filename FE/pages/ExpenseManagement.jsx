@@ -30,8 +30,8 @@ export default function ExpenseManagement() {
   const rawTab = searchParams.get('tab');
   const activeTab = tabKeys.includes(rawTab) ? rawTab : 'budget';
   const [refreshKey, setRefreshKey] = useState(0);
-  const [editingExpense, setEditingExpense] = useState(null);
   const [inputView, setInputView] = useState('project');
+  const selectedProjectId = searchParams.get('projectId') || '';
   const dirtyRef = useRef(false);
   const role = getUserRole();
 
@@ -44,7 +44,19 @@ export default function ExpenseManagement() {
   const setActiveTab = (key) => {
     if (key !== activeTab && dirtyRef.current && !confirmDiscard()) return;
     dirtyRef.current = false;
-    setSearchParams({ tab: key }, { replace: true });
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', key);
+      return next;
+    }, { replace: true });
+  };
+
+  const handleProjectChange = (id) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (id) next.set('projectId', id); else next.delete('projectId');
+      return next;
+    }, { replace: true });
   };
 
   const setInputViewSafe = (view) => {
@@ -81,19 +93,20 @@ export default function ExpenseManagement() {
               </button>
             </div>
             {inputView === 'project' ? (
-              <>
-                <ExpenseEntryForm
-                  onSaved={handleSaved}
-                  editingExpense={editingExpense}
-                  onEditDone={() => { setEditingExpense(null); handleSaved(); }}
-                />
-                <ExpenseHistory
-                  refreshKey={refreshKey}
-                  onSaved={handleSaved}
-                  onEdit={(exp) => { setInputView('project'); setEditingExpense(exp); }}
-                />
-              </>
-            ) : (
+                <>
+                  <ExpenseEntryForm
+                    onSaved={handleSaved}
+                    projectId={selectedProjectId}
+                    onProjectChange={handleProjectChange}
+                  />
+                  <ExpenseHistory
+                    refreshKey={refreshKey}
+                    onSaved={handleSaved}
+                    projectId={selectedProjectId}
+                    onProjectChange={handleProjectChange}
+                  />
+                </>
+              ) : (
               <CategoryBudgetEntry
                 refreshKey={refreshKey}
                 onSaved={handleSaved}

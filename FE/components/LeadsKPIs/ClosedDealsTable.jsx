@@ -5,7 +5,7 @@ import { getClosedDeals, deleteClosedDeal } from '../../services/api';
 
 const INITIAL_DISPLAY = 5;
 
-export default function ClosedDealsTable() {
+export default function ClosedDealsTable({ refreshKey = 0 }) {
   const { locale } = useDashboard();
   const addToast = useToast();
   const [deals, setDeals] = useState([]);
@@ -16,7 +16,7 @@ export default function ClosedDealsTable() {
 
   useEffect(() => {
     loadClosedDeals();
-  }, []);
+  }, [refreshKey]);
 
   const loadClosedDeals = async () => {
     setLoading(true);

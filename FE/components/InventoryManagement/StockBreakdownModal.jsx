@@ -103,7 +103,7 @@ export default function StockBreakdownModal({ onClose }) {
                       )}
                     </div>
                     <div>
-                      <div className="font-title-lg text-title-lg font-semibold text-on-surface">{detail.name}</div>
+                      <div className="font-body-md text-body-md font-bold text-on-surface">{detail.name}</div>
                     </div>
                   </div>
 
@@ -165,7 +165,7 @@ export default function StockBreakdownModal({ onClose }) {
                     )}
                   </div>
 
-                  <button onClick={() => setSelected(null)} className="text-secondary font-title-lg text-title-lg flex items-center gap-1 hover:underline cursor-pointer">
+                  <button onClick={() => setSelected(null)} className="text-secondary font-body-sm text-body-sm font-semibold flex items-center gap-1 hover:underline cursor-pointer">
                     <span className="material-symbols-outlined text-sm">arrow_back</span> {t('Quay lại danh sách', 'Back to list')}
                   </button>
                 </div>

@@ -4,14 +4,13 @@ import {
   getProjects,
   getInventoryItems,
   getExpenseById,
+  getExpenseList,
   saveExpense,
-  updateExpense,
   addExpenseLine,
-  updateExpenseLine,
-  deleteExpenseLine,
   getCategoryBudgetTree,
 } from '../../services/api';
 import NumberInput from '../common/NumberInput';
+import { getExpenseMeta, setExpenseMeta } from '../../utils/expenseMeta';
 
 let rowSeq = 0;
 
@@ -47,7 +46,7 @@ const emptyRow = () => {
   return {
     rowId: rowSeq,
     lineId: null,
-    expenseDate: '',
+    expenseDate: todayStr(),
     hangMucLon: '',
     categoryId: '',
     name: '',
@@ -98,7 +97,7 @@ const dirtySnapshot = (rows) => rows.map((r) => ({
   note: r.note,
 }));
 
-const mapLineToRow = (ln) => {
+const mapLineToRow = (ln, lineDates = {}) => {
   const isVatPhamLine = Boolean(ln.inventoryItemId || ln.isVatPham);
   const vat = ln.vatRateSnapshot != null ? Number(ln.vatRateSnapshot) : (ln.vatRate != null ? Number(ln.vatRate) : 0);
   const base = ln.unitPriceBeforeVat != null && ln.unitPriceBeforeVat !== ''
@@ -112,7 +111,7 @@ const mapLineToRow = (ln) => {
   return {
     rowId: ++rowSeq,
     lineId: ln.id,
-    expenseDate: ln.expenseDate || ln.recognizedDate || '',
+    expenseDate: lineDates[ln.id] || ln.expenseDate || ln.recognizedDate || '',
     hangMucLon: hml,
     categoryId: ln.categoryId || '',
     name: ln.name || '',
@@ -126,55 +125,75 @@ const mapLineToRow = (ln) => {
   };
 };
 
-async function loadLatestAsTemplate(projectId) {
+async function loadProjectLines(projectId) {
   try {
     const res = await getExpenseList(projectId);
     const list = Array.isArray(res.data) ? res.data.filter(Boolean) : [];
-    if (list.length === 0) return null;
-    const latest = [...list].sort((a, b) => {
+    if (list.length === 0) return [];
+    const sorted = [...list].sort((a, b) => {
       const da = a.recognizedDate || a.expenseDate || '';
       const db = b.recognizedDate || b.expenseDate || '';
       const c = String(db).localeCompare(String(da));
       return c !== 0 ? c : String(b.period || '').localeCompare(String(a.period || ''));
-    })[0];
-    let lines = Array.isArray(latest.lines) && latest.lines.length > 0 ? latest.lines : null;
-    if (!lines || lines.length === 0) {
-      try {
-        const detail = await getExpenseById(latest.id);
-        lines = Array.isArray(detail.data?.lines) ? detail.data.lines : [];
-      } catch { lines = []; }
+    });
+    const seen = new Set();
+    const out = [];
+    for (const exp of sorted) {
+      let lines = Array.isArray(exp.lines) && exp.lines.length > 0 ? exp.lines : null;
+      if (!lines || lines.length === 0) {
+        try {
+          const detail = await getExpenseById(exp.id);
+          lines = Array.isArray(detail.data?.lines) ? detail.data.lines : [];
+        } catch { lines = []; }
+      }
+      const lineDates = (getExpenseMeta(exp.id) || {}).lineDates || {};
+      for (const ln of (lines || [])) {
+        if (!ln) continue;
+        const key = [
+          String(ln.name || '').trim().toLowerCase(),
+          String(ln.hangMucLon || '').trim().toLowerCase(),
+          ln.inventoryItemId || '',
+          ln.plannedQuantity ?? ln.plannedQty ?? '',
+          ln.actualQuantity ?? ln.actualQty ?? '',
+          ln.vatRateSnapshot ?? ln.vatRate ?? '',
+          ln.unitPriceBeforeVat ?? ln.actualUnitPrice ?? ln.unitPriceAfterVat ?? '',
+          String(ln.note || '').trim().toLowerCase(),
+        ].join('~');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const row = mapLineToRow(ln, lineDates);
+        row.lineId = null;
+        if (!String(row.expenseDate || '').slice(0, 10)) row.expenseDate = todayStr();
+        out.push(row);
+      }
     }
-    return { expense: latest, lines: lines || [] };
+    return out;
   } catch {
-    return null;
+    return [];
   }
 }
 
-export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, onExitEdit }) {
+export default function ExpenseEntryForm({ onSaved, projectId, onProjectChange }) {
   const { locale } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
   getUserRole();
 
-  const isEditMode = Boolean(editingExpense);
   const [projects, setProjects] = useState([]);
-  const [projectId, setProjectId] = useState('');
-  const [date, setDate] = useState(todayStr);
   const [hangMucOptions, setHangMucOptions] = useState([]);
   const [categoryIdMap, setCategoryIdMap] = useState({});
   const [rows, setRows] = useState(() => [emptyRow()]);
-  const [expenseId, setExpenseId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [toast, setToast] = useState(null);
   const [inventoryItems, setInventoryItems] = useState([]);
-  const [deletedLineIds, setDeletedLineIds] = useState([]);
   const [dirty, setDirty] = useState(false);
-  const [templateSource, setTemplateSource] = useState(null);
   const [categoryNameById, setCategoryNameById] = useState({});
   const snapRef = useRef(null);
 
+  // Ngày nhập = ngày ấn nút Lưu; mỗi lần lưu sẽ tạo một bản ghi chi phí mới
+  const recordDate = todayStr();
   const period = (() => {
-    const [y, m] = String(date || '').split('-').map(Number);
+    const [y, m] = String(recordDate || '').split('-').map(Number);
     return { year: y || new Date().getFullYear(), month: m || new Date().getMonth() + 1 };
   })();
 
@@ -182,7 +201,9 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
     getProjects().then((res) => {
       const list = Array.isArray(res.data) ? res.data : [];
       setProjects(list);
-      if (list.length > 0) setProjectId(list[0].id);
+      if (list.length > 0 && !projectId && onProjectChange) {
+        onProjectChange(list[0].id);
+      }
     });
     getInventoryItems().then((res) => {
       setInventoryItems(Array.isArray(res.data) ? res.data : []);
@@ -225,109 +246,34 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
       });
   }, [period.year, projectId]);
 
-  useEffect(() => {
-    if (editingExpense && editingExpense.id) {
-      if (editingExpense.projectId) setProjectId(editingExpense.projectId);
-      const d = editingExpense.recognizedDate || editingExpense.expenseDate || '';
-      if (d) setDate(String(d).slice(0, 10));
-      else {
-        const p = String(editingExpense.period || '').split('-');
-        if (p.length === 2) setDate(`${p[0]}-${p[1]}-01`);
-      }
-    }
-  }, [editingExpense]);
-
-  const markDirty = (nextRows, deleted) => {
+  const markDirty = (nextRows) => {
     if (!snapRef.current) {
       setDirty(false);
       return;
     }
     const snap = JSON.stringify(snapRef.current);
     const cur = JSON.stringify(dirtySnapshot(nextRows));
-    setDirty(snap !== cur || deleted.length > 0);
+    setDirty(snap !== cur);
   };
 
+  // Khi chọn dự án: nạp TẤT CẢ dòng chi phí của dự án vào bảng nhập. Các dòng này chỉ là bản gốc;
+  // khi bấm "Lưu chi phí" sẽ tạo bản ghi mới chứa các dòng này — các bản ghi cũ không bị thay đổi.
   useEffect(() => {
     if (!projectId) return undefined;
     let cancelled = false;
-
-    const resetToNew = () => {
-      setExpenseId(null);
-      setRows([emptyRow()]);
-      snapRef.current = null;
-      setDeletedLineIds([]);
-      setDirty(false);
-    };
-
-    if (isEditMode && editingExpense?.id) {
-      const loadEdit = async () => {
-        let lines = Array.isArray(editingExpense.lines) && editingExpense.lines.length > 0 ? editingExpense.lines : null;
-        if (!lines) {
-          try {
-            const res = await getExpenseById(editingExpense.id);
-            const rec = res.data || {};
-            lines = Array.isArray(rec.lines) ? rec.lines : [];
-          } catch { lines = []; }
-        }
-        if (cancelled) return;
-        setExpenseId(editingExpense.id);
-        const mapped = (lines || [])
-          .filter(Boolean)
-          .map(mapLineToRow)
-          .map((r) => {
-            if (r.hangMucLon || !r.categoryId) return r;
-            const name = categoryNameById[r.categoryId];
-            return name ? { ...r, hangMucLon: normalizeHml(name) } : r;
-          });
-        setRows(mapped.length > 0 ? mapped : [emptyRow()]);
-        snapRef.current = mapped.length > 0 ? mapped.map((r) => ({ ...r })) : null;
-        setDeletedLineIds([]);
-        setDirty(false);
-      };
-      loadEdit();
-      return () => { cancelled = true; };
-    }
-
-    resetToNew();
-    return () => { cancelled = true; };
-  }, [projectId, period.month, period.year, reloadKey, isEditMode, editingExpense]);
-
-  // Nạp thông tin lần nhập gần nhất của dự án làm template cho bản ghi mới (không sửa bản cũ)
-  useEffect(() => {
-    if (!projectId || isEditMode) return undefined;
-    let cancelled = false;
     const run = async () => {
-      const template = await loadLatestAsTemplate(projectId);
+      const mapped = await loadProjectLines(projectId);
       if (cancelled) return;
-      if (!template || !template.lines.some(Boolean)) {
-        setTemplateSource(null);
-        return;
-      }
-      const mapped = template.lines
-        .filter(Boolean)
-        .map(mapLineToRow)
-        .map((r) => ({ ...r, lineId: null }));
-      if (mapped.length === 0) {
-        setTemplateSource(null);
-        return;
-      }
-      setRows(mapped);
+      setRows(mapped.length > 0 ? mapped : [emptyRow()]);
       snapRef.current = null;
       setDirty(false);
-      const srcDate = template.expense.recognizedDate || template.expense.expenseDate || '';
-      setTemplateSource({
-        expenseDate: srcDate ? String(srcDate).slice(0, 10) : '',
-        projectName: typeof template.expense.project === 'string' ? template.expense.project : (template.expense.project?.name || ''),
-        lineCount: mapped.length,
-      });
     };
     run();
     return () => { cancelled = true; };
-  }, [projectId, reloadKey, isEditMode]);
+  }, [projectId, reloadKey]);
 
-  // BE không lưu hangMucLon ở dòng chi phí — khi edit, khôi phục tên hạng mục từ categoryId để dropdown hiển thị đúng
+  // BE không lưu hangMucLon ở dòng chi phí — khôi phục tên hạng mục từ categoryId để dropdown hiển thị đúng
   useEffect(() => {
-    if (!isEditMode || !editingExpense?.id) return undefined;
     if (!categoryNameById || Object.keys(categoryNameById).length === 0) return undefined;
     setRows((prev) => (prev || []).map((r) => {
       if (r.hangMucLon || !r.categoryId) return r;
@@ -338,7 +284,7 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
       return { ...r, hangMucLon: hml };
     }));
     return undefined;
-  }, [isEditMode, editingExpense, categoryNameById]);
+  }, [categoryNameById]);
 
   const fmtCurrency = (n) => (Number(n) || 0).toLocaleString('vi-VN');
 
@@ -349,6 +295,7 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
   };
   const totalPlanned = rows.reduce((s, r) => s + calcRowPlanned(r), 0);
   const totalActual = rows.reduce((s, r) => s + lineTotalOf(r, inventoryItems), 0);
+  const totalAfterVat = rows.reduce((s, r) => s + Math.round(lineTotalOf(r, inventoryItems) * (1 + (Number(r.vatRate) || 0) / 100)), 0);
   const itemNames = Array.from(new Set(inventoryItems.map((i) => i.name))).filter(Boolean);
 
   const showToast = (msg, type = 'success') => {
@@ -361,7 +308,7 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
       const next = typeof field === 'object'
         ? prev.map((r) => (r.rowId === id ? { ...r, ...field } : r))
         : prev.map((r) => (r.rowId === id ? { ...r, [field]: value } : r));
-      markDirty(next, deletedLineIds);
+      markDirty(next);
       return next;
     });
   };
@@ -369,36 +316,20 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
   const addRow = () => {
     setRows((prev) => {
       const next = [...prev, emptyRow()];
-      markDirty(next, deletedLineIds);
+      markDirty(next);
       return next;
     });
   };
 
   const removeRow = (rowId) => {
-    const target = rows.find((r) => r.rowId === rowId);
-    if (!target) return;
-    if (target.lineId) {
-      setDeletedLineIds((prev) => {
-        const next = [...prev, target.lineId];
-        markDirty(rows.filter((r) => r.rowId !== rowId), next);
-        return next;
-      });
-      showToast(t('Dòng sẽ bị xóa khi bấm "Lưu chi phí"', 'Line will be deleted when you click "Save Expense"'));
-    } else {
-      markDirty(rows.filter((r) => r.rowId !== rowId), deletedLineIds);
-    }
     setRows((prev) => prev.filter((r) => r.rowId !== rowId));
   };
 
   const resetForm = () => {
     setRows([emptyRow()]);
-    setExpenseId(null);
-    setDeletedLineIds([]);
     snapRef.current = null;
     setDirty(false);
   };
-
-  const exitEdit = onExitEdit || onEditDone;
 
   const hasContent = (r) => Boolean(
     (r.name && r.name.trim()) ||
@@ -425,7 +356,7 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
       name: isVp && item ? (item.name || '').trim() : (r.name || '').trim(),
       hangMucLon: r.hangMucLon || null,
       categoryId: r.categoryId || null,
-      expenseDate: date || null,
+      expenseDate: r.expenseDate || null,
       inventoryItemId: (isVp && r.inventoryItemId) || null,
       isCustom: isCustomLine,
       plannedQuantity: Number(r.plannedQty) || 0,
@@ -439,9 +370,9 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
   };
 
   const validateRows = () => {
-    if (!date) return t('Vui lòng chọn ngày phát sinh', 'Please select an expense date');
     for (const r of rows) {
       if (!hasContent(r)) continue;
+      if (!r.expenseDate) return t('Mỗi dòng chi phí phải chọn ngày phát sinh', 'Each expense line must have an expense date');
       if (!r.hangMucLon) return t('Mỗi dòng chi phí phải chọn Hạng mục lớn', 'Each expense line must have a large category');
       if (r.vatRate !== '' && r.vatRate != null) {
         const vat = Number(r.vatRate);
@@ -465,7 +396,7 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
       return;
     }
     const validRows = rows.filter(hasContent);
-    if (validRows.length === 0 && deletedLineIds.length === 0) {
+    if (validRows.length === 0) {
       showToast(t('Nhập ít nhất một dòng chi phí', 'Enter at least one expense line'), 'error');
       return;
     }
@@ -476,74 +407,36 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
     }
     setSaving(true);
     try {
-      let recId = expenseId;
-      if (!recId) {
-        const res = await saveExpense({
-          projectId,
-          period: `${period.year}-${String(period.month).padStart(2, '0')}`,
-          recognizedDate: date || undefined,
-          expenseDate: date || undefined,
-          directCost: 0,
-          directNote: '',
-        });
-        recId = res?.data?.id || null;
-        if (!recId) throw new Error('Failed to create expense record');
-        setExpenseId(recId);
-      }
-      for (const id of deletedLineIds) {
-        try {
-          await deleteExpenseLine(id);
-        } catch (err) {
-          console.error('[ExpenseEntryForm] deleteExpenseLine failed:', err);
-        }
-      }
+      // Mỗi lần lưu tạo một bản ghi chi phí MỚI (ngày nhập = hôm nay); không sửa bản ghi cũ
+      const res = await saveExpense({
+        projectId,
+        period: `${period.year}-${String(period.month).padStart(2, '0')}`,
+        recognizedDate: recordDate,
+        expenseDate: recordDate,
+        directCost: 0,
+        directNote: '',
+      });
+      const recId = res?.data?.id || null;
+      if (!recId) throw new Error('Failed to create expense record');
+      const savedLineDates = {};
       for (const r of validRows) {
         const payload = buildLinePayload(r);
-        if (r.lineId) {
-          try {
-            await updateExpenseLine(r.lineId, payload);
-          } catch (err) {
-            console.error('[ExpenseEntryForm] updateExpenseLine failed:', err);
-            showToast(t('Lỗi cập nhật dòng chi phí', 'Error updating expense line'), 'error');
+        try {
+          const lineRes = await addExpenseLine(recId, payload);
+          const newLineId = lineRes?.data?.id || null;
+          if (String(r.expenseDate || '').slice(0, 10)) {
+            savedLineDates[newLineId || r.rowId] = String(r.expenseDate).slice(0, 10);
           }
-        } else {
-          try {
-            const res = await addExpenseLine(recId, payload);
-            const newLineId = res?.data?.id || null;
-            if (newLineId !== null && r.lineId === null) {
-              setRows((prev) => prev.map((row) => (row.rowId === r.rowId ? { ...row, lineId: newLineId } : row)));
-            }
-          } catch (err) {
-            console.error('[ExpenseEntryForm] addExpenseLine failed:', err);
-            showToast(t('Lỗi thêm dòng chi phí', 'Error adding expense line'), 'error');
-          }
+        } catch (err) {
+          console.error('[ExpenseEntryForm] addExpenseLine failed:', err);
+          showToast(t('Lỗi thêm dòng chi phí', 'Error adding expense line'), 'error');
         }
       }
-      // Cập nhật ngày phát sinh ở mức bản ghi (BE không lưu ngày trên line) để cột "Ngày phát sinh" đổi sau khi sửa
-      if (recId && isEditMode) {
-        const curDate = String(editingExpense?.recognizedDate || editingExpense?.expenseDate || '').slice(0, 10);
-        const newDate = String(date || '').slice(0, 10);
-        if (newDate && curDate !== newDate) {
-          try {
-            await updateExpense(recId, {
-              projectId,
-              period: `${period.year}-${String(period.month).padStart(2, '0')}`,
-              recognizedDate: newDate,
-              expenseDate: newDate,
-            });
-          } catch (err) {
-            console.error('[ExpenseEntryForm] updateExpense date failed:', err);
-          }
-        }
-      }
-      showToast(
-        deletedLineIds.length > 0
-          ? t('Đã lưu và xóa dòng chi phí', 'Saved and deleted expense lines')
-          : t('Đã lưu chi phí thành công', 'Expense saved successfully')
-      );
-      setDeletedLineIds([]);
-      snapRef.current = dirtySnapshot(rows);
-      resetForm();
+      // Lưu ngày phát sinh theo từng dòng vào meta (BE xác nhận lưu được nhưng FE giữ hậu thuẫn khi BE trả thiếu)
+      if (recId) setExpenseMeta(recId, { lineDates: savedLineDates });
+      showToast(t('Đã lưu chi phí thành công', 'Expense saved successfully'));
+      snapRef.current = null;
+      setDirty(false);
       setReloadKey((k) => k + 1);
       if (onSaved) onSaved();
     } catch (err) {
@@ -570,7 +463,7 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
               <select
                 className="bg-background-subtle border border-border-light rounded-lg px-4 py-1.5 text-body-md font-medium focus:ring-1 focus:ring-primary focus:border-primary outline-none min-w-[200px]"
                 value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
+                onChange={(e) => onProjectChange && onProjectChange(e.target.value)}
               >
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -579,93 +472,33 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
             </div>
           </div>
 
-          {isEditMode && (
-            <div className="mb-4 px-4 py-3 rounded-lg border-2 border-secondary/40 bg-secondary/10 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px] text-secondary">edit</span>
-                <div>
-                  <p className="font-label-md text-secondary">{t('Đã chuyển sang chế độ chỉnh sửa', 'Switched to edit mode')}</p>
-                  <p className="text-xs text-on-surface-variant">
-                    {t('Bấm "Cập nhật chi phí" để lưu thay đổi, hoặc chuyển sang nhập chi phí dự án để nhập mới.', 'Click "Update Expense" to save changes, or switch to project expense entry to create a new record.')}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { if (exitEdit) exitEdit(); }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-on-primary font-bold text-body-sm hover:brightness-110 active:scale-95 transition-all shrink-0 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">add_circle</span>
-                {t('Chuyển chế độ nhập chi phí dự án', 'Switch to project entry mode')}
-              </button>
-            </div>
-          )}
-
-          {!isEditMode && (
-            <div className="mb-4 px-4 py-2.5 rounded-lg border bg-primary/5 border-primary/20 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-primary">add_circle</span>
-                <span className="font-label-md text-primary">{t('Đang tạo bản ghi chi phí mới', 'Creating a new expense record')}</span>
-              </div>
-              {dirty && (
-                <span className="text-xs font-semibold text-warning flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">info</span>
-                  {t('Có thay đổi chưa được cập nhật', 'Unsaved changes')}
-                </span>
-              )}
-            </div>
-          )}
-
-          {!isEditMode && templateSource && (
-            <div className="mb-4 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5 flex items-start gap-2">
-              <span className="material-symbols-outlined text-[18px] text-primary shrink-0">content_copy</span>
-              <div>
-                <p className="font-label-md text-primary">{t('Đã nạp từ lần nhập gần nhất', 'Loaded from the latest entry')}</p>
-                <p className="text-xs text-on-surface-variant">
-                  {t(
-                    `Đã nạp ${templateSource.lineCount} dòng từ bản ghi gần nhất (${templateSource.expenseDate || '—'}) của dự án "${templateSource.projectName}". Ngày phát sinh đặt về hôm nay; bạn có thể chỉnh sửa và bấm "Lưu chi phí" để tạo bản ghi mới — bản cũ không bị thay đổi.`,
-                    `Loaded ${templateSource.lineCount} line(s) from the latest record (${templateSource.expenseDate || '—'}) of project "${templateSource.projectName}". Expense date is set to today; edit then click "Save Expense" to create a new record — the old one stays intact.`
-                  )}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="mb-6 flex gap-4 items-end">
-            <div>
-              <label className="font-label-md text-on-surface-variant block mb-1">{t('Ngày phát sinh', 'Expense date')}</label>
-              <input
-                className={`${inputCls} text-body-md w-[200px]`}
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </div>
-          </div>
-
           <div className="overflow-x-auto rounded-lg border border-border-light shadow-sm mb-6">
-            <table className="w-full min-w-[1100px] table-fixed divide-y divide-border-light">
+            <table className="w-full min-w-[1280px] table-fixed divide-y divide-border-light">
               <colgroup>
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
                 <col className="w-[16%]" />
-                <col className="w-[18%]" />
-                <col className="w-[14%]" />
+                <col className="w-[12%]" />
+                <col className="w-[10%]" />
                 <col className="w-[7%]" />
-                <col className="w-[11%]" />
-                <col className="w-[14%]" />
-                <col className="w-[10%]" />
-                <col className="w-[10%]" />
+                <col className="w-[12%]" />
+                <col className="w-[8%]" />
+                <col className="w-[8%]" />
+                <col className="w-[8%]" />
                 <col className="w-[48px]" />
               </colgroup>
               <thead className="bg-background-subtle">
                 <tr>
-                  <th className="py-3 pl-4 pr-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Hạng mục lớn', 'Large Category')}</th>
+                  <th className="py-3 pl-4 pr-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ngày phát sinh', 'Expense Date')}</th>
+                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Hạng mục lớn', 'Large Category')}</th>
                   <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Chi tiết', 'Detail')}</th>
-                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Mô tả', 'Description')}</th>
+                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ghi chú', 'Note')}</th>
+                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá', 'Unit Price')}</th>
                   <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('VAT (%)', 'VAT (%)')}</th>
-                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Đơn giá trước VAT', 'Unit Price (pre-VAT)')}</th>
                   <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('SL KH / SL Thực', 'Plan Qty / Actual Qty')}</th>
                   <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Thành tiền KH', 'Planned Cost')}</th>
                   <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Thành tiền TT', 'Actual Cost')}</th>
+                  <th className="px-3 py-3 text-left font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Tổng Cộng', 'Total')}</th>
                   <th className="px-3 py-3"></th>
                 </tr>
               </thead>
@@ -681,10 +514,19 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
                       : (Number(row.unitPrice) || 0);
                   const planAmount = unitPrice * (Number(row.plannedQty) || 0);
                   const actAmount = unitPrice * (Number(row.actualQty) || 0);
+                  const totalLineAfterVat = Math.round(actAmount * (1 + (Number(row.vatRate) || 0) / 100));
                   const overStock = selectedItem && Number(row.actualQty) > Number(selectedItem.currentStock || selectedItem.quantity || 0);
                   return (
                     <tr key={row.rowId} className="align-top">
                       <td className="py-3 pl-4 pr-3">
+                        <input
+                          className={`${inputCls} text-[12px] text-right`}
+                          type="date"
+                          value={row.expenseDate || ''}
+                          onChange={(e) => updateRow(row.rowId, 'expenseDate', e.target.value)}
+                        />
+                      </td>
+                      <td className="py-3 pr-3">
                         <select
                           className={`${inputCls} text-[12px]`}
                           value={row.hangMucLon || ''}
@@ -759,24 +601,13 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
                       <td className="py-3 px-3">
                         <input
                           className={inputCls}
-                          placeholder={t('Nhập mô tả...', 'Enter description...')}
+                          placeholder={t('Nhập ghi chú...', 'Enter note...')}
                           value={row.note || ''}
                           onChange={(e) => updateRow(row.rowId, 'note', e.target.value)}
                         />
                         {overStock && (
                           <p className="text-[10px] text-danger mt-0.5">{t('Vượt tồn kho!', 'Exceeds stock!')}</p>
                         )}
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-1">
-                          <NumberInput
-                            className={`${inputCls} text-right`}
-                            placeholder="0"
-                            value={row.vatRate}
-                            onChange={(e) => updateRow(row.rowId, 'vatRate', e.target.value)}
-                          />
-                          <span className="text-[12px] text-on-surface-variant">%</span>
-                        </div>
                       </td>
                       <td className="py-3 px-3">
                         {customLine ? (
@@ -789,6 +620,17 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
                         ) : (
                           <input readOnly className={`${inputCls} text-right bg-surface-container-low cursor-not-allowed`} value={unitPrice ? unitPrice.toLocaleString('vi-VN') : '—'} />
                         )}
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-1">
+                          <NumberInput
+                            className={`${inputCls} text-right`}
+                            placeholder="0"
+                            value={row.vatRate}
+                            onChange={(e) => updateRow(row.rowId, 'vatRate', e.target.value)}
+                          />
+                          <span className="text-[12px] text-on-surface-variant">%</span>
+                        </div>
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex gap-1">
@@ -812,6 +654,9 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
                       <td className="px-3 py-3">
                         <input readOnly className={`${inputCls} text-right bg-surface-container-low cursor-not-allowed`} value={actAmount ? actAmount.toLocaleString('vi-VN') : '—'} />
                       </td>
+                      <td className="px-3 py-3">
+                        <input readOnly className={`${inputCls} text-right bg-surface-container-low cursor-not-allowed`} value={totalLineAfterVat ? totalLineAfterVat.toLocaleString('vi-VN') : '—'} />
+                      </td>
                       <td className="px-3 py-3 text-center">
                         <button
                           type="button"
@@ -828,13 +673,14 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-primary bg-primary/10 font-bold">
-                  <td colSpan={6} className="px-4 py-3 text-on-surface">{t('Tổng cộng', 'Total')}</td>
+                  <td colSpan={7} className="px-4 py-3 text-on-surface">{t('Tổng cộng', 'Total')}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{fmtCurrency(totalPlanned)}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{fmtCurrency(totalActual)}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">{fmtCurrency(totalAfterVat)}</td>
                   <td></td>
                 </tr>
                 <tr className="border-t border-border-light bg-surface-container-lowest">
-                  <td colSpan={9} className="px-4 py-3">
+                  <td colSpan={11} className="px-4 py-3">
                     <button
                       type="button"
                       onClick={addRow}
@@ -868,9 +714,7 @@ export default function ExpenseEntryForm({ onSaved, editingExpense, onEditDone, 
               className="px-10 py-2.5 bg-primary text-on-primary rounded-lg font-bold shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
             >
               <span className="material-symbols-outlined text-body-md">{saving ? 'hourglass_top' : 'save'}</span>
-              {saving
-                ? (expenseId ? t('Đang cập nhật...', 'Updating...') : t('Đang lưu...', 'Saving...'))
-                : (expenseId ? t('Cập nhật chi phí', 'Update Expense') : t('Lưu chi phí', 'Save Expense'))}
+              {saving ? t('Đang lưu...', 'Saving...') : t('Lưu chi phí', 'Save Expense')}
             </button>
           </div>
         </div>

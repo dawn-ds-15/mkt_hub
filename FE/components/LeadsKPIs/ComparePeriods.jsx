@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getCompareData, getQuarterlyCompareData, deleteCompareData, generateAIReport } from '../../services/api';
+import { getProjects, getCompareData, getQuarterlyCompareData, deleteCompareData, generateAIReport } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { t } from '../../utils/i18n';
 
@@ -23,6 +23,9 @@ const metricsConfig = [
   { key: 'Raw Leads', label: 'Raw Leads', format: formatNum },
   { key: 'MQL', label: 'MQL', format: formatNum },
   { key: 'SQL', label: 'SQL', format: formatNum },
+  { key: 'OPP', label: 'OPP', format: formatNum },
+  { key: 'Closed Deal', label: 'Closed Deal', format: formatNum },
+  { key: 'Pipeline Value', label: 'Pipeline Value', format: formatCurrency },
   { key: 'Won Value', label: 'Won Value', format: formatCurrency },
 ];
 
@@ -80,6 +83,8 @@ export default function ComparePeriods({ year: currentYear }) {
   const [compareData, setCompareData] = useState({});
   const [quarterlyData, setQuarterlyData] = useState(null);
   const [selectedMetric, setSelectedMetric] = useState('Raw Leads');
+  const [projects, setProjects] = useState([]);
+  const [projectId, setProjectId] = useState('');
   const [loading, setLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -96,16 +101,22 @@ export default function ComparePeriods({ year: currentYear }) {
   }, []);
 
   useEffect(() => {
+    getProjects()
+      .then((res) => { const list = Array.isArray(res.data) ? res.data : []; setProjects(list); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     loadData();
-  }, [periodType, periodValue, selectedYears, selectedMetric]);
+  }, [periodType, periodValue, selectedYears, selectedMetric, projectId]);
 
   const loadData = async () => {
     setLoading(true);
     setLoadError('');
     try {
       const [compareRes, quarterlyRes] = await Promise.all([
-        getCompareData(selectedYears.length ? selectedYears : [currentYear], periodType, periodValue),
-        getQuarterlyCompareData(selectedYears.length ? selectedYears : [currentYear], selectedMetric),
+        getCompareData(selectedYears.length ? selectedYears : [currentYear], periodType, periodValue, projectId || undefined),
+        getQuarterlyCompareData(selectedYears.length ? selectedYears : [currentYear], selectedMetric, projectId || undefined),
       ]);
       setCompareData(compareRes.data || {});
       setQuarterlyData(quarterlyRes.data || null);
@@ -201,6 +212,19 @@ export default function ComparePeriods({ year: currentYear }) {
       {/* Section Filter */}
       <section className="bg-white border border-border-light rounded p-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider">{t(locale, { vi: 'Dự án:', en: 'Project:' })}</span>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="bg-surface-container text-body-sm font-semibold rounded px-3 py-1.5 border border-outline-variant focus:ring-1 focus:ring-primary outline-none cursor-pointer"
+            >
+              <option value="">{t(locale, { vi: 'Toàn hệ thống', en: 'All projects' })}</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
           <span className="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider">{t(locale, { vi: 'Hiển thị theo:', en: 'View by:' })}</span>
           <div className="flex bg-surface-container rounded p-1">
             {periodOptions.map((opt) => (

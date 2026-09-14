@@ -19,6 +19,7 @@ const tabs = [
 export default function LeadsKPIs() {
   const { locale } = useDashboard();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [closedDealsRefreshKey, setClosedDealsRefreshKey] = useState(0);
   const activeTab = searchParams.get('tab') || 'view';
 
   const setActiveTab = (key) => {
@@ -41,8 +42,8 @@ export default function LeadsKPIs() {
               </div>
             </div>
             <div className="flex flex-col gap-lg">
-              <OpportunitiesTable />
-              <ClosedDealsTable />
+              <OpportunitiesTable onConvertSuccess={() => setClosedDealsRefreshKey(k => k + 1)} />
+              <ClosedDealsTable refreshKey={closedDealsRefreshKey} />
               <LeadsKPIsFooter />
             </div>
           </div>

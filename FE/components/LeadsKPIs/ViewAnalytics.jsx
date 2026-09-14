@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getProjects, getKpiCardsData, getFunnelData, getClosedDeals, getPlanKPIs, getPipelineBySegment, getExpenseOverview } from '../../services/api';
+import { getProjects, getKpiCardsData, getFunnelData, getClosedDeals, getPlanKPIs, getPipelineBySegment, getExpenseOverview, getOpportunities } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { t } from '../../utils/i18n';
 
@@ -105,6 +105,7 @@ export default function ViewAnalytics({ year: propYear, periodType: propPeriodTy
   const [funnel, setFunnel] = useState([]);
   const [closedQuarters, setClosedQuarters] = useState([]);
   const [segments, setSegments] = useState([]);
+  const [opportunities, setOpportunities] = useState([]);
   const [cac, setCac] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -174,6 +175,19 @@ export default function ViewAnalytics({ year: propYear, periodType: propPeriodTy
         segData = (await getPipelineBySegment(periodType, periodValue, year, pid)).data || [];
       } catch { /* ignore */ }
       setSegments(segData);
+      try {
+        const oppRes = await getOpportunities(year);
+        const oppList = Array.isArray(oppRes.data) ? oppRes.data : [];
+        oppList.sort((a, b) => {
+          const da = a.initiationDate || '';
+          const db = b.initiationDate || '';
+          if (!da && !db) return 0;
+          if (!da) return 1;
+          if (!db) return -1;
+          return da.localeCompare(db);
+        });
+        setOpportunities(oppList);
+      } catch { setOpportunities([]); }
       try {
         const expensePeriod = periodType === 'month'
           ? `${year}-${String(periodValue).padStart(2, '0')}`
@@ -266,7 +280,19 @@ export default function ViewAnalytics({ year: propYear, periodType: propPeriodTy
                 ))}
               </select>
               {periodType !== 'year' && (
-                <span className="text-[11px] text-on-surface-variant font-medium ml-0.5 whitespace-nowrap">/ {year}</span>
+                <>
+                  <span className="text-[11px] text-on-surface-variant font-medium ml-0.5 whitespace-nowrap">/</span>
+                  <select
+                    value={year}
+                    onChange={(e) => setYear(e.target.value)}
+                    className="border border-border-light rounded px-1.5 py-1 text-[12px] text-on-surface bg-white focus:ring-1 focus:ring-primary outline-none ml-0.5 cursor-pointer"
+                    title={t(locale, { vi: 'Chọn năm', en: 'Select year' })}
+                  >
+                    {getPeriodOptions('year', year).map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </>
               )}
             </div>
           )}
@@ -519,6 +545,43 @@ export default function ViewAnalytics({ year: propYear, periodType: propPeriodTy
           </div>
         </div>
       </div>
+
+      {/* Opportunities List sorted by Start Date */}
+      {opportunities.length > 0 && (
+        <div className="bg-white border border-border-light rounded-lg overflow-hidden">
+          <div className="p-4 border-b border-border-light">
+            <h4 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider">
+              {t(locale, { vi: 'Danh sách Cơ hội (theo Ngày bắt đầu)', en: 'Opportunities List (by Start Date)' })}
+            </h4>
+          </div>
+          <table className="w-full text-left">
+            <thead className="bg-surface-container-low border-b border-border-light">
+              <tr>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">#</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{t(locale, { vi: 'Khách hàng', en: 'Customer' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{t(locale, { vi: 'Dự án', en: 'Project' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{t(locale, { vi: 'Hợp đồng', en: 'Contract' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">{t(locale, { vi: 'Fees', en: 'Fees' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{t(locale, { vi: 'Ngày bắt đầu', en: 'Start Date' })}</th>
+                <th className="px-3 py-2.5 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{t(locale, { vi: 'Dự kiến đóng', en: 'Expected Close' })}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-light">
+              {opportunities.map((opp, idx) => (
+                <tr key={opp.id || idx} className="hover:bg-surface-container transition-colors">
+                  <td className="px-3 py-2.5 text-[12px] text-on-surface-variant">{idx + 1}</td>
+                  <td className="px-3 py-2.5 text-[12px] font-medium text-on-surface">{opp.companyName || '—'}</td>
+                  <td className="px-3 py-2.5 text-[12px] text-on-surface-variant">{opp.project || '—'}</td>
+                  <td className="px-3 py-2.5 text-[12px] text-on-surface-variant">{opp.contractName || '—'}</td>
+                  <td className="px-3 py-2.5 text-[12px] text-on-surface text-right font-data-mono">{opp.fees ? Number(opp.fees).toLocaleString('vi-VN') : '—'}</td>
+                  <td className="px-3 py-2.5 text-[12px] text-on-surface-variant whitespace-nowrap">{opp.initiationDate || '—'}</td>
+                  <td className="px-3 py-2.5 text-[12px] text-on-surface-variant whitespace-nowrap">{opp.expectedCloseDate || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
     </div>
   );

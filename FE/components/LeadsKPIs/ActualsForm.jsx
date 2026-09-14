@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { saveActuals, getActuals, getProjects, getProjectKPIPlan, saveProjectKPIPlan } from '../../services/api';
+import { saveActuals, getActuals, saveMonthlyActuals, getProjects, getProjectKPIPlan, saveProjectKPIPlan } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 import NumberInput from '../common/NumberInput';
@@ -165,6 +165,13 @@ export default function ActualsForm() {
         date: selectedDate,
         projectId: selectedProjectId,
         actualId: savedActual?.actualId || null,
+      });
+      await saveMonthlyActuals({
+        period: selectedDate.slice(0, 7),
+        projectId: selectedProjectId,
+        rawLeads: actualForm.rawLeads,
+        mql: actualForm.mql,
+        sql: actualForm.sql,
       });
       clearActualDirty();
       addToast(t('Đã lưu Thực tế thành công!', 'Actuals saved successfully!'), 'success');

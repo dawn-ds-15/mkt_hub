@@ -208,7 +208,7 @@ export default function ExpenseReports({ refreshKey }) {
           <p className="text-body-sm font-body-sm text-outline mt-1 italic">{locale === 'vi' ? 'Theo kế hoạch' : 'As planned'}</p>
         </div>
         <div className="bg-surface-container-lowest border border-border-subtle p-5 rounded-lg border-t-4 border-t-primary shadow-sm">
-          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">{locale === 'vi' ? 'Thực tế (trước VAT)' : 'Actual (pre-VAT)'}</p>
+          <p className="text-outline font-label-md text-label-md mb-2 uppercase tracking-wide">{locale === 'vi' ? 'Thực tế' : 'Actual'}</p>
           <h3 className="font-display-lg text-display-lg text-on-surface">{formatCurrency(totalActual)}</h3>
           <p className="text-body-sm font-body-sm text-outline mt-1 italic">{locale === 'vi' ? 'Đã giải ngân' : 'Disbursed'}</p>
         </div>
@@ -389,8 +389,8 @@ export default function ExpenseReports({ refreshKey }) {
                     { key: 'Project', vi: 'Dự án', en: 'Project' },
                     { key: 'Type', vi: 'Loại', en: 'Type' },
                     { key: 'Period', vi: 'Kỳ', en: 'Period' },
-                    { key: 'Cost', vi: 'Chi phí (trước VAT)', en: 'Cost (pre-VAT)' },
-                    { key: 'Budget', vi: 'Ngân sách (trước VAT)', en: 'Budget (pre-VAT)' },
+                    { key: 'Cost', vi: 'Chi phí', en: 'Cost' },
+                    { key: 'Budget', vi: 'Ngân sách', en: 'Budget' },
                     { key: 'Variance', vi: 'Chênh lệch', en: 'Variance' },
                     { key: 'Health', vi: 'Tình trạng', en: 'Health' },
                   ].map((h) => (

@@ -292,12 +292,6 @@ export default function ExpenseOverview({ refreshKey }) {
                   {locale === 'vi' ? 'CAC = Tổng chi phí Marketing / Số khách hàng mới từ nguồn trả phí.' : 'CAC = Total Marketing Cost / New customers from paid sources.'}
                 </p>
               </div>
-              <div className="bg-white/10 p-4 rounded-lg border border-white/20 backdrop-blur-sm">
-                <p className="font-label-md text-label-md uppercase text-primary-fixed mb-1">{locale === 'vi' ? 'Giá trị Vòng đời KH (LTV)' : 'Customer Lifetime Value (LTV)'}</p>
-                <p className="font-body-md text-body-md leading-relaxed">
-                  {locale === 'vi' ? 'LTV = Giá trị đơn hàng TB × Tần suất mua × Thời gian gắn bó. (Tự động ước tính dựa trên dữ liệu lịch sử)' : 'LTV = Avg order value × Purchase frequency × Customer lifespan. (Auto-estimated based on historical data)'}
-                </p>
-              </div>
               <div className="pt-2">
                 <button
                   onClick={() => {

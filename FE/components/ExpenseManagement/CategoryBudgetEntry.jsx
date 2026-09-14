@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 import NumberInput from '../common/NumberInput';
@@ -8,7 +8,12 @@ import {
   createCategoryBudgetCategory,
   updateCategoryBudgetCategory,
   deleteCategoryBudgetCategory,
-  getProjects,
+  createCategoryBudgetSubcategory,
+  updateCategoryBudgetSubcategory,
+  deleteCategoryBudgetSubcategory,
+  createCategoryBudgetItem,
+  updateCategoryBudgetItem,
+  deleteCategoryBudgetItem,
 } from '../../services/api';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -50,6 +55,10 @@ function calcRowTotal(rowMonths) {
   return MONTHS.reduce((sum, m) => sum + monthValue(rowMonths, m), 0);
 }
 
+function sumMonths(months) {
+  return MONTHS.reduce((sum, m) => sum + monthValue(months, m), 0);
+}
+
 function mergeMonths(serverMonths, localMonths) {
   return serverMonths && Object.keys(serverMonths).length > 0 ? serverMonths : (localMonths || {});
 }
@@ -58,9 +67,24 @@ function mapTreeToState(tree, prev) {
   if (!tree) return [];
   const mapped = (tree.categories || []).map(cat => {
     const prevCat = (prev || []).find(c => c.id === cat.id);
+    const subs = Array.isArray(cat.subcategories) ? cat.subcategories : [];
+    const mergedSubs = subs.map(s => {
+      const prevSub = ((prevCat?.subcategories) || []).find(ps => ps.id === s.id);
+      const items = Array.isArray(s.items) ? s.items : [];
+      const mergedItems = items.map(it => {
+        const prevIt = ((prevSub?.items) || []).find(pi => pi.id === it.id);
+        return { ...it, months: mergeMonths(it.months, prevIt?.months) };
+      });
+      return {
+        ...s,
+        backup: s.backup ? { ...s.backup, months: mergeMonths(s.backup.months, prevSub?.backup?.months) } : s.backup,
+        items: mergedItems,
+      };
+    });
     return {
       ...cat,
       months: mergeMonths(cat.months, prevCat?.months),
+      subcategories: mergedSubs,
     };
   });
   const isBackup = (c) => String(c.name || '').trim().toLowerCase() === 'backup';
@@ -84,7 +108,6 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
   const [loadError, setLoadError] = useState('');
   const [reloadTick, setReloadTick] = useState(0);
   const [permissions, setPermissions] = useState(null);
-  const [saveProjectId, setSaveProjectId] = useState('');
   const loadSeqRef = useRef(0);
   const updatedAtRef = useRef(null);
 
@@ -102,6 +125,25 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
     getCategoryBudgetTree(year)
       .then(res => {
         if (seq !== loadSeqRef.current) return;
+        const cats = res.data?.categories || [];
+        if (cats.length === 0 && canManage) {
+          const defaults = [
+            { name: 'I.BRAND MARKETING', percent: 0, sortOrder: 1 },
+            { name: 'II. DIGITAL Marketing', percent: 0, sortOrder: 2 },
+            { name: 'gdfh', percent: 0, sortOrder: 3 },
+            { name: 'backup', percent: 0, sortOrder: 4 },
+            { name: 'Vật phẩm', percent: 0, sortOrder: 5 },
+            { name: 'Hạng mục khác', percent: 0, sortOrder: 6 },
+          ];
+          return Promise.all(defaults.map(d => createCategoryBudgetCategory({ ...d, year })))
+            .then(() => getCategoryBudgetTree(year))
+            .then(res2 => {
+              if (seq !== loadSeqRef.current) return;
+              setCategories(prev => mapTreeToState(res2.data, prev));
+              if (res2.permissions) setPermissions(res2.permissions);
+              if (res2.updatedAt) updatedAtRef.current = res2.updatedAt;
+            });
+        }
         setCategories(prev => mapTreeToState(res.data, prev));
         if (res.permissions) setPermissions(res.permissions);
         if (res.updatedAt) updatedAtRef.current = res.updatedAt;
@@ -114,18 +156,7 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
       .finally(() => {
         if (seq === loadSeqRef.current) setLoading(false);
       });
-  }, [year, reloadTick, refreshKey]);
-  useEffect(() => {
-    let cancelled = false;
-    getProjects()
-      .then((res) => {
-        if (cancelled) return;
-        const list = Array.isArray(res.data) ? res.data : [];
-        if (list.length > 0) setSaveProjectId(list[0].id);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
+  }, [year, reloadTick, refreshKey, canManage]);
 
   useEffect(() => {
     if (onDirtyChange) onDirtyChange(hasDirty);
@@ -212,12 +243,92 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
     });
   };
 
+  const updateSubBackupMonth = (subId, month, value) => {
+    const clean = sanitizeDigits(value);
+    setCategories(prev => prev.map(cat => ({
+      ...cat,
+      subcategories: (Array.isArray(cat.subcategories) ? cat.subcategories : []).map(s => (
+        s.id === subId ? { ...s, backup: { ...(s.backup || {}), months: { ...(s.backup?.months || {}), [month]: clean } } } : s
+      )),
+    })));
+    const key = `${subId}:backup:${month}`;
+    setDirtyKeys(prev => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+    setCellErrors(prev => {
+      if (!prev.has(key)) return prev;
+      const next = new Map(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+
+  const updateItemMonth = (itemId, month, value) => {
+    const clean = sanitizeDigits(value);
+    setCategories(prev => prev.map(cat => ({
+      ...cat,
+      subcategories: (Array.isArray(cat.subcategories) ? cat.subcategories : []).map(s => ({
+        ...s,
+        items: (Array.isArray(s.items) ? s.items : []).map(it => (
+          it.id === itemId ? { ...it, months: { ...(it.months || {}), [month]: clean } } : it
+        )),
+      })),
+    })));
+    const key = `${itemId}:plan:${month}`;
+    setDirtyKeys(prev => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+    setCellErrors(prev => {
+      if (!prev.has(key)) return prev;
+      const next = new Map(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+
+  const createSub = async (catId, sortOrder, name) => {
+    try {
+      await createCategoryBudgetSubcategory({ categoryId: catId, name, backupPercent: 0, sortOrder });
+      addToast(t('Đã thêm nhóm con', 'Subcategory added'));
+      await refreshTree();
+      if (onSaved) onSaved();
+    } catch (err) { addToast(apiErrorMsg(err, t('Lỗi khi thêm nhóm con', 'Error adding subcategory')), 'error'); }
+  };
+
+  const createItem = async (subId, sortOrder, name) => {
+    try {
+      await createCategoryBudgetItem({ subcategoryId: subId, name, sortOrder });
+      addToast(t('Đã thêm hạng mục con', 'Item added'));
+      await refreshTree();
+      if (onSaved) onSaved();
+    } catch (err) { addToast(apiErrorMsg(err, t('Lỗi khi thêm hạng mục con', 'Error adding item')), 'error'); }
+  };
+
   const collectValues = () => {
     const values = [];
     for (const cat of categories) {
       for (const m of MONTHS) {
         const amount = Number(cat.months?.[m]) || 0;
-        if (amount !== 0) values.push({ categoryId: cat.id, month: m, amount });
+        // Gửi cả amount = 0 để BE xóa giá trị tháng đó khi user đã xóa ô nhưng chưa lưu.
+        values.push({ categoryId: cat.id, month: m, amount });
+      }
+      for (const sub of (Array.isArray(cat.subcategories) ? cat.subcategories : [])) {
+        if (Number(sub.backup?.percent) > 0) {
+          for (const m of MONTHS) {
+            values.push({ subcategoryId: sub.id, isBackup: true, month: m, amount: Number(sub.backup?.months?.[m]) || 0 });
+          }
+        }
+        for (const it of (Array.isArray(sub.items) ? sub.items : [])) {
+          for (const m of MONTHS) {
+            values.push({ itemId: it.id, isBackup: false, month: m, amount: Number(it.months?.[m]) || 0 });
+          }
+        }
       }
     }
     return values;
@@ -228,7 +339,6 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
     setSaving(true);
     try {
       await saveCategoryBudgetValues(year, collectValues(), {
-        projectId: saveProjectId || undefined,
         baseUpdatedAt: updatedAtRef.current || undefined,
       });
       addToast(t('Đã lưu chi phí tổng hạng mục', 'Category budget saved'));
@@ -250,8 +360,11 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
         const errMap = new Map();
         for (const e of err.response.data.errors) {
           if (!e || typeof e.month === 'undefined') continue;
-          const catId = e.categoryId;
-          errMap.set(`${catId || ''}:plan:${e.month}`, e.message || '');
+          let key = null;
+          if (e.categoryId) key = `${e.categoryId}:plan:${e.month}`;
+          else if (e.itemId) key = `${e.itemId}:plan:${e.month}`;
+          else if (e.subcategoryId) key = `${e.subcategoryId}:backup:${e.month}`;
+          if (key) errMap.set(key, e.message || '');
         }
         setCellErrors(errMap);
         addToast(err.response.data.message || t('Một số ô không hợp lệ. Vui lòng kiểm tra lại.', 'Some cells are invalid. Please review.'), 'error');
@@ -275,7 +388,13 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
       return;
     }
     try {
-      await deleteCategoryBudgetCategory(id);
+      if (type === 'subcategory') {
+        await deleteCategoryBudgetSubcategory(id);
+      } else if (type === 'item') {
+        await deleteCategoryBudgetItem(id);
+      } else {
+        await deleteCategoryBudgetCategory(id);
+      }
       addToast(t('Đã xóa', 'Deleted'));
       await refreshTree();
       if (onSaved) onSaved();
@@ -471,6 +590,10 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
                     canEdit={canEdit}
                     onEnterEdit={enterEdit}
                     updateCategoryMonth={updateCategoryMonth}
+                    updateSubBackupMonth={updateSubBackupMonth}
+                    updateItemMonth={updateItemMonth}
+                    onCreateSub={createSub}
+                    onCreateItem={createItem}
                     refreshTree={refreshTree}
                     setConfirmDelete={setConfirmDelete}
                     t={t}
@@ -526,11 +649,15 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
   );
 }
 
-function CategoryRow({ cat, mode, dirtyKeys, cellErrors, canManage, canEdit, onEnterEdit, updateCategoryMonth, refreshTree, setConfirmDelete, t }) {
+function CategoryRow({ cat, mode, dirtyKeys, cellErrors, canManage, canEdit, onEnterEdit, updateCategoryMonth, updateSubBackupMonth, updateItemMonth, onCreateSub, onCreateItem, refreshTree, setConfirmDelete, t }) {
   const addToast = useToast();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(cat.name);
   const [editPercent, setEditPercent] = useState(cat.percent);
+
+  const isProtected = ['Vật phẩm', 'Hạng mục khác', 'backup'].some(
+    n => String(cat.name || '').trim().toLowerCase() === n.toLowerCase()
+  );
 
   const saveEdit = async () => {
     try {
@@ -540,12 +667,290 @@ function CategoryRow({ cat, mode, dirtyKeys, cellErrors, canManage, canEdit, onE
     } catch { addToast(t('Lỗi', 'Error'), 'error'); }
   };
 
+  const subcategories = Array.isArray(cat.subcategories) ? cat.subcategories : [];
+
   return (
-    <tr className="bg-blue-50 text-blue-900 font-medium transition hover:bg-blue-100">
-      <td className="budget-col-sticky bg-blue-100 p-2.5 flex items-center space-x-2 border-r border-blue-200 z-10">
+    <React.Fragment>
+      <tr className="bg-blue-50 text-blue-900 font-medium transition hover:bg-blue-100">
+        <td className="budget-col-sticky bg-blue-100 p-2.5 flex items-center space-x-2 border-r border-blue-200 z-10">
+          {editing ? (
+            <input
+              className="bg-white/80 text-blue-900 font-bold text-[11px] px-1.5 py-0.5 rounded border border-blue-300 focus:ring-1 focus:ring-blue-500 w-full"
+              value={editName}
+              onClick={e => e.stopPropagation()}
+              onChange={e => setEditName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
+              autoFocus
+            />
+          ) : (
+            <span className="font-bold tracking-wide uppercase text-[11px]">{cat.name}</span>
+          )}
+        </td>
+        <td className="budget-col-sticky-2 bg-blue-100 p-2 text-center font-semibold border-r border-blue-200 z-10" onClick={e => e.stopPropagation()}>
+          {editing ? (
+            <input
+              type="number"
+              className="w-12 text-center text-blue-900 text-[11px] px-1 py-0.5 rounded border border-blue-300 bg-white/80"
+              value={editPercent}
+              onChange={e => setEditPercent(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
+            />
+          ) : `${formatPercent(cat.percent)}%`}
+        </td>
+        <td className="budget-col-sticky-3 bg-blue-100 p-2 text-center border-r border-blue-200 sticky-border-right z-10" onClick={e => e.stopPropagation()}>
+          {canManage && (
+          <div className="flex items-center justify-center space-x-2">
+            <button
+              className="text-blue-700 hover:text-blue-900 transition-colors"
+              title={t('Sửa', 'Edit')}
+              onClick={() => { setEditing(!editing); setEditName(cat.name); setEditPercent(cat.percent); }}
+            >
+              <span className="material-symbols-outlined text-sm">edit</span>
+            </button>
+            {!isProtected && (
+            <button
+              className="text-blue-700 hover:text-red-600 transition-colors"
+              title={t('Xóa', 'Delete')}
+              onClick={() => setConfirmDelete({ type: 'category', id: cat.id, name: cat.name })}
+            >
+              <span className="material-symbols-outlined text-sm">delete</span>
+            </button>
+            )}
+          </div>
+          )}
+        </td>
+        {MONTHS.map(m => {
+          const isDirty = dirtyKeys.has(`${cat.id}:plan:${m}`);
+          const errMsg = cellErrors.get(`${cat.id}:plan:${m}`);
+          const planVal = cat.months?.[m];
+          return (
+            <td
+              key={m}
+              className={`p-1 border-r border-blue-200/70 ${errMsg ? 'bg-red-100 text-red-600' : isDirty ? 'bg-blue-200/70' : ''}`}
+              onClick={() => { if (mode === 'view' && canEdit) onEnterEdit?.(); }}
+            >
+              {mode === 'edit' ? (
+                <NumberInput
+                  aria-label={`${cat.name} - ${t('Kế hoạch', 'Plan')} - ${t('Tháng', 'Month')} ${m}`}
+                  className="w-full bg-white/80 text-blue-900 font-medium text-right text-[11px] px-1.5 py-0.5 rounded border border-blue-200 focus:ring-1 focus:ring-blue-500"
+                  value={planVal || planVal === 0 ? planVal : ''}
+                  onChange={(e) => updateCategoryMonth(cat.id, m, e.target.value)}
+                />
+              ) : (
+                <span className="block text-right px-1 py-0.5 text-[11px] tabular-nums text-blue-900 font-medium cursor-pointer">
+                  {formatCurrency(monthValue(cat.months, m))}
+                </span>
+              )}
+            </td>
+          );
+        })}
+        <td className="p-2 text-right bg-blue-100 font-bold">
+          {formatMoney(calcRowTotal(cat.months))}
+        </td>
+      </tr>
+
+      {subcategories.map(sub => {
+        const isBackupVisible = Number(sub.backup?.percent) > 0;
+        const subTotalByMonth = MONTHS.map(m =>
+          (isBackupVisible ? monthValue(sub.backup?.months, m) : 0) + (sub.items || []).reduce((s, it) => s + monthValue(it.months, m), 0)
+        );
+        return (
+          <SubcategoryBlock
+            key={sub.id}
+            sub={sub}
+            catId={cat.id}
+            mode={mode}
+            dirtyKeys={dirtyKeys}
+            cellErrors={cellErrors}
+            canManage={canManage}
+            canEdit={canEdit}
+            onEnterEdit={onEnterEdit}
+            subTotalByMonth={subTotalByMonth}
+            updateSubBackupMonth={updateSubBackupMonth}
+            updateItemMonth={updateItemMonth}
+            onCreateItem={onCreateItem}
+            refreshTree={refreshTree}
+            setConfirmDelete={setConfirmDelete}
+            t={t}
+          />
+        );
+      })}
+
+      {canManage && (
+        <AddRow
+          label={t('+ Thêm nhóm con', '+ Add subcategory')}
+          onAdd={async (name) => await onCreateSub(cat.id, subcategories.length + 1, name)}
+          t={t}
+          colSpan={16}
+        />
+      )}
+    </React.Fragment>
+  );
+}
+
+function SubcategoryBlock({ sub, catId, mode, dirtyKeys, cellErrors, canManage, canEdit, onEnterEdit, subTotalByMonth, updateSubBackupMonth, updateItemMonth, onCreateItem, refreshTree, setConfirmDelete, t }) {
+  const addToast = useToast();
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(sub.name);
+  const items = Array.isArray(sub.items) ? sub.items : [];
+  const backupPercent = Number(sub.backup?.percent) || 0;
+
+  const saveEdit = async () => {
+    try {
+      await updateCategoryBudgetSubcategory(sub.id, { name: editName });
+      setEditing(false);
+      await refreshTree();
+    } catch { addToast(t('Lỗi', 'Error'), 'error'); }
+  };
+
+  return (
+    <React.Fragment>
+      <tr className="bg-violet-50 text-violet-900 transition hover:bg-violet-100">
+        <td className="budget-col-sticky bg-violet-100 p-2 pl-6 border-r border-violet-200 z-10">
+          {editing ? (
+            <input
+              className="bg-white/80 text-violet-900 font-bold text-[11px] px-1.5 py-0.5 rounded border border-violet-300 focus:ring-1 focus:ring-violet-500 w-full"
+              value={editName}
+              onClick={e => e.stopPropagation()}
+              onChange={e => setEditName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
+              autoFocus
+            />
+          ) : (
+            <span className="inline-flex items-center font-bold tracking-wide text-[11px]">
+              <span className="text-violet-400 mr-1.5">└</span>{sub.name}
+            </span>
+          )}
+        </td>
+        <td className="budget-col-sticky-2 bg-violet-100 p-2 text-center text-[11px] font-semibold border-r border-violet-200 z-10">
+          {t('TỔNG', 'TOTAL')}
+        </td>
+        <td className="budget-col-sticky-3 bg-violet-100 p-2 text-center border-r border-violet-200 sticky-border-right z-10">
+          {canManage && (
+          <div className="flex items-center justify-center space-x-2">
+            <button
+              className="text-violet-700 hover:text-violet-900 transition-colors"
+              title={t('Sửa', 'Edit')}
+              onClick={() => { setEditing(!editing); setEditName(sub.name); }}
+            >
+              <span className="material-symbols-outlined text-sm">edit</span>
+            </button>
+            <button
+              className="text-violet-700 hover:text-red-600 transition-colors"
+              title={t('Xóa', 'Delete')}
+              onClick={() => setConfirmDelete({ type: 'subcategory', id: sub.id, name: sub.name })}
+            >
+              <span className="material-symbols-outlined text-sm">delete</span>
+            </button>
+          </div>
+          )}
+        </td>
+        {subTotalByMonth.map((val, idx) => (
+          <td key={idx} className="p-1 border-r border-violet-200/70 bg-violet-50/40">
+            <span className="block text-right px-1 py-0.5 text-[11px] tabular-nums text-violet-900 font-bold">
+              {formatCurrency(val)}
+            </span>
+          </td>
+        ))}
+        <td className="p-2 text-right bg-violet-100 font-extrabold text-violet-900">
+          {formatMoney(subTotalByMonth.reduce((s, v) => s + v, 0))}
+        </td>
+      </tr>
+
+      {backupPercent > 0 && (
+      <tr className="bg-amber-50 text-amber-900 transition hover:bg-amber-100">
+        <td className="budget-col-sticky bg-amber-100 p-2 pl-10 border-r border-amber-200 z-10">
+          <span className="inline-flex items-center text-[11px] font-semibold text-amber-800">
+            <span className="material-symbols-outlined text-[14px] mr-1">shield_with_heart</span>
+            {t('BACK UP', 'BACKUP')} ({formatPercent(backupPercent)}%)
+          </span>
+        </td>
+        <td className="budget-col-sticky-2 bg-amber-100 p-2 text-center text-[11px] border-r border-amber-200 z-10 text-amber-700">
+          {formatPercent(backupPercent)}%
+        </td>
+        <td className="budget-col-sticky-3 bg-amber-100 p-2 text-center border-r border-amber-200 sticky-border-right z-10">
+          <span className="text-slate-300 text-sm">—</span>
+        </td>
+        {MONTHS.map(m => {
+          const isDirty = dirtyKeys.has(`${sub.id}:backup:${m}`);
+          const errMsg = cellErrors.get(`${sub.id}:backup:${m}`);
+          const planVal = sub.backup?.months?.[m];
+          return (
+            <td
+              key={m}
+              className={`p-1 border-r border-amber-200/70 ${errMsg ? 'bg-red-100 text-red-600' : isDirty ? 'bg-amber-200/70' : ''}`}
+              onClick={() => { if (mode === 'view' && canEdit) onEnterEdit?.(); }}
+            >
+              {mode === 'edit' ? (
+                <NumberInput
+                  aria-label={`BACK UP - ${t('Tháng', 'Month')} ${m}`}
+                  className="w-full bg-white/80 text-amber-900 font-medium text-right text-[11px] px-1.5 py-0.5 rounded border border-amber-200 focus:ring-1 focus:ring-amber-500"
+                  value={planVal || planVal === 0 ? planVal : ''}
+                  onChange={(e) => updateSubBackupMonth(sub.id, m, e.target.value)}
+                />
+              ) : (
+                <span className="block text-right px-1 py-0.5 text-[11px] tabular-nums text-amber-900 font-medium cursor-pointer">
+                  {formatCurrency(monthValue(sub.backup?.months, m))}
+                </span>
+              )}
+            </td>
+          );
+        })}
+        <td className="p-2 text-right bg-amber-100 font-bold text-amber-900">
+          {formatMoney(calcRowTotal(sub.backup?.months))}
+        </td>
+      </tr>
+      )}
+
+      {items.map(item => (
+        <ItemRow
+          key={item.id}
+          item={item}
+          subId={sub.id}
+          mode={mode}
+          dirtyKeys={dirtyKeys}
+          cellErrors={cellErrors}
+          canManage={canManage}
+          canEdit={canEdit}
+          onEnterEdit={onEnterEdit}
+          updateItemMonth={updateItemMonth}
+          refreshTree={refreshTree}
+          setConfirmDelete={setConfirmDelete}
+          t={t}
+        />
+      ))}
+
+      {canManage && (
+        <AddRow
+          label={t('+ Thêm hạng mục nhỏ', '+ Add sub item')}
+          onAdd={async (name) => await onCreateItem(sub.id, items.length + 1, name)}
+          t={t}
+          colSpan={16}
+        />
+      )}
+    </React.Fragment>
+  );
+}
+
+function ItemRow({ item, subId, mode, dirtyKeys, cellErrors, canManage, canEdit, onEnterEdit, updateItemMonth, refreshTree, setConfirmDelete, t }) {
+  const addToast = useToast();
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(item.name);
+
+  const saveEdit = async () => {
+    try {
+      await updateCategoryBudgetItem(item.id, { name: editName });
+      setEditing(false);
+      await refreshTree();
+    } catch { addToast(t('Lỗi', 'Error'), 'error'); }
+  };
+
+  return (
+    <tr className="bg-white text-slate-700 transition hover:bg-violet-50">
+      <td className="budget-col-sticky bg-white p-2 pl-10 border-r border-slate-200 z-10">
         {editing ? (
           <input
-            className="bg-white/80 text-blue-900 font-bold text-[11px] px-1.5 py-0.5 rounded border border-blue-300 focus:ring-1 focus:ring-blue-500 w-full"
+            className="bg-white text-slate-800 text-[11px] px-1.5 py-0.5 rounded border border-slate-300 focus:ring-1 focus:ring-violet-500 w-full"
             value={editName}
             onClick={e => e.stopPropagation()}
             onChange={e => setEditName(e.target.value)}
@@ -553,34 +958,26 @@ function CategoryRow({ cat, mode, dirtyKeys, cellErrors, canManage, canEdit, onE
             autoFocus
           />
         ) : (
-          <span className="font-bold tracking-wide uppercase text-[11px]">{cat.name}</span>
+          <span className="inline-flex items-center text-[11px] font-medium text-slate-700">
+            <span className="text-slate-400 mr-1.5">•</span>{item.name}
+          </span>
         )}
       </td>
-      <td className="budget-col-sticky-2 bg-blue-100 p-2 text-center font-semibold border-r border-blue-200 z-10" onClick={e => e.stopPropagation()}>
-        {editing ? (
-          <input
-            type="number"
-            className="w-12 text-center text-blue-900 text-[11px] px-1 py-0.5 rounded border border-blue-300 bg-white/80"
-            value={editPercent}
-            onChange={e => setEditPercent(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
-          />
-        ) : `${formatPercent(cat.percent)}%`}
-      </td>
-      <td className="budget-col-sticky-3 bg-blue-100 p-2 text-center border-r border-blue-200 sticky-border-right z-10" onClick={e => e.stopPropagation()}>
+      <td className="budget-col-sticky-2 bg-white p-2 text-center text-[11px] border-r border-slate-200 z-10 text-slate-300">—</td>
+      <td className="budget-col-sticky-3 bg-white p-2 text-center border-r border-slate-200 sticky-border-right z-10">
         {canManage && (
         <div className="flex items-center justify-center space-x-2">
           <button
-            className="text-blue-700 hover:text-blue-900 transition-colors"
+            className="text-slate-400 hover:text-violet-700 transition-colors"
             title={t('Sửa', 'Edit')}
-            onClick={() => { setEditing(!editing); setEditName(cat.name); setEditPercent(cat.percent); }}
+            onClick={() => { setEditing(!editing); setEditName(item.name); }}
           >
             <span className="material-symbols-outlined text-sm">edit</span>
           </button>
           <button
-            className="text-blue-700 hover:text-red-600 transition-colors"
+            className="text-slate-400 hover:text-red-600 transition-colors"
             title={t('Xóa', 'Delete')}
-            onClick={() => setConfirmDelete({ type: 'category', id: cat.id, name: cat.name })}
+            onClick={() => setConfirmDelete({ type: 'item', id: item.id, name: item.name })}
           >
             <span className="material-symbols-outlined text-sm">delete</span>
           </button>
@@ -588,32 +985,32 @@ function CategoryRow({ cat, mode, dirtyKeys, cellErrors, canManage, canEdit, onE
         )}
       </td>
       {MONTHS.map(m => {
-        const isDirty = dirtyKeys.has(`${cat.id}:plan:${m}`);
-        const errMsg = cellErrors.get(`${cat.id}:plan:${m}`);
-        const planVal = cat.months?.[m];
+        const isDirty = dirtyKeys.has(`${item.id}:plan:${m}`);
+        const errMsg = cellErrors.get(`${item.id}:plan:${m}`);
+        const planVal = item.months?.[m];
         return (
           <td
             key={m}
-            className={`p-1 border-r border-blue-200/70 ${errMsg ? 'bg-red-100 text-red-600' : isDirty ? 'bg-blue-200/70' : ''}`}
+            className={`p-1 border-r border-slate-200 ${errMsg ? 'bg-red-100 text-red-600' : isDirty ? 'bg-violet-100' : ''}`}
             onClick={() => { if (mode === 'view' && canEdit) onEnterEdit?.(); }}
           >
             {mode === 'edit' ? (
               <NumberInput
-                aria-label={`${cat.name} - ${t('Kế hoạch', 'Plan')} - ${t('Tháng', 'Month')} ${m}`}
-                className="w-full bg-white/80 text-blue-900 font-medium text-right text-[11px] px-1.5 py-0.5 rounded border border-blue-200 focus:ring-1 focus:ring-blue-500"
+                aria-label={`${item.name} - ${t('Kế hoạch', 'Plan')} - ${t('Tháng', 'Month')} ${m}`}
+                className="w-full bg-white text-slate-800 font-medium text-right text-[11px] px-1.5 py-0.5 rounded border border-slate-200 focus:ring-1 focus:ring-violet-500"
                 value={planVal || planVal === 0 ? planVal : ''}
-                onChange={(e) => updateCategoryMonth(cat.id, m, e.target.value)}
+                onChange={(e) => updateItemMonth(item.id, m, e.target.value)}
               />
             ) : (
-              <span className="block text-right px-1 py-0.5 text-[11px] tabular-nums text-blue-900 font-medium cursor-pointer">
-                {monthValue(cat.months, m) ? formatCurrency(monthValue(cat.months, m)) : formatCurrency(0)}
+              <span className="block text-right px-1 py-0.5 text-[11px] tabular-nums text-slate-700 font-medium cursor-pointer">
+                {formatCurrency(monthValue(item.months, m))}
               </span>
             )}
           </td>
         );
       })}
-      <td className="p-2 text-right bg-blue-100 font-bold">
-        {formatMoney(calcRowTotal(cat.months))}
+      <td className="p-2 text-right bg-slate-50 font-semibold">
+        {formatMoney(calcRowTotal(item.months))}
       </td>
     </tr>
   );

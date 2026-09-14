@@ -1,7 +1,14 @@
 services:
-  mkt-hub:
-    build: .
+  mkt-hub-fe:
+    build:
+      context: .
+      args:
+        VITE_API_URL: ${VITE_API_URL:-https://mkt-hub.onrender.com/api}
+    image: mkt-hub-fe:latest
+    container_name: mkt-hub-fe
     ports:
-      - "3000:3000"
-    volumes:
-      - ./BE/prisma/dev.db:/app/BE/prisma/dev.db
+      - "8080:80"
+    environment:
+      # Backend upstream used by the nginx /api/ proxy (optional).
+      BE_UPSTREAM: ${BE_UPSTREAM:-https://mkt-hub.onrender.com}
+    restart: unless-stopped

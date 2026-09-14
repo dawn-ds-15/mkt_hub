@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { Folder, X, Wallet, ChevronRight } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 const statusConfig = {
@@ -46,7 +47,7 @@ export default function ProjectOverview({ project, onClose }) {
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-2xl">folder</span>
+              <Folder className="w-6 h-6 text-primary" />
             </div>
             <div>
               <h2 className="font-headline-md text-headline-md font-bold text-on-surface">{project.name}</h2>
@@ -54,7 +55,7 @@ export default function ProjectOverview({ project, onClose }) {
             </div>
           </div>
           <button onClick={onClose} className="text-on-surface-variant hover:text-primary transition-colors">
-            <span className="material-symbols-outlined text-[24px]">close</span>
+            <X className="w-6 h-6" />
           </button>
         </div>
       </div>
@@ -87,7 +88,7 @@ export default function ProjectOverview({ project, onClose }) {
           title={locale === 'vi' ? 'Chuyển đến tab nhập chi phí' : 'Go to expense input tab'}
         >
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-primary">payments</span>
+            <Wallet className="w-5 h-5 text-primary" />
             <div>
               <p className="text-label-sm font-bold text-on-surface uppercase tracking-wider">Chi phí dự án</p>
               <p className="text-body-sm text-on-surface-variant mt-0.5">Kế hoạch: {formatCurrency(budgetTotal)} · Thực tế: {formatCurrency(costTotal)}</p>
@@ -95,7 +96,7 @@ export default function ProjectOverview({ project, onClose }) {
           </div>
           <span className="flex items-center gap-1 text-label-sm font-semibold text-primary">
             Nhập chi phí
-            <span className="material-symbols-outlined text-[16px] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+            <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </span>
         </button>
 

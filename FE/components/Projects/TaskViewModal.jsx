@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Info } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 import { updateTask } from '../../services/api';
@@ -151,7 +152,7 @@ export default function TaskViewModal({ task, onClose, onEdit, onSaved }) {
                 />
                 {task.status !== 'Done' && (
                   <p className="mt-1 text-[11px] leading-[15px] text-amber-600 flex items-start gap-0.5">
-                    <span className="material-symbols-outlined text-[13px] mt-[1px]">info</span>
+                    <Info className="w-3.5 h-3.5 mt-px shrink-0" />
                     {locale === 'vi'
                       ? 'Chuyển trạng thái sang "Hoàn thành" thì ô này mới có hiệu lực.'
                       : 'Switch status to "Done" for this field to take effect.'}

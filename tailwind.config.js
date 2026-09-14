@@ -8,6 +8,12 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          400: '#818CF8',
+          500: '#6366F1',
+          600: '#4F46E5',
+          700: '#4338CA',
+        },
         "surface-tint": "#4059aa",
         "surface-container-lowest": "#ffffff",
         "on-tertiary": "#ffffff",
@@ -96,6 +102,8 @@ export default {
         "section-gap": "32px",
       },
       fontFamily: {
+        sans: ["Inter", "Be Vietnam Pro", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
         "headline-lg": ["Inter"],
         "body-md": ["Inter"],
         "label-md": ["Inter"],

@@ -1,10 +1,17 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { ChevronDown, Search, CalendarDays, SlidersHorizontal, X, Plus, CircleAlert, ListChecks, Loader2, Trash2, TriangleAlert, Link2, CheckCircle2, CircleX, ExternalLink, Unlink, Eye, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTaskList, createTask, deleteTask, getProjects, getMembers } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { translateTaskErrors } from '../../utils/taskErrors';
 import { useDropdownOptions } from '../../hooks/useDropdownOptions';
 import TaskEditDrawer from './TaskEditDrawer';
 import TaskViewModal from './TaskViewModal';
+
+const statusIcons = {
+  error: <CircleAlert className="w-[15px] h-[15px]" />,
+  check_circle: <CheckCircle2 className="w-[15px] h-[15px]" />,
+  cancel: <CircleX className="w-[15px] h-[15px]" />,
+};
 
 const statusStyles = {
   overdue: { bg: 'bg-red-100', text: 'text-red-700', label: 'Quá hạn', row: 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100', icon: 'error', iconColor: 'text-red-600', fill: true },
@@ -349,11 +356,11 @@ export default function TaskList({ projectId: projectIdProp }) {
                 );
               })}
             </select>
-            <span className="material-symbols-outlined text-sm absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+            <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline" />
           </div>
         ))}
         <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm min-w-[200px]">
-          <span className="material-symbols-outlined text-sm text-outline">search</span>
+          <Search className="w-4 h-4 text-outline" />
           <input
             type="text"
             value={searchTerm}
@@ -363,7 +370,7 @@ export default function TaskList({ projectId: projectIdProp }) {
           />
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-outline-variant rounded text-sm">
-          <span className="material-symbols-outlined text-sm text-outline">calendar_today</span>
+          <CalendarDays className="w-4 h-4 text-outline" />
           <input
             type="date"
             value={draftFilters.dateFrom || ''}
@@ -384,21 +391,21 @@ export default function TaskList({ projectId: projectIdProp }) {
           onClick={applyFilters}
           className="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md flex items-center gap-2 hover:bg-primary/90 transition-transform active:scale-95"
         >
-          <span className="material-symbols-outlined text-sm">filter_alt</span>
+          <SlidersHorizontal className="w-4 h-4" />
           {locale === 'vi' ? 'Lọc' : 'Filter'}
         </button>
         <button
           onClick={clearFilters}
           className="text-error font-semibold text-sm flex items-center gap-1 hover:underline whitespace-nowrap"
         >
-          <span className="material-symbols-outlined text-sm">close</span>
+          <X className="w-4 h-4" />
           {locale === 'vi' ? 'Xóa lọc' : 'Clear Filters'}
         </button>
         <button
           onClick={() => setShowQuickAddPopup(true)}
           className="ml-auto bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md flex items-center gap-2 hover:bg-primary/90 transition-transform active:scale-95 whitespace-nowrap"
         >
-          <span className="material-symbols-outlined text-sm">add</span>
+          <Plus className="w-4 h-4" />
           {locale === 'vi' ? 'Thêm task' : 'Add Task'}
         </button>
       </div>
@@ -481,7 +488,7 @@ export default function TaskList({ projectId: projectIdProp }) {
             </div>
             {quickAddError && (
               <p className="text-red-600 text-xs flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">error</span>
+                <CircleAlert className="w-4 h-4" />
                 {quickAddError}
               </p>
             )}
@@ -506,7 +513,7 @@ export default function TaskList({ projectId: projectIdProp }) {
       {selected.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-3">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="material-symbols-outlined text-primary text-[20px]">checklist</span>
+            <ListChecks className="w-5 h-5 text-primary" />
             <span className="text-sm font-semibold text-on-surface">
               {locale === 'vi' ? `Đã chọn ${selected.length} task` : `${selected.length} tasks selected`}
             </span>
@@ -526,7 +533,7 @@ export default function TaskList({ projectId: projectIdProp }) {
               disabled={deleting}
               className="px-4 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
-              <span className="material-symbols-outlined text-[18px]">{deleting ? 'sync' : 'delete'}</span>
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {deleting
                 ? (locale === 'vi' ? 'Đang xóa...' : 'Deleting...')
                 : (locale === 'vi' ? 'Xóa hàng loạt' : 'Delete selected')}
@@ -549,7 +556,7 @@ export default function TaskList({ projectId: projectIdProp }) {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="w-12 p-3"><span className="material-symbols-outlined text-outline">warning</span></th>
+                <th className="w-12 p-3"><TriangleAlert className="w-4 h-4 text-outline" /></th>
                 <th className="p-3 text-label-sm text-outline uppercase whitespace-nowrap">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase min-w-[250px]">{locale === 'vi' ? 'Tên Task' : 'Task Name'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Người phụ trách' : 'Assignee'}</th>
@@ -560,7 +567,7 @@ export default function TaskList({ projectId: projectIdProp }) {
                 <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Hạn chót' : 'Deadline'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Tuần' : 'Week'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Hoàn thành' : 'Completed'}</th>
-                <th className="p-3 text-label-sm text-outline uppercase text-center"><span className="material-symbols-outlined">link</span></th>
+                <th className="p-3 text-label-sm text-outline uppercase text-center"><Link2 className="w-4 h-4" /></th>
                 <th className="p-3 text-label-sm text-outline uppercase">{locale === 'vi' ? 'Ghi chú' : 'Notes'}</th>
                 <th className="p-3 text-label-sm text-outline uppercase text-center">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
               </tr>
@@ -585,11 +592,8 @@ export default function TaskList({ projectId: projectIdProp }) {
                       </td>
                       <td className="p-3 text-center align-middle">
                         {st.icon ? (
-                          <span
-                            className={`material-symbols-outlined ${st.iconColor}`}
-                            style={st.fill ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                          >
-                            {st.icon}
+                          <span className={`inline-flex ${st.iconColor}`}>
+                            {statusIcons[st.icon]}
                           </span>
                         ) : null}
                       </td>
@@ -625,9 +629,11 @@ export default function TaskList({ projectId: projectIdProp }) {
                       </td>
                       <td className="p-3 text-center align-middle">
                         {task.linkUrl ? (
-                          <a href={task.linkUrl} target="_blank" rel="noopener noreferrer" className="material-symbols-outlined text-outline cursor-pointer hover:text-primary no-underline">open_in_new</a>
+                          <a href={task.linkUrl} target="_blank" rel="noopener noreferrer" className="inline-flex text-outline cursor-pointer hover:text-primary no-underline">
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
                         ) : (
-                          <span className="material-symbols-outlined text-outline-variant">link_off</span>
+                          <Unlink className="w-4 h-4 text-outline-variant" />
                         )}
                       </td>
                       <td className="p-3 text-xs italic text-outline align-middle">{task.remark}</td>
@@ -638,21 +644,21 @@ export default function TaskList({ projectId: projectIdProp }) {
                             className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors"
                             title={locale === 'vi' ? 'Xem chi tiết' : 'View Details'}
                           >
-                            <span className="material-symbols-outlined text-lg">visibility</span>
+                            <Eye className="w-[18px] h-[18px]" />
                           </button>
                           <button
                             onClick={() => setEditTask(task)}
                             className="w-8 h-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors"
                             title={locale === 'vi' ? 'Chỉnh sửa' : 'Edit'}
                           >
-                            <span className="material-symbols-outlined text-lg">edit</span>
+                            <Pencil className="w-[18px] h-[18px]" />
                           </button>
                           {userRole === 'manager' && (
                             <button
                               onClick={() => handleDeleteTask(task)}
                               className="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded transition-colors"
                             >
-                              <span className="material-symbols-outlined text-lg text-red-500">delete</span>
+                              <Trash2 className="w-[18px] h-[18px] text-red-500" />
                             </button>
                           )}
                         </div>
@@ -676,7 +682,7 @@ export default function TaskList({ projectId: projectIdProp }) {
               onClick={() => setPage(p => Math.max(1, p - 1))}
               className="w-8 h-8 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-container-high disabled:opacity-30 transition-colors"
             >
-              <span className="material-symbols-outlined text-sm">chevron_left</span>
+              <ChevronLeft className="w-4 h-4" />
             </button>
             {pageItems.map((p) => (
               p === '...' ? (
@@ -707,7 +713,7 @@ export default function TaskList({ projectId: projectIdProp }) {
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               className="w-8 h-8 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-container-high disabled:opacity-30 transition-colors"
             >
-              <span className="material-symbols-outlined text-sm">chevron_right</span>
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>

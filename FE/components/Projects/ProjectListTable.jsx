@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Loader2, Plus, ListFilter, ChevronDown, X, Wallet, TrendingUp, Rocket, TriangleAlert, PieChart, ListChecks, Trash2, Timer, Megaphone, CalendarDays, CheckCircle2, CircleX, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getProjects, deleteProject } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import CreateProjectForm from './CreateProjectForm';
@@ -136,7 +137,7 @@ export default function ProjectListTable() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 text-on-surface-variant">
-        <span className="material-symbols-outlined text-[40px] text-outline-variant animate-spin">sync</span>
+        <Loader2 className="w-9 h-9 text-outline-variant animate-spin" />
       </div>
     );
   }
@@ -158,14 +159,14 @@ export default function ProjectListTable() {
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-primary text-on-primary rounded-lg text-[14px] leading-[20px] font-semibold hover:bg-primary/90 transition-colors flex-1 sm:flex-none justify-center shadow-sm"
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
+            <Plus className="w-[18px] h-[18px]" />
             {locale === 'vi' ? 'Thêm dự án' : 'Add Project'}
           </button>
           <button
             onClick={() => setShowFilter(!showFilter)}
             className="flex items-center gap-1.5 px-4 py-2 bg-surface-container-lowest border border-border-light rounded-lg text-[14px] leading-[20px] hover:bg-surface-container-high transition-colors flex-1 sm:flex-none justify-center shadow-sm"
           >
-            <span className="material-symbols-outlined text-[18px]">filter_list</span>
+            <ListFilter className="w-[18px] h-[18px]" />
             {locale === 'vi' ? 'Bộ lọc' : 'Filter'}
           </button>
           <div className="relative flex-1 sm:flex-none">
@@ -178,7 +179,7 @@ export default function ProjectListTable() {
                 <option key={o.value} value={o.value}>{locale === 'vi' || o.label === 'Tất cả trạng thái' ? (o.value === 'All' ? o.label : o.label) : o.value}</option>
               ))}
             </select>
-            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline text-[20px]">expand_more</span>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline w-5 h-5" />
           </div>
         </div>
       </div>
@@ -195,13 +196,13 @@ export default function ProjectListTable() {
               <option value="All">{locale === 'vi' ? 'Tất cả' : 'All'}</option>
               {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
-            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline text-[20px]">expand_more</span>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline w-5 h-5" />
           </div>
           <button
             onClick={() => { setStatusFilter('All'); setTypeFilter('All'); setPage(1); }}
             className="text-error text-[12px] font-semibold flex items-center gap-1 hover:underline"
           >
-            <span className="material-symbols-outlined text-[14px]">close</span>
+            <X className="w-3.5 h-3.5" />
             {locale === 'vi' ? 'Xóa lọc' : 'Clear'}
           </button>
         </div>
@@ -212,13 +213,13 @@ export default function ProjectListTable() {
           <div className="flex justify-between items-start mb-2">
             <span className="text-on-surface-variant text-[12px] leading-[16px] uppercase tracking-wider">{locale === 'vi' ? 'Tổng ngân sách năm' : 'Yearly total budget'}</span>
             <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-secondary">
-              <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+              <Wallet className="w-[18px] h-[18px]" />
             </div>
           </div>
           <div>
             <h3 className="text-[20px] leading-[28px] font-bold text-on-surface">{compact(summary.totalBudget)} <span className="text-[14px] leading-[20px] text-outline font-normal">VND</span></h3>
             <div className="flex items-center gap-1 mt-1 text-[12px] leading-[16px] text-success">
-              <span className="material-symbols-outlined text-[14px]">trending_up</span>
+              <TrendingUp className="w-3.5 h-3.5" />
               <span>{locale === 'vi' ? `Đã phân bổ ${summary.allocated}%` : `Allocated ${summary.allocated}%`}</span>
             </div>
           </div>
@@ -228,13 +229,13 @@ export default function ProjectListTable() {
           <div className="flex justify-between items-start mb-2">
             <span className="text-on-surface-variant text-[12px] leading-[16px] uppercase tracking-wider">{locale === 'vi' ? 'Dự án đang chạy' : 'Active projects'}</span>
             <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-tertiary-container">
-              <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
+              <Rocket className="w-[18px] h-[18px]" />
             </div>
           </div>
           <div>
             <h3 className="text-[20px] leading-[28px] font-bold text-on-surface">{summary.active} <span className="text-[14px] leading-[20px] text-outline font-normal">{locale === 'vi' ? 'Chiến dịch' : 'Campaigns'}</span></h3>
             <div className="flex items-center gap-1 mt-1 text-[12px] leading-[16px] text-warning">
-              <span className="material-symbols-outlined text-[14px]">error</span>
+              <TriangleAlert className="w-3.5 h-3.5" />
               <span>{summary.nearDeadline} {locale === 'vi' ? 'dự án chậm tiến độ' : 'projects delayed'}</span>
             </div>
           </div>
@@ -244,7 +245,7 @@ export default function ProjectListTable() {
           <div className="flex justify-between items-start mb-2">
             <span className="text-on-surface-variant text-[12px] leading-[16px] uppercase tracking-wider">{locale === 'vi' ? 'KPI Đạt được (TB)' : 'KPI Achieved (avg)'}</span>
             <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-success">
-              <span className="material-symbols-outlined text-[18px]">pie_chart</span>
+              <PieChart className="w-[18px] h-[18px]" />
             </div>
           </div>
           <div>
@@ -259,7 +260,7 @@ export default function ProjectListTable() {
       {selected.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="material-symbols-outlined text-primary text-[20px]">checklist</span>
+            <ListChecks className="w-5 h-5 text-primary" />
             <span className="text-[14px] leading-[20px] font-semibold text-on-surface">
               {locale === 'vi' ? `Đã chọn ${selected.length} dự án` : `${selected.length} projects selected`}
             </span>
@@ -279,7 +280,7 @@ export default function ProjectListTable() {
               disabled={deleting}
               className="px-4 py-1.5 rounded-lg bg-danger text-on-error text-[13px] leading-[18px] font-semibold hover:brightness-110 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
-              <span className="material-symbols-outlined text-[18px]">{deleting ? 'sync' : 'delete'}</span>
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {deleting
                 ? (locale === 'vi' ? 'Đang xóa...' : 'Deleting...')
                 : (locale === 'vi' ? 'Xóa hàng loạt' : 'Delete selected')}
@@ -343,19 +344,19 @@ export default function ProjectListTable() {
                     <td className="py-4 px-4">
                       <div className="flex items-start gap-2">
                         <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <span className={`material-symbols-outlined ${delayed ? 'text-warning' : 'text-secondary'}`}>{delayed ? 'timer_arrow_up' : 'campaign'}</span>
+                          {delayed ? <Timer className="w-[18px] h-[18px] text-warning" /> : <Megaphone className="w-[18px] h-[18px] text-secondary" />}
                         </div>
                         <div>
                           <p className="text-[18px] leading-[26px] font-semibold text-on-surface group-hover:text-secondary transition-colors">{p.name}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="font-data-mono text-outline text-[12px] bg-surface-container-high px-1.5 py-0.5 rounded">{codeOf(p)}</span>
                             <span className="text-on-surface-variant text-[12px] flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[14px]">event</span>{p.deadline}
+                              <CalendarDays className="w-3.5 h-3.5" />{p.deadline}
                             </span>
                           </div>
                           {overBudget && (
                             <div className="flex items-center gap-1 text-danger text-[12px] mt-1">
-                              <span className="material-symbols-outlined text-[14px]">warning</span>
+                              <TriangleAlert className="w-3.5 h-3.5" />
                               {locale === 'vi' ? 'Vượt ngân sách dự kiến' : 'Over projected budget'}
                             </div>
                           )}
@@ -399,18 +400,17 @@ export default function ProjectListTable() {
                     <td className="py-4 px-4 text-center">
                       {(p.documentsCount || 0) > 0 ? (
                         <span
-                          className="material-symbols-outlined text-success inline-flex"
-                          style={{ fontVariationSettings: "'FILL' 1" }}
+                          className="inline-flex text-success"
                           title={locale === 'vi' ? `Đã có ${p.documentsCount} hồ sơ` : `${p.documentsCount} document(s)`}
                         >
-                          check_circle
+                          <CheckCircle2 className="w-[18px] h-[18px]" />
                         </span>
                       ) : (
                         <span
-                          className="material-symbols-outlined text-outline inline-flex"
+                          className="inline-flex text-outline"
                           title={locale === 'vi' ? 'Chưa có hồ sơ' : 'No documents'}
                         >
-                          cancel
+                          <CircleX className="w-[18px] h-[18px]" />
                         </span>
                       )}
                     </td>
@@ -431,7 +431,7 @@ export default function ProjectListTable() {
               onClick={() => setPage(safePage - 1)}
               className="w-8 h-8 flex items-center justify-center rounded border border-border-light bg-surface-container-lowest text-outline hover:bg-surface-container-high transition-colors disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+              <ChevronLeft className="w-[18px] h-[18px]" />
             </button>
             {pages.map((pg, i) => (
               <span key={pg} className="flex items-center">
@@ -453,7 +453,7 @@ export default function ProjectListTable() {
               onClick={() => setPage(safePage + 1)}
               className="w-8 h-8 flex items-center justify-center rounded border border-border-light bg-surface-container-lowest text-outline hover:bg-surface-container-high transition-colors disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+              <ChevronRight className="w-[18px] h-[18px]" />
             </button>
           </div>
         </div>

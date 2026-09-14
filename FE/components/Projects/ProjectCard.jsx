@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronDown, CalendarDays, Eye, Pencil, Trash2 } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 const statusConfig = {
@@ -29,9 +30,7 @@ export default function ProjectCard({ project, onEdit, onDelete }) {
       >
         <div className="flex-1 grid grid-cols-12 gap-4 items-center">
           <div className="col-span-4 flex items-center gap-4">
-            <span className={`material-symbols-outlined text-outline-variant transition-transform duration-300 ${open ? 'rotate-180' : ''}`}>
-              expand_more
-            </span>
+            <ChevronDown className={`w-4 h-4 text-outline-variant transition-transform duration-300 shrink-0 ${open ? 'rotate-180' : ''}`} />
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-headline-sm text-headline-sm text-on-surface">{project.name}</span>
@@ -49,7 +48,7 @@ export default function ProjectCard({ project, onEdit, onDelete }) {
           </div>
           <div className="col-span-3">
             <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-outline text-[16px]">calendar_month</span>
+              <CalendarDays className="w-4 h-4 text-outline" />
               <span className="text-label-md text-on-surface-variant">{project.deadline}</span>
             </div>
             <span className={`px-3 py-1 ${status.bg} ${status.text} text-[11px] font-bold rounded-full border ${status.border}`}>
@@ -71,21 +70,21 @@ export default function ProjectCard({ project, onEdit, onDelete }) {
               className="p-2 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant hover:text-primary"
               title={locale === 'vi' ? 'Xem chi tiết' : 'View Details'}
             >
-              <span className="material-symbols-outlined text-[20px]">visibility</span>
+              <Eye className="w-5 h-5" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); if (onEdit) onEdit(project); }}
               className="p-2 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant hover:text-primary"
               title={locale === 'vi' ? 'Chỉnh sửa' : 'Edit'}
             >
-              <span className="material-symbols-outlined text-[20px]">edit</span>
+              <Pencil className="w-5 h-5" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); if (onDelete) onDelete(project); }}
               className="p-2 hover:bg-error/10 rounded-lg transition-colors text-on-surface-variant hover:text-error"
               title={locale === 'vi' ? 'Xóa dự án' : 'Delete Project'}
             >
-              <span className="material-symbols-outlined text-[20px]">delete</span>
+              <Trash2 className="w-5 h-5" />
             </button>
           </div>
         </div>

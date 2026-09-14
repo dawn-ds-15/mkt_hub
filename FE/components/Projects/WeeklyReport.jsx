@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { Zap, Download, BarChart3, CheckCircle2, ClipboardList, CircleAlert, LifeBuoy, Save, Loader2, Check, MessageSquare, TrendingUp, Brain, BellRing } from 'lucide-react';
 import { getWeeklyReport, saveWeeklyLog, exportWeeklyReport, getProjects, getMembers } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 
@@ -140,11 +141,11 @@ export default function WeeklyReport() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleAutoFill} className="px-4 py-2 bg-surface-container-high text-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-surface-variant transition-colors border border-outline-variant">
-            <span className="material-symbols-outlined text-[18px]">bolt</span>
+            <Zap className="w-[18px] h-[18px]" />
             {locale === 'vi' ? 'Tự động điền' : 'Auto Fill'}
           </button>
           <button onClick={handleExport} className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-primary/90 transition-colors">
-            <span className="material-symbols-outlined text-[18px]">download</span>
+            <Download className="w-[18px] h-[18px]" />
             {locale === 'vi' ? 'Xuất TXT' : 'Export TXT'}
           </button>
         </div>
@@ -162,7 +163,7 @@ export default function WeeklyReport() {
         <>
           <div className="flex items-center justify-between">
             <h3 className="font-headline-lg text-headline-lg text-primary flex items-center gap-3">
-              <span className="material-symbols-outlined text-[32px]">bar_chart</span> {locale === 'vi' ? `Báo cáo tuần ${data.week}/${data.year}` : `Weekly Report ${data.week}/${data.year}`}
+              <BarChart3 className="w-[30px] h-[30px] text-brand-600" /> {locale === 'vi' ? `Báo cáo tuần ${data.week}/${data.year}` : `Weekly Report ${data.week}/${data.year}`}
             </h3>
             <span className="text-label-md font-medium text-on-surface-variant bg-surface-container px-3 py-1 rounded-full border border-outline-variant">
               {locale === 'vi' ? 'Trạng thái:' : 'Status:'} {data.status === 'Đã lưu' ? (locale === 'vi' ? 'Đã lưu' : 'Saved') : (locale === 'vi' ? 'Nháp' : 'Draft')}
@@ -172,7 +173,7 @@ export default function WeeklyReport() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }} className="mb-4">
             <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
               <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900"><span className="material-symbols-outlined text-[18px] align-text-bottom text-green-600">check_circle</span> {locale === 'vi' ? '1. Công việc đã hoàn thành' : '1. Completed Work'}</h4>
+                <h4 className="text-sm font-bold text-gray-900"><CheckCircle2 className="w-[18px] h-[18px] text-green-600 align-text-bottom" /> {locale === 'vi' ? '1. Công việc đã hoàn thành' : '1. Completed Work'}</h4>
                 <span className="text-[11px] text-gray-400">{data.completed.length}</span>
               </div>
               <div className="overflow-x-auto">
@@ -203,7 +204,7 @@ export default function WeeklyReport() {
 
             <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
               <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900"><span className="material-symbols-outlined text-[18px] align-text-bottom text-blue-600">assignment</span> {locale === 'vi' ? `2. Kế hoạch tuần ${data.week + 1}` : `2. Next Week Plan ${data.week + 1}`}</h4>
+                <h4 className="text-sm font-bold text-gray-900"><ClipboardList className="w-[18px] h-[18px] text-blue-600 align-text-bottom" /> {locale === 'vi' ? `2. Kế hoạch tuần ${data.week + 1}` : `2. Next Week Plan ${data.week + 1}`}</h4>
                 <span className="text-[11px] text-gray-400">{data.nextWeek.length}</span>
               </div>
               <div className="overflow-x-auto">
@@ -234,7 +235,7 @@ export default function WeeklyReport() {
 
             <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
               <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900"><span className="material-symbols-outlined text-[18px] align-text-bottom text-orange-600">error_outline</span> {locale === 'vi' ? '3. Tồn đọng / Vấn đề' : '3. Backlog / Issues'}</h4>
+                <h4 className="text-sm font-bold text-gray-900"><CircleAlert className="w-[18px] h-[18px] text-orange-600 align-text-bottom" /> {locale === 'vi' ? '3. Tồn đọng / Vấn đề' : '3. Backlog / Issues'}</h4>
                 <span className="text-[11px] text-gray-400">{data.backlog.length}</span>
               </div>
               <div className="p-3 space-y-2">
@@ -252,7 +253,7 @@ export default function WeeklyReport() {
 
             <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
               <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900"><span className="material-symbols-outlined text-[18px] align-text-bottom text-purple-600">support</span> {locale === 'vi' ? '4. Cần BOD hỗ trợ' : '4. BOD Support Needed'}</h4>
+                <h4 className="text-sm font-bold text-gray-900"><LifeBuoy className="w-[18px] h-[18px] text-purple-600 align-text-bottom" /> {locale === 'vi' ? '4. Cần BOD hỗ trợ' : '4. BOD Support Needed'}</h4>
                 <span className="text-[11px] text-gray-400">{data.bod.length}</span>
               </div>
               <div className="overflow-x-auto">
@@ -286,8 +287,8 @@ export default function WeeklyReport() {
                   saved ? 'bg-green-600 text-on-primary' : 'bg-primary text-on-primary hover:opacity-90'
                 }`}
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  {saving ? 'sync' : saved ? 'check' : 'save'}
+                <span className="text-[18px] h-[18px] w-[18px] inline-flex items-center justify-center">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
                 </span>
                 {saving ? (locale === 'vi' ? 'Đang lưu...' : 'Saving...') : saved ? (locale === 'vi' ? 'Đã lưu' : 'Saved') : (locale === 'vi' ? 'Lưu nhật ký' : 'Save Log')}
               </button>
@@ -300,7 +301,7 @@ export default function WeeklyReport() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
               <div className="flex flex-col gap-2">
                 <label className="font-label-md text-on-surface-variant flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">comment</span> {locale === 'vi' ? 'Ghi chú công việc' : 'Work Notes'}
+                  <MessageSquare className="w-[18px] h-[18px]" /> {locale === 'vi' ? 'Ghi chú công việc' : 'Work Notes'}
                 </label>
                 <textarea
                   className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
@@ -311,7 +312,7 @@ export default function WeeklyReport() {
               </div>
               <div className="flex flex-col gap-2">
                 <label className="font-label-md text-on-surface-variant flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">trending_up</span> {locale === 'vi' ? 'Đề xuất cải tiến' : 'Improvement Suggestions'}
+                  <TrendingUp className="w-[18px] h-[18px]" /> {locale === 'vi' ? 'Đề xuất cải tiến' : 'Improvement Suggestions'}
                 </label>
                 <textarea
                   className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
@@ -322,7 +323,7 @@ export default function WeeklyReport() {
               </div>
               <div className="flex flex-col gap-2">
                 <label className="font-label-md text-on-surface-variant flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">psychology</span> {locale === 'vi' ? 'Bài học kinh nghiệm' : 'Lessons Learned'}
+                  <Brain className="w-[18px] h-[18px]" /> {locale === 'vi' ? 'Bài học kinh nghiệm' : 'Lessons Learned'}
                 </label>
                 <textarea
                   className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"
@@ -333,7 +334,7 @@ export default function WeeklyReport() {
               </div>
               <div className="flex flex-col gap-2">
                 <label className="font-label-md text-on-surface-variant flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">notifications_active</span> {locale === 'vi' ? 'Thông báo / Nhắc nhở' : 'Notifications / Reminders'}
+                  <BellRing className="w-[18px] h-[18px]" /> {locale === 'vi' ? 'Thông báo / Nhắc nhở' : 'Notifications / Reminders'}
                 </label>
                 <textarea
                   className="bg-white border border-outline-variant w-full h-32 p-3 text-body-md focus:border-primary focus:ring-0 resize-none"

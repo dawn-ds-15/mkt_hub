@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { CircleAlert, Info } from 'lucide-react';
 import { updateTask, deleteTask, getMembers, getDropdownKeys } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { translateTaskErrors } from '../../utils/taskErrors';
@@ -286,7 +287,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
 
           {error && (
             <p className="text-red-600 text-xs flex items-center gap-1 mt-1">
-              <span className="material-symbols-outlined text-[14px]">error</span>
+              <CircleAlert className="w-4 h-4" />
               {error}
             </p>
           )}
@@ -314,7 +315,7 @@ export default function TaskEditDrawer({ task, onClose, onSaved, onDeleted, read
               <input type="date" className="w-full px-3 py-2 border border-primary rounded text-sm focus:border-blue-500 focus:ring-0 outline-none" value={completedDate} onChange={(e) => setCompletedDate(e.target.value)} disabled={readOnly} />
               {status !== 'Done' && (
                 <div className="text-[11px] leading-[15px] text-amber-600 flex items-start gap-0.5 mt-0.5">
-                  <span className="material-symbols-outlined text-[13px] mt-[1px]">info</span>
+                  <Info className="w-3.5 h-3.5 mt-px shrink-0" />
                   <span>{locale === 'vi'
                     ? 'Chuyển trạng thái sang "Hoàn thành" thì ô này mới có hiệu lực.'
                     : 'Switch status to "Done" for this field to take effect.'}</span>

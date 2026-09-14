@@ -110,11 +110,11 @@ const kpiLabelVi = {
 };
 
 const kpiDisplayMeta = {
-  'Raw Leads': { emoji: '🔵', accent: 'blue', planLabel: 'KH' },
-  'MQL': { emoji: '🟡', accent: 'yellow', planLabel: 'KH' },
-  'SQL': { emoji: '🟠', accent: 'orange', planLabel: 'KH' },
-  'Closed Deal': { emoji: '🟢', accent: 'green', planLabel: 'KH' },
-  'Pipeline Value': { emoji: '💰', accent: 'purple', planLabel: 'KH' },
+  'Raw Leads': { accent: 'blue', planLabel: 'KH' },
+  'MQL': { accent: 'yellow', planLabel: 'KH' },
+  'SQL': { accent: 'orange', planLabel: 'KH' },
+  'Closed Deal': { accent: 'green', planLabel: 'KH' },
+  'Pipeline Value': { accent: 'purple', planLabel: 'KH' },
 };
 
 function transformKpiCards(kpiCards) {
@@ -122,7 +122,7 @@ function transformKpiCards(kpiCards) {
     .filter((kpi) => kpi.label !== 'CAC / LTV' && kpi.label !== 'CAC/LTV')
     .map((kpi, idx) => {
     const viLabel = kpiLabelVi[kpi.label] || kpi.label;
-    const meta = kpiDisplayMeta[kpi.label] || { emoji: '📊', accent: 'blue', planLabel: 'KH' };
+    const meta = kpiDisplayMeta[kpi.label] || { accent: 'blue', planLabel: 'KH' };
     const actual = kpi.actual ?? kpi.value ?? 0;
     const plan = kpi.plan ?? 0;
     const pct = kpi.percentVsPlan ?? kpi.ratio ?? null;
@@ -130,7 +130,6 @@ function transformKpiCards(kpiCards) {
     return {
       id: idx + 1,
       label: viLabel,
-      emoji: meta.emoji,
       accent: meta.accent,
       value: isCurrency ? formatCurrency(actual) : formatNumber(actual),
       trend: getKpiTrend(pct),

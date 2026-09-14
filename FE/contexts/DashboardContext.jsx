@@ -16,6 +16,7 @@ const currentWeek = String(getISOWeek(now));
 
 const DASHBOARD_STORAGE_KEY = 'mkt_hub_dashboard';
 const LOCALE_STORAGE_KEY = 'mkt_hub_locale';
+const THEME_STORAGE_KEY = 'mkt_hub_theme';
 
 function loadFromStorage() {
   try {
@@ -37,6 +38,12 @@ function loadLocale() {
   } catch { return 'vi'; }
 }
 
+function loadTheme() {
+  try {
+    return localStorage.getItem(THEME_STORAGE_KEY) || 'light';
+  } catch { return 'light'; }
+}
+
 const DashboardContext = createContext(null);
 
 export function DashboardProvider({ children }) {
@@ -45,6 +52,15 @@ export function DashboardProvider({ children }) {
   const [periodType, setPeriodType] = useState(saved?.periodType || 'week');
   const [periodValue, setPeriodValue] = useState(saved?.periodValue || currentWeek);
   const [locale, setLocale] = useState(loadLocale);
+  const [theme, setTheme] = useState(loadTheme);
+
+  useEffect(() => {
+    const applyType = () => {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+    };
+    applyType();
+    try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch {}
+  }, [theme]);
 
   useEffect(() => {
     saveToStorage({ year, periodType, periodValue });
@@ -80,8 +96,12 @@ export function DashboardProvider({ children }) {
     setLocale(prev => prev === 'vi' ? 'en' : 'vi');
   }, []);
 
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
+
   return (
-    <DashboardContext.Provider value={{ year, periodType, periodValue, setYear: changeYear, setPeriodType: updatePeriod, setPeriodValue, locale, toggleLocale }}>
+    <DashboardContext.Provider value={{ year, periodType, periodValue, setYear: changeYear, setPeriodType: updatePeriod, setPeriodValue, locale, toggleLocale, theme, toggleTheme }}>
       {children}
     </DashboardContext.Provider>
   );

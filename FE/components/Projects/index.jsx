@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { Plus, ListFilter, LayoutDashboard, PauseCircle, Clock4, X } from 'lucide-react';
 import { getProjects, deleteProject } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import ProjectCard from './ProjectCard';
@@ -83,14 +84,14 @@ export default function ProjectsPage({ onProjectCreated }) {
             onClick={() => setShowCreateForm(true)}
             className="px-4 py-2 bg-primary text-on-primary rounded-lg text-label-md font-bold hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-2"
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
+            <Plus className="w-[18px] h-[18px]" />
             {locale === 'vi' ? 'Tạo dự án' : 'Create Project'}
           </button>
           <button
             onClick={() => setShowFilter(!showFilter)}
             className="px-4 py-2 border border-outline-variant rounded-lg text-label-md font-semibold hover:bg-surface-container transition-all flex items-center gap-2"
           >
-            <span className="material-symbols-outlined text-[18px]">filter_list</span>
+            <ListFilter className="w-[18px] h-[18px]" />
             {locale === 'vi' ? 'Bộ lọc' : 'Filters'}
           </button>
         </div>
@@ -100,7 +101,7 @@ export default function ProjectsPage({ onProjectCreated }) {
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary">dashboard</span>
+            <LayoutDashboard className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">{locale === 'vi' ? 'Tổng quan' : 'Overview'}</h3>
@@ -150,12 +151,12 @@ export default function ProjectsPage({ onProjectCreated }) {
 
         <div className="flex gap-4 mt-4 pt-4 border-t border-outline-variant">
           <div className="flex items-center gap-1.5 text-body-sm">
-            <span className="material-symbols-outlined text-amber-600 text-sm">pause_circle</span>
+            <PauseCircle className="w-4 h-4 text-amber-600" />
             <span className="text-on-surface-variant">{locale === 'vi' ? 'Tạm dừng:' : 'On Hold:'}</span>
             <span className="font-semibold text-amber-600">{summary.onHold}</span>
           </div>
           <div className="flex items-center gap-1.5 text-body-sm">
-            <span className="material-symbols-outlined text-red-600 text-sm">schedule</span>
+            <Clock4 className="w-4 h-4 text-red-600" />
             <span className="text-on-surface-variant">{locale === 'vi' ? 'Sắp đến hạn:' : 'Near Deadline:'}</span>
             <span className="font-semibold text-red-600">{summary.nearDeadline}</span>
           </div>
@@ -196,7 +197,7 @@ export default function ProjectsPage({ onProjectCreated }) {
             onClick={() => setFilters({ status: 'Tất cả', type: 'Tất cả' })}
             className="text-error font-semibold text-sm flex items-center gap-1 hover:underline"
           >
-            <span className="material-symbols-outlined text-sm">close</span>
+            <X className="w-4 h-4" />
             {locale === 'vi' ? 'Xóa lọc' : 'Clear Filters'}
           </button>
         </div>

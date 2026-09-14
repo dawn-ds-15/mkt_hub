@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, ArrowLeft, Boxes } from 'lucide-react';
 import { login as apiLogin, register as apiRegister, forgotPassword, verifyOtp, resetPassword } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 
@@ -183,23 +184,23 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-sidebar-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#080D1A] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl card-shadow border border-border-light p-8">
+        <div className="bg-white rounded-xl card-shadow border border-slate-200 p-8">
           <div className="flex flex-col items-center mb-6">
-            <div className="w-14 h-14 bg-primary rounded-xl flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-white text-3xl">hub</span>
+            <div className="w-14 h-14 bg-gradient-to-tr from-brand-600 to-brand-400 rounded-xl flex items-center justify-center shadow-lg shadow-brand-600/20 mb-4">
+              <Boxes className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-headline-lg font-headline-lg text-on-surface">MKT Hub</h1>
-            <p className="text-body-md text-on-surface-variant mt-1">{{ vi: 'Vận hành Marketing', en: 'Marketing Operations' }[locale]}</p>
+            <h1 className="text-headline-lg font-headline-lg text-slate-900">MKT Hub</h1>
+            <p className="text-body-md text-slate-500 mt-1">{{ vi: 'Vận hành Marketing', en: 'Marketing Operations' }[locale]}</p>
           </div>
 
-          <div className="flex mb-6 bg-surface-container-low rounded-lg p-1" role="tablist">
+          <div className="flex mb-6 bg-slate-100 rounded-lg p-1" role="tablist">
             <button
               role="tab"
               aria-selected={tab === 'login'}
               onClick={() => switchTab('login')}
-              className={`flex-1 py-2 text-label-md font-semibold rounded-md transition-colors ${tab === 'login' ? 'bg-white text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+              className={`flex-1 py-2 text-label-md font-semibold rounded-md transition-colors ${tab === 'login' ? 'bg-white text-on-surface shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               {{ vi: 'Đăng nhập', en: 'Login' }[locale]}
             </button>
@@ -207,7 +208,7 @@ export default function Login() {
               role="tab"
               aria-selected={tab === 'register'}
               onClick={() => switchTab('register')}
-              className={`flex-1 py-2 text-label-md font-semibold rounded-md transition-colors ${tab === 'register' ? 'bg-white text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+              className={`flex-1 py-2 text-label-md font-semibold rounded-md transition-colors ${tab === 'register' ? 'bg-white text-on-surface shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               {{ vi: 'Đăng ký', en: 'Register' }[locale]}
             </button>
@@ -216,7 +217,7 @@ export default function Login() {
           {tab === 'login' ? (
             <form onSubmit={handleLogin} noValidate className="space-y-5">
               <div className="space-y-1.5">
-                <label htmlFor="login-email" className="text-label-md text-on-surface-variant">{{ vi: 'Email', en: 'Email' }[locale]}</label>
+                <label htmlFor="login-email" className="text-label-md text-slate-600">{{ vi: 'Email', en: 'Email' }[locale]}</label>
                 <input
                   id="login-email"
                   name="email"
@@ -227,12 +228,12 @@ export default function Login() {
                   placeholder={{ vi: 'Nhập email', en: 'Enter email' }[locale]}
                   aria-describedby={error ? 'login-error' : undefined}
                   aria-invalid={error ? 'true' : undefined}
-                  className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-body-md text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent placeholder:text-slate-400"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="login-password" className="text-label-md text-on-surface-variant">{{ vi: 'Mật khẩu', en: 'Password' }[locale]}</label>
+                <label htmlFor="login-password" className="text-label-md text-slate-600">{{ vi: 'Mật khẩu', en: 'Password' }[locale]}</label>
                 <div className="relative">
                   <input
                     id="login-password"
@@ -244,10 +245,11 @@ export default function Login() {
                     placeholder="••••••••"
                     aria-describedby={error ? 'login-error' : undefined}
                     aria-invalid={error ? 'true' : undefined}
-                    className="w-full px-3 py-2.5 pr-10 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                    className="w-full px-3 py-2.5 pr-10 border border-slate-200 rounded-lg text-body-md text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent placeholder:text-slate-400"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? ({ vi: 'Ẩn mật khẩu', en: 'Hide password' })[locale] : ({ vi: 'Hiện mật khẩu', en: 'Show password' })[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
-                    <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? ({ vi: 'Ẩn mật khẩu', en: 'Hide password' })[locale] : ({ vi: 'Hiện mật khẩu', en: 'Show password' })[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1">
+                    <EyeOff className={showPassword ? 'w-[20px] h-[20px]' : 'hidden'} />
+                    <Eye className={showPassword ? 'hidden' : 'w-[20px] h-[20px]'} />
                   </button>
                 </div>
               </div>
@@ -261,7 +263,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-primary text-white font-bold py-2.5 rounded-lg text-body-md hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-brand-600 text-white font-bold py-2.5 rounded-lg text-body-md hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? ({ vi: 'Đang đăng nhập...', en: 'Logging in...' })[locale] : ({ vi: 'Đăng nhập', en: 'Login' })[locale]}
               </button>
@@ -270,7 +272,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={openForgot}
-                  className="text-body-sm text-primary hover:underline"
+                  className="text-body-sm text-brand-600 hover:underline"
                 >
                   {{ vi: 'Quên mật khẩu?', en: 'Forgot password?' }[locale]}
                 </button>
@@ -283,20 +285,20 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => switchTab('login')}
-                  className="inline-flex items-center gap-1 text-body-sm text-on-surface-variant hover:text-on-surface"
+                  className="inline-flex items-center gap-1 text-body-sm text-slate-500 hover:text-slate-700"
                 >
-                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                  <ArrowLeft className="w-4 h-4" />
                   {{ vi: 'Quay lại đăng nhập', en: 'Back to login' }[locale]}
                 </button>
               )}
 
               {forgotStep === 'email' && (
                 <form onSubmit={handleSendOtp} noValidate className="space-y-5">
-                  <p className="text-body-sm text-on-surface-variant">
+                  <p className="text-body-sm text-slate-600">
                     {{ vi: 'Nhập email đăng ký của bạn, chúng tôi sẽ gửi mã OTP để đặt lại mật khẩu.', en: 'Enter your registered email and we will send you an OTP code to reset your password.' }[locale]}
                   </p>
                   <div className="space-y-1.5">
-                    <label htmlFor="fp-email" className="text-label-md text-on-surface-variant">{{ vi: 'Email', en: 'Email' }[locale]}</label>
+                    <label htmlFor="fp-email" className="text-label-md text-slate-600">{{ vi: 'Email', en: 'Email' }[locale]}</label>
                     <input
                       id="fp-email"
                       name="email"
@@ -307,7 +309,7 @@ export default function Login() {
                       placeholder={{ vi: 'Nhập email', en: 'Enter email' }[locale]}
                       aria-describedby={fpError ? 'fp-error' : undefined}
                       aria-invalid={fpError ? 'true' : undefined}
-                      className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-body-md text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent placeholder:text-slate-400"
                     />
                   </div>
                   {fpError && (
@@ -318,7 +320,7 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={fpLoading}
-                    className="w-full bg-primary text-white font-bold py-2.5 rounded-lg text-body-md hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-brand-600 text-white font-bold py-2.5 rounded-lg text-body-md hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {fpLoading ? ({ vi: 'Đang gửi...', en: 'Sending...' })[locale] : ({ vi: 'Gửi mã OTP', en: 'Send OTP' }[locale])}
                   </button>
@@ -327,11 +329,11 @@ export default function Login() {
 
               {forgotStep === 'reset' && (
                 <form onSubmit={handleResetPassword} noValidate className="space-y-5">
-                  <p className="text-body-sm text-on-surface-variant">
+                  <p className="text-body-sm text-slate-600">
                     {{ vi: 'Nhập mã OTP đã gửi tới', en: 'Enter the OTP code sent to' }[locale]} <strong>{forgotEmail}</strong>
                   </p>
                   <div className="space-y-1.5">
-                    <label htmlFor="fp-otp" className="text-label-md text-on-surface-variant">{{ vi: 'Mã OTP', en: 'OTP Code' }[locale]}</label>
+                    <label htmlFor="fp-otp" className="text-label-md text-slate-600">{{ vi: 'Mã OTP', en: 'OTP Code' }[locale]}</label>
                     <input
                       id="fp-otp"
                       name="otp"
@@ -342,12 +344,12 @@ export default function Login() {
                       onChange={(e) => { setForgotOtp(e.target.value.replace(/[^\d]/g, '')); setFpError(''); }}
                       placeholder={{ vi: 'Nhập mã OTP', en: 'Enter OTP' }[locale]}
                       aria-invalid={fpError ? 'true' : undefined}
-                      className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface tracking-[0.4em] text-center bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline placeholder:tracking-normal"
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-body-md text-slate-900 tracking-[0.4em] text-center bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent placeholder:text-slate-400 placeholder:tracking-normal"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label htmlFor="fp-new-password" className="text-label-md text-on-surface-variant">{{ vi: 'Mật khẩu mới', en: 'New Password' }[locale]}</label>
+                    <label htmlFor="fp-new-password" className="text-label-md text-slate-600">{{ vi: 'Mật khẩu mới', en: 'New Password' }[locale]}</label>
                     <div className="relative">
                       <input
                         id="fp-new-password"
@@ -358,16 +360,17 @@ export default function Login() {
                         onChange={(e) => { setForgotNewPass(e.target.value); setFpError(''); }}
                         placeholder="••••••••"
                         aria-invalid={fpError ? 'true' : undefined}
-                        className="w-full px-3 py-2.5 pr-10 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                        className="w-full px-3 py-2.5 pr-10 border border-slate-200 rounded-lg text-body-md text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent placeholder:text-slate-400"
                       />
-                      <button type="button" onClick={() => setShowForgotPass(!showForgotPass)} aria-pressed={showForgotPass} aria-label={{ vi: 'Hiện/ẩn mật khẩu', en: 'Show/hide password' }[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
-                        <span className="material-symbols-outlined text-[20px]">{showForgotPass ? 'visibility_off' : 'visibility'}</span>
+                      <button type="button" onClick={() => setShowForgotPass(!showForgotPass)} aria-pressed={showForgotPass} aria-label={{ vi: 'Hiện/ẩn mật khẩu', en: 'Show/hide password' }[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1">
+                        <EyeOff className={showForgotPass ? 'w-[20px] h-[20px]' : 'hidden'} />
+                        <Eye className={showForgotPass ? 'hidden' : 'w-[20px] h-[20px]'} />
                       </button>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label htmlFor="fp-confirm-password" className="text-label-md text-on-surface-variant">{{ vi: 'Xác nhận mật khẩu mới', en: 'Confirm New Password' }[locale]}</label>
+                    <label htmlFor="fp-confirm-password" className="text-label-md text-slate-600">{{ vi: 'Xác nhận mật khẩu mới', en: 'Confirm New Password' }[locale]}</label>
                     <input
                       id="fp-confirm-password"
                       name="confirmNewPassword"
@@ -377,7 +380,7 @@ export default function Login() {
                       onChange={(e) => { setForgotConfirmPass(e.target.value); setFpError(''); }}
                       placeholder="••••••••"
                       aria-invalid={fpError ? 'true' : undefined}
-                      className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-body-md text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent placeholder:text-slate-400"
                     />
                   </div>
 
@@ -389,7 +392,7 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={fpLoading}
-                    className="w-full bg-primary text-white font-bold py-2.5 rounded-lg text-body-md hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-brand-600 text-white font-bold py-2.5 rounded-lg text-body-md hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {fpLoading ? ({ vi: 'Đang xử lý...', en: 'Processing...' })[locale] : ({ vi: 'Đặt lại mật khẩu', en: 'Reset Password' }[locale])}
                   </button>
@@ -414,7 +417,7 @@ export default function Login() {
           ) : (
             <form onSubmit={handleRegister} noValidate className="space-y-5">
               <div className="space-y-1.5">
-                <label htmlFor="reg-name" className="text-label-md text-on-surface-variant">{{ vi: 'Họ tên', en: 'Full Name' }[locale]}</label>
+                <label htmlFor="reg-name" className="text-label-md text-slate-600">{{ vi: 'Họ tên', en: 'Full Name' }[locale]}</label>
                 <input
                   id="reg-name"
                   name="name"
@@ -425,12 +428,12 @@ export default function Login() {
                   placeholder="Nguyễn Văn A"
                   aria-describedby={error ? 'reg-error' : undefined}
                   aria-invalid={error ? 'true' : undefined}
-                  className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-body-md text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent placeholder:text-slate-400"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="reg-email" className="text-label-md text-on-surface-variant">{{ vi: 'Email', en: 'Email' }[locale]}</label>
+                <label htmlFor="reg-email" className="text-label-md text-slate-600">{{ vi: 'Email', en: 'Email' }[locale]}</label>
                 <input
                   id="reg-email"
                   name="email"
@@ -441,12 +444,12 @@ export default function Login() {
                   placeholder="email@example.com"
                   aria-describedby={error ? 'reg-error' : undefined}
                   aria-invalid={error ? 'true' : undefined}
-                  className="w-full px-3 py-2.5 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-body-md text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent placeholder:text-slate-400"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="reg-password" className="text-label-md text-on-surface-variant">{{ vi: 'Mật khẩu', en: 'Password' }[locale]}</label>
+                <label htmlFor="reg-password" className="text-label-md text-slate-600">{{ vi: 'Mật khẩu', en: 'Password' }[locale]}</label>
                 <div className="relative">
                   <input
                     id="reg-password"
@@ -458,16 +461,17 @@ export default function Login() {
                     placeholder="••••••••"
                     aria-describedby={error ? 'reg-error' : undefined}
                     aria-invalid={error ? 'true' : undefined}
-                    className="w-full px-3 py-2.5 pr-10 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                    className="w-full px-3 py-2.5 pr-10 border border-slate-200 rounded-lg text-body-md text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent placeholder:text-slate-400"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? ({ vi: 'Ẩn mật khẩu', en: 'Hide password' })[locale] : ({ vi: 'Hiện mật khẩu', en: 'Show password' })[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
-                    <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? ({ vi: 'Ẩn mật khẩu', en: 'Hide password' })[locale] : ({ vi: 'Hiện mật khẩu', en: 'Show password' })[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1">
+                    <EyeOff className={showPassword ? 'w-[20px] h-[20px]' : 'hidden'} />
+                    <Eye className={showPassword ? 'hidden' : 'w-[20px] h-[20px]'} />
                   </button>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="reg-confirm-password" className="text-label-md text-on-surface-variant">{{ vi: 'Xác nhận mật khẩu', en: 'Confirm Password' }[locale]}</label>
+                <label htmlFor="reg-confirm-password" className="text-label-md text-slate-600">{{ vi: 'Xác nhận mật khẩu', en: 'Confirm Password' }[locale]}</label>
                 <div className="relative">
                   <input
                     id="reg-confirm-password"
@@ -479,10 +483,11 @@ export default function Login() {
                     placeholder="••••••••"
                     aria-describedby={error ? 'reg-error' : undefined}
                     aria-invalid={error ? 'true' : undefined}
-                    className="w-full px-3 py-2.5 pr-10 border border-border-light rounded-lg text-body-md text-on-surface bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-outline"
+                    className="w-full px-3 py-2.5 pr-10 border border-slate-200 rounded-lg text-body-md text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent placeholder:text-slate-400"
                   />
-                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} aria-pressed={showNewPassword} aria-label={showNewPassword ? ({ vi: 'Ẩn mật khẩu', en: 'Hide password' })[locale] : ({ vi: 'Hiện mật khẩu', en: 'Show password' })[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1">
-                    <span className="material-symbols-outlined text-[20px]">{showNewPassword ? 'visibility_off' : 'visibility'}</span>
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} aria-pressed={showNewPassword} aria-label={showNewPassword ? ({ vi: 'Ẩn mật khẩu', en: 'Hide password' })[locale] : ({ vi: 'Hiện mật khẩu', en: 'Show password' })[locale]} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1">
+                    <EyeOff className={showNewPassword ? 'w-[20px] h-[20px]' : 'hidden'} />
+                    <Eye className={showNewPassword ? 'hidden' : 'w-[20px] h-[20px]'} />
                   </button>
                 </div>
               </div>
@@ -496,7 +501,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-primary text-white font-bold py-2.5 rounded-lg text-body-md hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-brand-600 text-white font-bold py-2.5 rounded-lg text-body-md hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? ({ vi: 'Đang đăng ký...', en: 'Registering...' })[locale] : ({ vi: 'Đăng ký', en: 'Register' })[locale]}
               </button>

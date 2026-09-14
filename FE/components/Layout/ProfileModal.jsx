@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { changePassword } from '../../services/api';
 
@@ -58,9 +59,9 @@ export default function ProfileModal({ onClose, userEmail }) {
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-md pointer-events-auto mx-4">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <h3 className="text-base font-bold">{t(L.title)}</h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+            <h3 className="text-base font-bold text-slate-900">{t(L.title)}</h3>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
           </div>
 
           <div className="px-6 py-5 space-y-4">
@@ -87,8 +88,8 @@ export default function ProfileModal({ onClose, userEmail }) {
             </div>
 
             {message && (
-              <p className={`text-xs flex items-center gap-1 ${msgType === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                <span className="material-symbols-outlined text-[14px]">{msgType === 'success' ? 'check_circle' : 'error'}</span>
+              <p className={`text-xs flex items-center gap-1.5 ${msgType === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                {msgType === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                 {message}
               </p>
             )}

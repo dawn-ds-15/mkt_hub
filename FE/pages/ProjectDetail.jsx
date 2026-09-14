@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import {
+  ChevronRight, PlayCircle, CalendarDays, CheckCircle2, CircleX, PauseCircle,
+  Clock4, ShieldCheck, TriangleAlert, ArrowRight, CloudUpload, Loader2, Trash2,
+  FileText, FileSpreadsheet, ImageIcon, FileType2, CircleDot, Circle,
+} from 'lucide-react';
 import Layout from '../components/Layout';
 import {
   getProject,
@@ -17,12 +22,12 @@ import CreateProjectForm from '../components/Projects/CreateProjectForm';
 import ProjectExpenses from '../components/ExpenseManagement/ProjectExpenses';
 
 const statusConfig = {
-  near_deadline: { label: 'Sắp hết hạn', bg: 'bg-amber-100', text: 'text-amber-700', icon: 'schedule' },
-  active: { label: 'Đang thực hiện', bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed', icon: 'play_circle' },
-  planning: { label: 'Lên kế hoạch', bg: 'bg-blue-100', text: 'text-blue-700', icon: 'event' },
-  completed: { label: 'Hoàn thành', bg: 'bg-green-100', text: 'text-green-700', icon: 'check_circle' },
-  cancelled: { label: 'Đã huỷ', bg: 'bg-red-100', text: 'text-red-700', icon: 'cancel' },
-  on_hold: { label: 'Tạm dừng', bg: 'bg-amber-100', text: 'text-amber-700', icon: 'pause_circle' },
+  near_deadline: { label: 'Sắp hết hạn', bg: 'bg-amber-100', text: 'text-amber-700', icon: Clock4 },
+  active: { label: 'Đang thực hiện', bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed', icon: PlayCircle },
+  planning: { label: 'Lên kế hoạch', bg: 'bg-blue-100', text: 'text-blue-700', icon: CalendarDays },
+  completed: { label: 'Hoàn thành', bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle2 },
+  cancelled: { label: 'Đã huỷ', bg: 'bg-red-100', text: 'text-red-700', icon: CircleX },
+  on_hold: { label: 'Tạm dừng', bg: 'bg-amber-100', text: 'text-amber-700', icon: PauseCircle },
 };
 
 function getInitials(name) {
@@ -55,10 +60,10 @@ function dueLabel(iso, locale) {
 
 function taskMeta(task) {
   const s = task.status || task.statusLabel || '';
-  if (s === 'Done' || task.statusLabel === 'Done') return { icon: 'check_circle', iconClass: 'text-success', done: true };
-  if (s === 'overdue') return { icon: 'schedule', iconClass: 'text-danger' };
-  if (s === 'Processing') return { icon: 'radio_button_checked', iconClass: 'text-secondary-container' };
-  return { icon: 'radio_button_unchecked', iconClass: 'text-outline' };
+  if (s === 'Done' || task.statusLabel === 'Done') return { icon: CheckCircle2, iconClass: 'text-success', done: true };
+  if (s === 'overdue') return { icon: Clock4, iconClass: 'text-danger' };
+  if (s === 'Processing') return { icon: CircleDot, iconClass: 'text-secondary-container' };
+  return { icon: Circle, iconClass: 'text-outline' };
 }
 
 function fmtSize(bytes) {
@@ -70,11 +75,11 @@ function fmtSize(bytes) {
 
 function docIcon(type, name) {
   const t = `${type || ''} ${name || ''}`.toLowerCase();
-  if (t.includes('pdf')) return 'picture_as_pdf';
-  if (/png|jpe?g|gif|webp|svg|image/.test(t)) return 'image';
-  if (/xls|csv/.test(t)) return 'table_chart';
-  if (/\.docx?|word/.test(t)) return 'article';
-  return 'description';
+  if (t.includes('pdf')) return FileType2;
+  if (/png|jpe?g|gif|webp|svg|image/.test(t)) return ImageIcon;
+  if (/xls|csv/.test(t)) return FileSpreadsheet;
+  if (/\.docx?|word/.test(t)) return FileText;
+  return FileText;
 }
 
 function CircularProgress({ value }) {
@@ -233,8 +238,8 @@ const load = useCallback(() => {
 
   const st = statusConfig[project?.status] || statusConfig.active;
   const health = (project?.status === 'near_deadline' || project?.status === 'on_hold' || project?.status === 'cancelled')
-    ? { label: locale === 'vi' ? 'Chậm tiến độ' : 'Behind schedule', color: 'text-danger', icon: 'error' }
-    : { label: locale === 'vi' ? 'Tốt (Đúng hạn)' : 'Healthy (On track)', color: 'text-success', icon: 'health_and_safety' };
+    ? { label: locale === 'vi' ? 'Chậm tiến độ' : 'Behind schedule', color: 'text-danger', icon: TriangleAlert }
+    : { label: locale === 'vi' ? 'Tốt (Đúng hạn)' : 'Healthy (On track)', color: 'text-success', icon: ShieldCheck };
 
   const projectPlanFromCategories = (() => {
     if (!categoryBudgetTree || !Array.isArray(categoryBudgetTree.categories)) return 0;
@@ -294,13 +299,13 @@ const load = useCallback(() => {
           <div>
             <div className="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md mb-1">
               <Link to="/projects" className="hover:text-primary transition-colors">{locale === 'vi' ? 'Dự án' : 'Projects'}</Link>
-              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>chevron_right</span>
+              <ChevronRight className="w-3.5 h-3.5" />
               <span className="text-on-surface">{locale === 'vi' ? 'Chi tiết' : 'Detail'}</span>
             </div>
             <div className="flex items-center gap-4 flex-wrap">
               <h2 className="text-[24px] leading-[32px] font-semibold text-on-surface">{project.name}</h2>
               <span className={`inline-flex items-center px-2 py-[2px] rounded-full font-label-md text-label-md ${st.bg} ${st.text}`}>
-                <span className="material-symbols-outlined mr-1" style={{ fontSize: 14, fontVariationSettings: "'FILL' 1" }}>{st.icon}</span>
+                <st.icon className="w-3.5 h-3.5 mr-1" />
                 {locale === 'vi' ? st.label : ({
                   near_deadline: 'Near deadline', active: 'Active', planning: 'Planning',
                   completed: 'Completed', cancelled: 'Cancelled', on_hold: 'On Hold',
@@ -330,7 +335,7 @@ const load = useCallback(() => {
                 <CircularProgress value={project.progress} />
               </div>
               <div className="flex items-center gap-1 font-label-md text-label-md">
-                <span className={`material-symbols-outlined ${health.color}`} style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>{health.icon}</span>
+                <health.icon className={`w-4 h-4 ${health.color}`} />
                 <span className={health.color}>{health.label}</span>
               </div>
               <div className="flex items-center gap-4 mt-4 text-on-surface-variant font-label-md text-label-md">
@@ -378,7 +383,7 @@ const load = useCallback(() => {
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Ngân sách dự án' : 'Project Budget'}</h3>
               <button onClick={() => navigate('/expense')} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Mở module Chi phí' : 'Open Expense module'}>
-                <span className="material-symbols-outlined">arrow_forward</span>
+                <ArrowRight className="w-5 h-5" />
               </button>
             </div>
             <div className="flex flex-col gap-2 flex-1 justify-center">
@@ -404,7 +409,7 @@ const load = useCallback(() => {
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Công việc gần nhất' : 'Recent Tasks'}</h3>
               <button onClick={() => navigate(`/tasks?projectId=${id}`)} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Mở module Công việc' : 'Open Tasks module'}>
-                <span className="material-symbols-outlined">arrow_forward</span>
+                <ArrowRight className="w-5 h-5" />
               </button>
             </div>
             {recentTasks.length > 0 ? (
@@ -414,7 +419,7 @@ const load = useCallback(() => {
                   return (
                     <li key={idx} className="flex items-center justify-between p-2 rounded hover:bg-background transition-colors">
                       <div className="flex items-center gap-2">
-                        <span className={`material-symbols-outlined ${meta.iconClass}`} style={{ fontVariationSettings: meta.done ? "'FILL' 1" : "'FILL' 0" }}>{meta.icon}</span>
+                        <meta.icon className={`w-[18px] h-[18px] ${meta.iconClass}`} />
                         <span className={`text-[14px] leading-[20px] truncate max-w-[220px] ${meta.done ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{task.name}</span>
                       </div>
                       <div className="flex items-center gap-4">
@@ -439,7 +444,7 @@ const load = useCallback(() => {
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Chi phí phát sinh' : 'Incurred Expenses'}</h3>
               <button onClick={() => navigate(`/expense?tab=input&projectId=${id}`)} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Xem lịch sử chi phí dự án' : 'View project expense history'}>
-                <span className="material-symbols-outlined">arrow_forward</span>
+                <ArrowRight className="w-5 h-5" />
               </button>
             </div>
             <ProjectExpenses projectId={project.id} onDataLoaded={setExpenseTotals} />
@@ -464,7 +469,7 @@ const load = useCallback(() => {
                 dragOver ? 'border-primary bg-primary/5' : 'border-surface-container-high bg-background-subtle hover:bg-surface-container-low'
               }`}
             >
-              <span className={`material-symbols-outlined transition-colors ${dragOver ? 'text-primary' : 'text-on-surface-variant'}`} style={{ fontSize: 32 }}>{uploading ? 'sync' : 'cloud_upload'}</span>
+              {uploading ? <Loader2 className={`w-8 h-8 animate-spin transition-colors ${dragOver ? 'text-primary' : 'text-on-surface-variant'}`} /> : <CloudUpload className={`w-8 h-8 transition-colors ${dragOver ? 'text-primary' : 'text-on-surface-variant'}`} />}
               <p className="text-[14px] leading-[20px] text-on-surface-variant">
                 {uploading
                   ? (locale === 'vi' ? 'Đang tải lên...' : 'Uploading...')
@@ -482,9 +487,11 @@ const load = useCallback(() => {
             </div>
             {docs.length > 0 ? (
               <ul className="flex flex-col gap-2">
-                {docs.map((doc) => (
+                {[...docs].map((doc) => {
+                    const DocIcon = docIcon(doc.type, doc.name);
+                    return (
                   <li key={doc.id} className="flex items-center gap-3 p-2 rounded-lg border border-surface-container-high hover:bg-background transition-colors">
-                    <span className={`material-symbols-outlined ${docIcon(doc.type, doc.name) === 'description' ? 'text-secondary-container' : 'text-primary'}`}>{docIcon(doc.type, doc.name)}</span>
+                    <DocIcon className={`w-5 h-5 flex-shrink-0 ${DocIcon === FileText ? 'text-secondary-container' : 'text-primary'}`} />
                     <div className="flex-1 min-w-0">
                       <a
                         href={doc.url || undefined}
@@ -519,10 +526,11 @@ const load = useCallback(() => {
                       title={locale === 'vi' ? 'Xoá hồ sơ' : 'Delete document'}
                       className="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:text-danger hover:bg-error-container transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                      <Trash2 className="w-[18px] h-[18px]" />
                     </button>
                   </li>
-                ))}
+                    );
+                  })}
               </ul>
             ) : (
               <div className="flex items-center justify-center py-6 text-on-surface-variant text-[14px] leading-[20px]">

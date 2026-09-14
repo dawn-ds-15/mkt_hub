@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { X, Sparkles, Eye, User, CalendarDays, Clock4 } from 'lucide-react';
 import { updateProject, getMembers, getDropdownKeys, createProject, getChecklistTemplates } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -182,7 +183,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
         <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">{locale === 'vi' ? (isEditing ? 'Chỉnh sửa Dự án' : 'Tạo Dự án Mới') : (isEditing ? 'Edit Project' : 'New Project')}</h3>
         {onClose && (
           <button onClick={onClose} className="text-on-surface-variant hover:text-primary transition-colors">
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <X className="w-5 h-5" />
           </button>
         )}
       </div>
@@ -228,7 +229,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
               </span>
             </div>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">auto_awesome</span>
+              <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-[18px] h-[18px] pointer-events-none" />
               <select
                 className="w-full pl-10 pr-4 py-2 bg-surface-container-low text-body-md border border-outline-variant rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
                 value={templateKey}
@@ -252,7 +253,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
                   onClick={() => setShowPreview(true)}
                   className="flex items-center gap-1 shrink-0 text-[12px] leading-[16px] font-semibold text-primary hover:underline"
                 >
-                  <span className="material-symbols-outlined text-[16px]">visibility</span>
+                  <Eye className="w-4 h-4" />
                   {locale === 'vi' ? 'Xem trước mẫu' : 'Preview template'}
                 </button>
               </div>
@@ -262,7 +263,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
         <div className="space-y-1">
           <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Chủ sở hữu' : 'Owner'}</label>
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">person</span>
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-[18px] h-[18px] pointer-events-none" />
             <select
               className={`w-full pl-10 pr-4 py-2 bg-surface-container-low text-body-md border rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none ${errorField === 'ownerId' ? 'border-red-400' : 'border-outline-variant'}`}
               value={ownerId}
@@ -278,7 +279,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
         <div className="space-y-1">
           <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Hạn chót' : 'Deadline'}</label>
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">event</span>
+            <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-[18px] h-[18px] pointer-events-none" />
             <input
               className={`w-full pl-10 pr-4 py-2 bg-surface-container-low border rounded text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none ${errorField === 'deadline' ? 'border-red-400' : 'border-outline-variant'}`}
               type="date"
@@ -313,7 +314,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
                   </p>
                 </div>
                 <button onClick={() => setShowPreview(false)} className="text-on-surface-variant hover:text-primary transition-colors">
-                  <span className="material-symbols-outlined text-[20px]">close</span>
+                  <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="overflow-y-auto p-4 space-y-4">
@@ -328,7 +329,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
                             <p className="text-on-surface font-medium leading-snug">{t.name}</p>
                             <p className="text-[11px] leading-[15px] text-on-surface-variant mt-0.5 flex items-center gap-1.5 flex-wrap">
                               <span className="inline-flex items-center gap-0.5">
-                                <span className="material-symbols-outlined text-[13px]">schedule</span>
+                                <Clock4 className="w-3.5 h-3.5" />
                                 {(t.startOffset && t.endOffset && t.startOffset !== t.endOffset)
                                   ? `${t.startOffset} – ${t.endOffset}`
                                   : (t.startOffset || t.endOffset || `T-${t.daysBeforeDeadline} ${locale === 'vi' ? 'ngày' : 'days'}`)}

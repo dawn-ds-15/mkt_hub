@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { CloudUpload, Image as ImageIcon, FileSpreadsheet, CheckCircle2, X } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 const ACCEPT = {
@@ -73,9 +74,11 @@ export default function FileUploadModal({ type, onClose, onConfirm }) {
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto pointer-events-auto mx-4">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-            <h3 className="text-base font-bold">{TYPE_LABEL(locale)[type]}</h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 sticky top-0 bg-white z-10">
+            <h3 className="text-base font-bold text-slate-900">{TYPE_LABEL(locale)[type]}</h3>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors p-1">
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           <div className="px-6 py-5 space-y-5">
@@ -85,17 +88,17 @@ export default function FileUploadModal({ type, onClose, onConfirm }) {
               onDrop={handleDrop}
               onClick={() => inputRef.current && inputRef.current.click()}
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                dragOver ? 'border-primary bg-primary/5' : 'border-border-light hover:border-primary/50'
+                dragOver ? 'border-brand-600 bg-brand-600/5' : 'border-slate-300 hover:border-brand-600/60'
               }`}
             >
               <div className="flex justify-center mb-3">
-                <span className="material-symbols-outlined text-[40px] text-primary">cloud_upload</span>
+                <CloudUpload className="w-10 h-10 text-brand-600" />
               </div>
-              <p className="text-sm font-semibold text-on-surface mb-1">
+              <p className="text-sm font-semibold text-slate-900 mb-1">
                 {locale === 'vi' ? 'Kéo thả file vào đây hoặc' : 'Drag & drop a file here or'}
-                <span className="text-primary ml-1">{locale === 'vi' ? 'chọn file' : 'browse'}</span>
+                <span className="text-brand-600 ml-1">{locale === 'vi' ? 'chọn file' : 'browse'}</span>
               </p>
-              <p className="text-xs text-on-surface-variant">{TYPE_HINT(locale)[type]}</p>
+              <p className="text-xs text-slate-500">{TYPE_HINT(locale)[type]}</p>
               <input
                 ref={inputRef}
                 type="file"
@@ -106,30 +109,32 @@ export default function FileUploadModal({ type, onClose, onConfirm }) {
             </div>
 
             {file && (
-              <div className="bg-background-subtle border border-border-light rounded-lg p-4 flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary">{type === 'image' ? 'image' : 'description'}</span>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 flex items-center gap-3">
+                {type === 'image'
+                  ? <ImageIcon className="w-6 h-6 text-brand-600 shrink-0" />
+                  : <FileSpreadsheet className="w-6 h-6 text-brand-600 shrink-0" />}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-on-surface truncate">{file.name}</p>
-                  <p className="text-xs text-on-surface-variant">
+                  <p className="text-sm font-medium text-slate-900 truncate">{file.name}</p>
+                  <p className="text-xs text-slate-500">
                     {(file.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
                 <button
                   onClick={() => setFile(null)}
-                  className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                  className="text-slate-400 hover:text-slate-600 transition-colors p-1"
                 >
-                  &times;
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             )}
 
             {type === 'image' && file?.dataUrl && (
-              <img src={file.dataUrl} alt={file.name} className="w-full max-h-56 object-contain rounded-lg border border-border-light" />
+              <img src={file.dataUrl} alt={file.name} className="w-full max-h-56 object-contain rounded-lg border border-slate-200" />
             )}
           </div>
 
-          <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
-            <button onClick={onClose} className="px-6 py-2.5 border border-border-light rounded-lg text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer">
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200">
+            <button onClick={onClose} className="px-6 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
               {locale === 'vi' ? 'Hủy bỏ' : 'Cancel'}
             </button>
             <button
@@ -143,9 +148,9 @@ export default function FileUploadModal({ type, onClose, onConfirm }) {
                   onConfirm(file.name, { size: file.size, dataUrl: null, file: null });
                 }
               }}
-              className="px-8 py-2.5 bg-primary text-white rounded-lg text-sm font-bold shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+              className="px-8 py-2.5 bg-brand-600 text-white rounded-lg text-sm font-bold shadow-md shadow-brand-600/20 hover:bg-brand-700 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
-              <span className="material-symbols-outlined text-base">check_circle</span>
+              <CheckCircle2 className="w-4 h-4" />
               {locale === 'vi' ? 'Xác nhận' : 'Confirm'}
             </button>
           </div>

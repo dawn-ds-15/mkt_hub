@@ -1,4 +1,6 @@
-const trendSymbols = { up: '▲', flat: '—', down: '▼' };
+import { TrendingUp, TrendingDown, Minus, TrendingUp as UpBadgeIcon, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+
+const trendSymbols = { up: <TrendingUp className="w-3 h-3" />, flat: <Minus className="w-3 h-3" />, down: <TrendingDown className="w-3 h-3" /> };
 const trendColors = { up: 'text-success', flat: 'text-warning', down: 'text-danger' };
 const accentBorders = {
   blue: 'bg-[#2563EB]',
@@ -8,24 +10,38 @@ const accentBorders = {
   purple: 'bg-[#8B5CF6]',
 };
 
-export default function KPICard({ label, value, emoji, accent, trend, percentage, suffix, badge, planValue, planLabel, barColor, barWidth }) {
+const badgeIcons = {
+  trending_up: <UpBadgeIcon className="w-3 h-3" />,
+  schedule: <Clock className="w-3 h-3" />,
+  warning: <AlertTriangle className="w-3 h-3" />,
+  error: <AlertTriangle className="w-3 h-3" />,
+  check_circle: <CheckCircle2 className="w-3 h-3" />,
+};
+
+export default function KPICard({ label, value, accent, trend, percentage, suffix, badge, planValue, planLabel, barColor, barWidth }) {
+  const accentClass = accentBorders[accent] || 'bg-primary';
   return (
     <div className={`bg-white rounded-xl border border-border-light p-2.5 relative overflow-hidden`}>
-      <div className={`absolute top-0 left-0 right-0 h-[3px] ${accentBorders[accent] || 'bg-primary'}`} />
-      <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1 truncate">{emoji} {label}</div>
-      <div className="text-xl font-extrabold text-gray-900 tracking-tight mb-0.5 leading-tight">{value}</div>
+      <div className={`absolute top-0 left-0 right-0 h-[3px] ${accentClass}`} />
+      <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1 truncate">
+        <span className={`inline-block w-1.5 h-1.5 rounded-full ${accentClass} mr-1.5 align-middle`} />
+        {label}
+      </div>
+      <div className="text-xl font-extrabold text-gray-900 tracking-tight mb-0.5 leading-tight num">{value}</div>
       <div className={`flex items-center gap-1 text-[10px] ${trend ? trendColors[trend] : 'text-gray-400'}`}>
         {badge ? (
           <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${badge.bgColor} ${badge.textColor}`}>
-            <span className="material-symbols-outlined text-[12px]">{badge.icon}</span>
+            {badgeIcons[badge.icon] || <UpBadgeIcon className="w-3 h-3" />}
             {badge.label}
           </span>
         ) : trend ? (
-          <>{trendSymbols[trend]} {percentage}% {suffix}</>
+          <>
+            <span className="inline-flex items-center">{trendSymbols[trend]}</span> {percentage}% {suffix}
+          </>
         ) : null}
       </div>
       {planValue != null && (
-        <div className="text-[10px] text-gray-400 mt-0.5 truncate">{planLabel}: {planValue}</div>
+        <div className="text-[10px] text-gray-400 mt-0.5 truncate">{planLabel}: <span className="num">{planValue}</span></div>
       )}
       {barWidth && (
         <div className="mt-1.5 h-1 bg-gray-100 rounded-full overflow-hidden">

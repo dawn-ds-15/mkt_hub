@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { CalendarDays, LayoutDashboard, TriangleAlert } from 'lucide-react';
 import { getKanbanData, updateTask, getProjects, getMembers, getTask } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import TaskViewModal from './TaskViewModal';
@@ -366,7 +367,7 @@ export default function KanbanBoard() {
             {members.map(m => <option key={m.id}>{m.name}</option>)}
           </select>
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg">
-            <span className="material-symbols-outlined text-sm text-gray-400">calendar_today</span>
+            <CalendarDays className="w-4 h-4 text-gray-400" />
             <input
               type="date"
               value={dateFrom}
@@ -386,7 +387,7 @@ export default function KanbanBoard() {
         </div>
 
         <div className="text-[11px] text-gray-400 font-medium flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-sm">dashboard</span>
+          <LayoutDashboard className="w-3.5 h-3.5" />
           {filteredColumns.reduce((s, c) => s + c.tasks.length, 0)} {locale === 'vi' ? 'task' : 'tasks'} • {filteredColumns.length} {locale === 'vi' ? 'cột' : 'columns'}
         </div>
         <div className="flex flex-row flex-nowrap gap-3 pb-4" style={{ minHeight: 'calc(100vh - 280px)' }}>
@@ -466,7 +467,7 @@ export default function KanbanBoard() {
           <div className="fixed inset-0 bg-black/30" onClick={() => setWarningPopup(null)} />
           <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-3xl text-amber-500">warning</span>
+              <TriangleAlert className="w-7 h-7 text-amber-500" />
               <h3 className="text-base font-bold">{locale === 'vi' ? 'Không thể di chuyển' : 'Cannot move task'}</h3>
             </div>
             <p className="text-sm text-gray-600">

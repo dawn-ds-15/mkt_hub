@@ -8,4 +8,6 @@ specification
 *.sql
 *.xlsx
 *.csv
+*.tar
+*.tar.gz
 README.md

@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ExpenseEntryForm from '../components/ExpenseManagement/ExpenseEntryForm';
 import ExpenseHistory from '../components/ExpenseManagement/ExpenseHistory';
-import ExpenseReports from '../components/ExpenseManagement/ExpenseReports';
 import ExpenseOverview from '../components/ExpenseManagement/ExpenseOverview';
 import ExpenseBudget from '../components/ExpenseManagement/ExpenseBudget';
 import CategoryBudgetEntry from '../components/ExpenseManagement/CategoryBudgetEntry';
@@ -116,19 +115,8 @@ export default function ExpenseManagement() {
           </div>
         );
       case 'overview':
-        return (
-          <div className="space-y-8">
-            <ExpenseOverview refreshKey={refreshKey} />
-            {role === 'manager' && (
-              <div className="border-t border-border-light pt-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-headline-sm text-headline-sm text-on-surface">{locale === 'vi' ? 'Báo cáo Chi phí' : 'Expense Reports'}</h2>
-                </div>
-                <ExpenseReports refreshKey={refreshKey} />
-              </div>
-            )}
-          </div>
-        );
+        // Nội dung tab theo feedback T05 (25/09): bộ lọc thời gian, Tổng chi phí/ROAS/CAC, biểu đồ tròn + bảng dự án, so sánh các năm
+        return <ExpenseOverview refreshKey={refreshKey} />;
       case 'budget':
         return <ExpenseBudget refreshKey={refreshKey} onSaved={handleSaved} onAddExpense={() => setActiveTab('input')} />;
       default:

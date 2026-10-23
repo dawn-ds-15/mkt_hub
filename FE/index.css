@@ -161,6 +161,11 @@ html.dark [class*="bg-surface-container-highest"] {
 html.dark [class*="bg-surface-bright"] {
   background-color: #080E1C !important;
 }
+/* Plain "bg-surface" (exact token) — e.g. pagination footer, bars */
+html.dark [class*="bg-surface "],
+html.dark [class$="bg-surface"] {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
 
 html.dark [class*="bg-slate-50"] {
   background-color: #080E1C !important;

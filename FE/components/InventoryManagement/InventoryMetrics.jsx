@@ -6,6 +6,7 @@ function formatCurrency(val) {
 
 const METRIC_META = {
   totalStock: { icon: 'inventory_2', tone: 'secondary' },
+  totalImportValue: { icon: 'move_to_inbox', tone: 'secondary' },
   totalValue: { icon: 'account_balance_wallet', tone: 'secondary' },
 };
 
@@ -13,18 +14,30 @@ export default function InventoryMetrics({ overview, onOpenStock }) {
   const { locale } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
 
+  // Số liệu toàn kho từ /inventory/overview (BE): tồn kho, giá trị nhập (Σ SL nhập × đơn giá sau VAT), giá trị tồn
+  const totalStock = overview?.totalStock;
+  const totalValue = overview?.totalValue;
+  const totalImportValue = overview?.totalImportValue;
+
   const cards = [
     {
       key: 'totalStock',
       label: t('Tổng kho hàng', 'Total stock'),
-      value: formatCurrency(overview?.totalStock),
+      value: formatCurrency(totalStock),
       suffix: t('đơn vị', 'units'),
       caption: { icon: null, text: t('Tổng số lượng vật phẩm đang có trong kho', 'Total quantity currently in warehouse'), tone: 'muted' },
     },
     {
+      key: 'totalImportValue',
+      label: t('Tổng giá trị nhập kho', 'Total imported value'),
+      value: formatCurrency(totalImportValue),
+      suffix: 'VND',
+      caption: { icon: null, text: t('Tổng SL nhập × đơn giá sau VAT của các batch', 'Imported qty × post-VAT unit price across batches'), tone: 'muted' },
+    },
+    {
       key: 'totalValue',
       label: t('Tổng giá trị tồn kho', 'Total inventory value'),
-      value: formatCurrency(overview?.totalValue),
+      value: formatCurrency(totalValue),
       suffix: 'VND',
       caption: {
         icon: 'trending_up',
@@ -37,7 +50,7 @@ export default function InventoryMetrics({ overview, onOpenStock }) {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-gutter mb-xl">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-gutter mb-xl">
       {cards.map((card) => {
         const meta = METRIC_META[card.key];
         const toneText = { secondary: 'text-secondary', warning: 'text-warning', success: 'text-success' }[meta.tone];

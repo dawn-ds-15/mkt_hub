@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, BellOff, CalendarDays, ListChecks, CheckCheck } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { getTaskList } from '../../services/api';
+import { subscribeTasks } from '../../services/taskPoller';
 
 const SEEN_KEY = 'mkt_hub_notif_seen';
 
@@ -38,36 +38,21 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
-    let cancelled = false;
-    let timer = null;
-
-    const check = async () => {
-      try {
-        const user = getCurrentUser();
-        if (!user) return;
-        const res = await getTaskList({});
-        const tasks = res.data || [];
-        const mine = tasks.filter((t) => isMine(t, user));
-        setNotifications(mine.map((t) => ({
-          id: t.id,
-          title: t.taskName || '-',
-          project: t.project || '',
-          due: t.due || '',
-          status: t.status || '',
-        })));
-        const fresh = mine.filter((t) => !seenRef.current[t.id]);
-        setNewCount(fresh.length);
-      } catch {
-        // ignore polling errors
-      }
+    const check = (tasks) => {
+      const user = getCurrentUser();
+      if (!user) return;
+      const mine = tasks.filter((t) => isMine(t, user));
+      setNotifications(mine.map((t) => ({
+        id: t.id,
+        title: t.taskName || '-',
+        project: t.project || '',
+        due: t.due || '',
+        status: t.status || '',
+      })));
+      const fresh = mine.filter((t) => !seenRef.current[t.id]);
+      setNewCount(fresh.length);
     };
-
-    check();
-    timer = setInterval(check, 30000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
+    return subscribeTasks(check);
   }, []);
 
   const markRead = () => {

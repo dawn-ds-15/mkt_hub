@@ -47,6 +47,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
   const [modalIndex, setModalIndex] = useState(null);
   const [signedDate, setSignedDate] = useState(getTodayISO());
   const [modalSubmitting, setModalSubmitting] = useState(false);
+  const [showAllRows, setShowAllRows] = useState(false);
 
   const loadOpportunities = useCallback(async () => {
     setLoading(true);
@@ -66,7 +67,8 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
   }, [loadOpportunities]);
 
   const addRow = () => {
-    setRows(prev => [...prev, { ...emptyRow, id: Date.now() }]);
+    const defaultSize = sizeOptions[0]?.value || emptyRow.size;
+    setRows(prev => [...prev, { ...emptyRow, id: Date.now(), size: defaultSize }]);
   };
 
   const handleRowChange = (index, field, value) => {
@@ -106,23 +108,53 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
         }
       }));
       const failed = results.filter(r => r.status === 'rejected');
+      const applyLocalIds = () => {
+        setRows(prev => {
+          const copy = [...prev];
+          results.forEach((r) => {
+            if (r.status === 'fulfilled' && r.value?.newId != null) {
+              copy[r.value.idx] = { ...copy[r.value.idx], id: r.value.newId };
+            }
+          });
+          return copy;
+        });
+        setDirtyIndices(new Set());
+      };
       if (failed.length) {
         addToast(locale === 'vi'
           ? `Lưu thất bại ${failed.length} dòng.`
           : `Failed to save ${failed.length} row(s).`, 'error');
+        applyLocalIds();
       } else {
         addToast(locale === 'vi' ? 'Đã lưu tất cả thay đổi.' : 'All changes saved.', 'success');
-      }
-      setRows(prev => {
-        const copy = [...prev];
-        results.forEach((r) => {
-          if (r.status === 'fulfilled' && r.value?.newId != null) {
-            copy[r.value.idx] = { ...copy[r.value.idx], id: r.value.newId };
+        try {
+          const refreshed = await getOpportunities();
+          if (Array.isArray(refreshed.data) && refreshed.data.length) {
+            const idMap = new Map();
+            results.forEach((r) => {
+              if (r.status === 'fulfilled' && r.value && rows[r.value.idx]) {
+                const local = rows[r.value.idx];
+                if (r.value.newId != null) idMap.set(String(r.value.newId), local);
+                else if (typeof local.id === 'string') idMap.set(String(local.id), local);
+              }
+            });
+            const merged = refreshed.data.map((fresh) => {
+              const local = idMap.get(String(fresh.id));
+              if (local && local.size && local.size !== fresh.size) {
+                return { ...fresh, size: local.size };
+              }
+              return fresh;
+            });
+            setRows(merged);
+            setDirtyIndices(new Set());
+            setSelectedIds(new Set());
+          } else {
+            applyLocalIds();
           }
-        });
-        return copy;
-      });
-      setDirtyIndices(new Set());
+        } catch (e) {
+          applyLocalIds();
+        }
+      }
     } catch {
       addToast(locale === 'vi' ? 'Có lỗi khi lưu!' : 'An error occurred while saving!', 'error');
     } finally {
@@ -220,6 +252,9 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
           copy[modalIndex] = { ...row, id: realId };
           return copy;
         });
+      } else if (dirtyIndices.has(modalIndex)) {
+        // BE chuyển won từ bản đã lưu → lưu trước các sửa đổi chưa lưu (fees, hợp đồng...) của dòng này
+        await updateOpportunity(realId, row);
       }
       await convertOpportunityToWon(realId, signedDate, row.contractName);
       setRemovingIds(prev => new Set([...prev, realId]));
@@ -270,11 +305,13 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
     }
   };
 
+  const visibleRows = showAllRows ? rows : rows.slice(-5);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="text-label-md font-semibold text-on-surface uppercase tracking-wider">
-          {locale === 'vi' ? 'Chi tiết Opportunities' : 'Opportunities Detail'}
+          {locale === 'vi' ? 'Chi tiết Opportunities' : 'Opportunities Detail'} {!loading && `(${rows.length})`}
         </h4>
         <div className="flex items-center gap-3">
           {selectedIds.size > 0 && (
@@ -296,6 +333,20 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
               {saving
                 ? (locale === 'vi' ? 'Đang lưu...' : 'Saving...')
                 : (locale === 'vi' ? `Lưu (${dirtyIndices.size})` : `Save (${dirtyIndices.size})`)}
+            </button>
+          )}
+          {rows.length > 5 && (
+            <button
+              onClick={() => setShowAllRows(prev => !prev)}
+              className="text-primary flex items-center gap-1 text-body-sm font-semibold hover:underline"
+              title={showAllRows
+                ? (locale === 'vi' ? 'Thu gọn về 5 dòng gần nhất' : 'Collapse to 5 most recent rows')
+                : (locale === 'vi' ? 'Xem tất cả dòng đã nhập' : 'View all entered rows')}
+            >
+              <span className="material-symbols-outlined text-[18px]">{showAllRows ? 'unfold_less' : 'unfold_more'}</span>
+              {showAllRows
+                ? (locale === 'vi' ? 'Thu gọn' : 'Collapse')
+                : (locale === 'vi' ? `Xem thêm (${rows.length - 5})` : `View more (${rows.length - 5})`)}
             </button>
           )}
           <button
@@ -332,7 +383,8 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light">
-            {rows.map((row, index) => {
+            {visibleRows.map((row, index) => {
+              const realIndex = showAllRows ? index : rows.indexOf(row);
               const isRemoving = removingIds.has(row.id);
               return (
                 <tr
@@ -356,16 +408,19 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       placeholder="Cty CP ABC..."
                       type="text"
                       value={row.companyName}
-                      onChange={(e) => handleRowChange(index, 'companyName', e.target.value)}
+                      onChange={(e) => handleRowChange(realIndex, 'companyName', e.target.value)}
                     />
                   </td>
                   <td className="px-2 py-2">
                     <select
                       className="w-full border-0 focus:ring-0 px-1 py-1.5 text-body-md outline-none bg-transparent rounded-md cursor-pointer hover:bg-surface-container-low focus:bg-surface-container-low transition-colors whitespace-nowrap"
                       value={row.size}
-                      onChange={(e) => handleRowChange(index, 'size', e.target.value)}
+                      onChange={(e) => handleRowChange(realIndex, 'size', e.target.value)}
                     >
                       {sizeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      {row.size && !sizeOptions.some(o => o.value === row.size) && (
+                        <option value={row.size}>{row.size}</option>
+                      )}
                     </select>
                   </td>
                   <td className="px-2 py-2">
@@ -375,7 +430,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       onChange={(e) => {
                         const pid = e.target.value;
                         const pName = projects.find(p => p.id === pid)?.name || '';
-                        handleRowChangeMulti(index, { projectId: pid, project: pName });
+                        handleRowChangeMulti(realIndex, { projectId: pid, project: pName });
                       }}
                     >
                       <option value="">{locale === 'vi' ? 'Chọn dự án' : 'Select project'}</option>
@@ -391,7 +446,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       placeholder={locale === 'vi' ? 'Tên hợp đồng...' : 'Contract name...'}
                       type="text"
                       value={row.contractName}
-                      onChange={(e) => handleRowChange(index, 'contractName', e.target.value)}
+                      onChange={(e) => handleRowChange(realIndex, 'contractName', e.target.value)}
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -399,7 +454,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       className="w-full border-0 focus:ring-0 px-2 py-1.5 text-data-display outline-none text-right rounded-md hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
                       placeholder="5,000"
                       value={row.fees}
-                      onChange={(e) => handleRowChange(index, 'fees', e.target.value)}
+                      onChange={(e) => handleRowChange(realIndex, 'fees', e.target.value)}
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -407,7 +462,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       className="w-full max-w-[150px] border-0 focus:ring-0 px-2 py-1.5 text-body-md outline-none rounded-md hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
                       type="date"
                       value={row.initiationDate}
-                      onChange={(e) => handleRowChange(index, 'initiationDate', e.target.value)}
+                      onChange={(e) => handleRowChange(realIndex, 'initiationDate', e.target.value)}
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -415,14 +470,14 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                       className="w-full max-w-[150px] border-0 focus:ring-0 px-2 py-1.5 text-body-md outline-none rounded-md hover:bg-surface-container-low focus:bg-surface-container-low transition-colors"
                       type="date"
                       value={row.expectedCloseDate}
-                      onChange={(e) => handleRowChange(index, 'expectedCloseDate', e.target.value)}
+                      onChange={(e) => handleRowChange(realIndex, 'expectedCloseDate', e.target.value)}
                     />
                   </td>
                   <td className="px-2 py-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <button
-                        onClick={() => handleConvert(index)}
-                        disabled={convertingIndex === index}
+                        onClick={() => handleConvert(realIndex)}
+                        disabled={convertingIndex === realIndex}
                         title={locale === 'vi' ? 'Chuyển thành Won' : 'Convert to Won'}
                         className="px-2.5 py-1.5 bg-success text-white rounded text-label-md font-semibold hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1 shadow-sm"
                       >
@@ -430,7 +485,7 @@ export default function OpportunitiesTable({ onConvertSuccess = noop }) {
                         {locale === 'vi' ? 'Chuyển Won' : 'Won'}
                       </button>
                       <button
-                        onClick={() => handleDeleteRow(index, row)}
+                        onClick={() => handleDeleteRow(realIndex, row)}
                         title={locale === 'vi' ? 'Xóa' : 'Delete'}
                         className="p-1.5 text-on-surface-variant hover:text-error hover:bg-error/10 rounded transition-all flex items-center justify-center"
                       >

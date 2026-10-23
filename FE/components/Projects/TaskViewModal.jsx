@@ -3,16 +3,19 @@ import { Info } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 import { updateTask } from '../../services/api';
+import { mergeSubtasks, saveSubtasks } from '../../utils/subtasks';
+import { useTaskStatusOptions, statusLabelOf } from '../../hooks/useTaskStatusOptions';
 
-const statusBadge = (locale) => ({
-  overdue: { label: locale === 'vi' ? 'Quá hạn' : 'Overdue', cls: 'bg-red-100 text-red-700' },
-  Planning: { label: locale === 'vi' ? 'Chưa làm' : 'To Do', cls: 'bg-slate-100 text-slate-700' },
-  Processing: { label: locale === 'vi' ? 'Đang làm' : 'In Progress', cls: 'bg-blue-100 text-blue-700' },
-  Done: { label: locale === 'vi' ? 'Hoàn thành' : 'Done', cls: 'bg-green-100 text-green-700' },
-  Backlog: { label: locale === 'vi' ? 'Tồn đọng' : 'Backlog', cls: 'bg-amber-100 text-amber-700' },
-  Pending: { label: locale === 'vi' ? 'Đang chờ' : 'Pending', cls: 'bg-purple-100 text-purple-700' },
-  Cancel: { label: locale === 'vi' ? 'Đã huỷ' : 'Cancelled', cls: 'bg-gray-100 text-gray-600' },
-});
+// Chỉ giữ màu theo khóa chuẩn — nhãn lấy nguyên văn từ tab Cấu hình Dropdown.
+const statusBadgeCls = {
+  overdue: 'bg-red-100 text-red-700',
+  Planning: 'bg-slate-100 text-slate-700',
+  Processing: 'bg-blue-100 text-blue-700',
+  Done: 'bg-green-100 text-green-700',
+  Backlog: 'bg-amber-100 text-amber-700',
+  Pending: 'bg-purple-100 text-purple-700',
+  Cancel: 'bg-gray-100 text-gray-600',
+};
 
 const priorityLabel = (locale) => ({ high: locale === 'vi' ? 'Cao' : 'High', medium: locale === 'vi' ? 'Trung bình' : 'Medium', low: locale === 'vi' ? 'Thấp' : 'Low' });
 
@@ -27,10 +30,19 @@ export default function TaskViewModal({ task, onClose, onEdit, onSaved }) {
   const [startDate, setStartDate] = useState(toDateInput(task.startDate));
   const [dueDate, setDueDate] = useState(toDateInput(task.dueDate));
   const [completedDate, setCompletedDate] = useState(toDateInput(task.completedDate));
+  const [subtasks, setSubtasks] = useState(() => mergeSubtasks(task.id, task.subtasks));
   const [saving, setSaving] = useState(false);
 
   if (!task) return null;
-  const st = statusBadge(locale)[task.status] || statusBadge(locale).Planning;
+  const statusOptions = useTaskStatusOptions();
+  // task.status bị gộp thành 'overdue' khi trễ hạn -> hiện trạng thái thật,
+  // còn quá hạn tách ra thành nhãn phụ để khớp với form sửa task.
+  const isOverdue = task.status === 'overdue';
+  const realStatus = task.statusKey || (isOverdue ? 'Overdue' : task.status);
+  const st = {
+    cls: statusBadgeCls[realStatus] || 'bg-slate-100 text-slate-700',
+    label: statusLabelOf(statusOptions, realStatus),
+  };
 
   const handleSaveDate = async (field, value) => {
     setSaving(true);
@@ -51,6 +63,29 @@ export default function TaskViewModal({ task, onClose, onEdit, onSaved }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleToggleSubtask = async (index) => {
+    const next = subtasks.map((s, i) => (i === index ? { ...s, done: !s.done } : s));
+    setSubtasks(next);
+    saveSubtasks(task.id, next);
+    setSaving(true);
+    try {
+      await updateTask(task.id, { subtasks: next });
+      if (onSaved) onSaved({ ...task, subtasks: next });
+    } catch (e) {
+      console.error('[TaskViewModal] updateTask failed:', e, e?.response?.data);
+      setSubtasks(subtasks);
+      saveSubtasks(task.id, subtasks);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fmtShortDate = (v) => {
+    if (!v || typeof v !== 'string') return '';
+    const [y, m, d] = v.split('-');
+    return `${d}/${m}/${y}`;
   };
 
   return (
@@ -98,11 +133,35 @@ export default function TaskViewModal({ task, onClose, onEdit, onSaved }) {
               </div>
             )}
 
+            {subtasks.length > 0 && (
+              <div>
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                  {locale === 'vi' ? 'Task nhỏ' : 'Sub-tasks'} ({subtasks.filter(s => s.done).length}/{subtasks.length})
+                </label>
+                <div className="mt-1 space-y-1">
+                  {subtasks.map((s, i) => (
+                    <label key={`${s.id ?? 's'}-${i}`} className="flex items-center gap-2 px-2 py-1 bg-gray-50 rounded cursor-pointer">
+                      <input type="checkbox" checked={s.done} onChange={() => handleToggleSubtask(i)} disabled={saving} className="w-4 h-4 accent-blue-600 shrink-0" />
+                      <span className={`text-sm ${s.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{s.text}</span>
+                      {s.doneDate && (
+                        <span className="text-[11px] text-gray-400 whitespace-nowrap">{fmtShortDate(s.doneDate)}</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Trạng thái' : 'Status'}</label>
-                <div className="mt-1">
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${st.cls}`}>{st.label}</span>
+                  {isOverdue && realStatus !== 'Overdue' && (
+                    <span className="px-2 py-1 rounded text-xs font-bold uppercase bg-red-100 text-red-700">
+                      {statusLabelOf(statusOptions, 'Overdue')}
+                    </span>
+                  )}
                 </div>
               </div>
               <div>
@@ -164,7 +223,7 @@ export default function TaskViewModal({ task, onClose, onEdit, onSaved }) {
             {task.linkUrl && (
               <div>
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{locale === 'vi' ? 'Link' : 'Link'}</label>
-                <a href={task.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block text-sm text-blue-600 underline">{task.linkUrl}</a>
+                <a href={/^https?:\/\//i.test(task.linkUrl) ? task.linkUrl : `https://${task.linkUrl}`} target="_blank" rel="noopener noreferrer" className="mt-1 block text-sm text-blue-600 underline break-all">{task.linkUrl}</a>
               </div>
             )}
 

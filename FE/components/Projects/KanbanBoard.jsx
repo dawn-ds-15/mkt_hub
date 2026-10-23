@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, memo, useRef } from 'react';
 import { CalendarDays, LayoutDashboard, TriangleAlert } from 'lucide-react';
-import { getKanbanData, updateTask, getProjects, getMembers, getTask } from '../../services/api';
+import { getKanbanData, updateTask, getProjects, getMembers, getTask, TASK_STATUS_FALLBACK_LABELS, taskDateKey } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { useTaskStatusOptions, statusLabelOf } from '../../hooks/useTaskStatusOptions';
 import TaskViewModal from './TaskViewModal';
 import TaskEditDrawer from './TaskEditDrawer';
 
@@ -15,13 +16,23 @@ const STATUS_TO_API = {
   overdue: 'Overdue',
 };
 
+const STATUS_FE = {
+  planning: 'Planning',
+  processing: 'Processing',
+  done: 'Done',
+  pending: 'Pending',
+  backlog: 'Backlog',
+  cancel: 'Cancel',
+  overdue: 'Overdue',
+};
+
 const ALLOWED_TRANSITIONS = {
   planning: ['processing', 'done', 'pending', 'backlog', 'cancel', 'overdue'],
-  processing: ['done', 'pending', 'backlog', 'cancel', 'overdue'],
+  processing: ['planning', 'done', 'pending', 'backlog', 'cancel', 'overdue'],
   done: [],
-  pending: ['processing', 'done', 'backlog', 'cancel', 'overdue'],
+  pending: ['planning', 'processing', 'done', 'backlog', 'cancel', 'overdue'],
   backlog: ['planning', 'processing', 'done', 'cancel', 'overdue'],
-  cancel: [],
+  cancel: ['planning', 'done'],
   overdue: ['processing', 'done', 'pending', 'backlog'],
 };
 
@@ -51,40 +62,32 @@ const columnHeaderAccent = {
   overdue: 'bg-red-200 text-red-700',
 };
 
-const COLUMN_LABELS = {
-  planning: { vi: 'Chưa làm', en: 'To Do' },
-  processing: { vi: 'Đang làm', en: 'In Progress' },
-  done: { vi: 'Hoàn thành', en: 'Done' },
-  pending: { vi: 'Chờ xử lý', en: 'Pending' },
-  backlog: { vi: 'Tồn đọng', en: 'Backlog' },
-  cancel: { vi: 'Đã huỷ', en: 'Cancelled' },
-  overdue: { vi: 'Quá hạn', en: 'Overdue' },
+// Chế độ tiếng Việt: tên tiếng Việt của 7 trạng thái chuẩn.
+// Chế độ khác: nhãn trong tab Cấu hình Dropdown, gõ sao hiện vậy.
+const columnLabelOf = (statusOptions, colId, locale) => {
+  const key = STATUS_FE[colId] || colId;
+  if (locale === 'vi' && TASK_STATUS_FALLBACK_LABELS[key]) return TASK_STATUS_FALLBACK_LABELS[key];
+  return statusLabelOf(statusOptions, key);
 };
-
-function getTaskId(task) {
-  const id = String(task.id || '');
-  if (id.includes('-')) return id.split('-').pop();
-  return id.length > 7 ? '#' + id.slice(0, 7) : '#' + id;
-}
 
 function PriorityDot({ priority }) {
   const c = priorityColors[priority] || priorityColors.Medium;
   return <span className={`inline-block w-2 h-2 rounded-full ${c.bar}`} />;
 }
 
-function KanbanCard({ task, onDragStart, onCardClick }) {
-  const pColor = priorityColors[task.priority] || priorityColors.Medium;
-
+const KanbanCard = memo(function KanbanCard({ task, onPointerDown, onCardClick, canDrag, isDragging }) {
   return (
     <div
-      draggable
-      onDragStart={(e) => onDragStart(e, task.id)}
-      onClick={() => onCardClick(task.id)}
-      className="bg-white rounded-lg border border-gray-200/80 p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all space-y-1.5"
+      onPointerDown={(e) => onPointerDown(e, task.id)}
+      className={`bg-white rounded-lg border border-gray-200/80 p-2.5 space-y-1.5 select-none ${
+        isDragging ? 'opacity-40 ring-2 ring-primary/40 scale-[0.98] touch-none' : 'transition-[box-shadow,border-color]'
+      } ${
+        canDrag ? 'cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300' : 'cursor-default'
+      }`}
     >
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 min-w-0">
         <PriorityDot priority={task.priority} />
-        <span className="text-[10px] font-mono text-gray-400 font-medium">{getTaskId(task)}</span>
+        <span className="text-[10px] text-gray-400 font-medium truncate" title={task.project}>{task.project}</span>
       </div>
       <p className={`text-xs font-medium leading-snug text-gray-800 line-clamp-2 ${task.status === 'done' ? 'line-through text-gray-400' : ''}`}>
         {task.title}
@@ -108,21 +111,19 @@ function KanbanCard({ task, onDragStart, onCardClick }) {
       </div>
     </div>
   );
-}
+});
 
-function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, onDragLeave, isOver, onCardClick }) {
+const KanbanColumn = memo(function KanbanColumn({ column, draggedTaskId, isOver, onPointerDown, onCardClick }) {
   const { locale } = useDashboard();
+  const statusOptions = useTaskStatusOptions();
   const bg = columnBg[column.id] || 'bg-gray-50';
   const accent = columnHeaderAccent[column.id] || 'bg-gray-200 text-gray-700';
-  const title = COLUMN_LABELS[column.id]?.[locale === 'vi' ? 'vi' : 'en'] || column.title;
+  const title = columnLabelOf(statusOptions, column.id, locale);
 
   return (
     <div
+      data-kanban-col={column.id}
       className={`flex flex-col flex-1 min-w-[160px] w-0 rounded-xl ${bg}`}
-      onDragOver={onDragOver}
-      onDragEnter={(e) => onDragEnter(e, column.id)}
-      onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, column.id)}
     >
       <div className="flex items-center justify-between px-3 pt-3 pb-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -138,7 +139,14 @@ function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, on
         }`}
       >
         {column.tasks.map((task) => (
-          <KanbanCard key={task.id} task={task} onDragStart={onDragStart} onCardClick={onCardClick} />
+          <KanbanCard
+            key={task.id}
+            task={task}
+            canDrag={(ALLOWED_TRANSITIONS[column.id]?.length || 0) > 0}
+            isDragging={draggedTaskId === task.id}
+            onPointerDown={onPointerDown}
+            onCardClick={onCardClick}
+          />
         ))}
         {column.tasks.length === 0 && (
           <div className="flex items-center justify-center h-24 text-gray-400 text-[11px] italic">
@@ -148,10 +156,11 @@ function KanbanColumn({ column, onDragStart, onDrop, onDragOver, onDragEnter, on
       </div>
     </div>
   );
-}
+});
 
 export default function KanbanBoard() {
   const { locale } = useDashboard();
+  const statusOptions = useTaskStatusOptions();
   const [columns, setColumns] = useState([]);
   const [allRawTasks, setAllRawTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -163,6 +172,12 @@ export default function KanbanBoard() {
   const [reasonPopup, setReasonPopup] = useState(null);
   const [reasonText, setReasonText] = useState('');
   const [warningPopup, setWarningPopup] = useState(null);
+
+  const dragRef = useRef({ taskId: null, fromCol: null, startX: 0, startY: 0, active: false });
+  const moveHandlerRef = useRef(null);
+  const upHandlerRef = useRef(null);
+  const ghostRef = useRef(null);
+  const [draggedTaskTitle, setDraggedTaskTitle] = useState('');
 
   const [viewTask, setViewTask] = useState(null);
   const [viewTaskData, setViewTaskData] = useState(null);
@@ -200,67 +215,56 @@ export default function KanbanBoard() {
         tasks = tasks.filter(t => t.project === projectFilter || t.projectName === projectFilter);
       }
       if (assigneeFilter !== 'Tất cả mọi người') {
-        tasks = tasks.filter(t => t.assignee?.name === assigneeFilter);
+        // Thẻ Kanban lưu assignee là chuỗi tên (không phải object) -> lọc theo assigneeId,
+        // dự phòng so tên khi task thiếu id.
+        const member = members.find(m => String(m.id) === String(assigneeFilter));
+        tasks = tasks.filter(t => (t.assigneeId
+          ? String(t.assigneeId) === String(assigneeFilter)
+          : !!member && t.assignee === member.name));
       }
       if (dateFrom) {
-        tasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) >= new Date(dateFrom));
+        tasks = tasks.filter(t => { const k = taskDateKey(t.dueDate); return k && k >= dateFrom; });
       }
       if (dateTo) {
-        tasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) <= new Date(dateTo));
+        tasks = tasks.filter(t => { const k = taskDateKey(t.dueDate); return k && k <= dateTo; });
       }
       return { ...col, tasks, badgeCount: tasks.length };
     });
-  }, [columns, projectFilter, assigneeFilter, dateFrom, dateTo]);
+  }, [columns, members, projectFilter, assigneeFilter, dateFrom, dateTo]);
 
   const showToast = (msg, type = 'error') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleDragStart = useCallback((e, taskId) => {
-    setDraggedTaskId(taskId);
-    for (const col of columns) {
-      if (col.tasks.some((t) => t.id === taskId)) {
-        setDraggedFromCol(col.id);
-        break;
-      }
+  const cleanupDragListeners = useCallback(() => {
+    if (moveHandlerRef.current) {
+      window.removeEventListener('pointermove', moveHandlerRef.current);
     }
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(taskId));
-  }, [columns]);
-
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    if (upHandlerRef.current) {
+      window.removeEventListener('pointerup', upHandlerRef.current);
+      window.removeEventListener('pointercancel', upHandlerRef.current);
+    }
+    moveHandlerRef.current = null;
+    upHandlerRef.current = null;
   }, []);
 
-  const handleDragEnter = useCallback((e, colId) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setOverColId(colId);
-  }, []);
+  useEffect(() => () => cleanupDragListeners(), [cleanupDragListeners]);
 
-  const handleDragLeave = useCallback((e) => {
-    e.stopPropagation();
-    if (e.currentTarget.contains(e.relatedTarget)) return;
-    setOverColId(null);
-  }, []);
-
-  const doMoveTask = useCallback((targetColId, reason) => {
+  const doMoveTask = useCallback((targetColId, taskId, fromColId, reason) => {
     const apiStatus = STATUS_TO_API[targetColId];
     if (!apiStatus) return;
-    const taskId = draggedTaskId;
-    const prevColumns = columns;
     const prevColsCopy = columns.map(c => ({ ...c, tasks: [...c.tasks] }));
     setColumns((prev) => {
       const next = prev.map((col) => ({ ...col, tasks: [...col.tasks] }));
-      const fromCol = next.find((c) => c.id === draggedFromCol);
+      const fromCol = next.find((c) => c.id === fromColId);
       const toCol = next.find((c) => c.id === targetColId);
       if (!fromCol || !toCol) return prev;
       const taskIdx = fromCol.tasks.findIndex((t) => t.id === taskId);
       if (taskIdx === -1) return prev;
       const [movedTask] = fromCol.tasks.splice(taskIdx, 1);
-      toCol.tasks.push(movedTask);
+      // Cập nhật luôn trạng thái trên thẻ, nếu không form sửa task sẽ đọc phải trạng thái cũ.
+      toCol.tasks.push({ ...movedTask, status: targetColId, statusKey: STATUS_FE[targetColId] });
       return next.map(c => ({ ...c, badgeCount: c.tasks.length }));
     });
     const payload = reason ? { status: apiStatus, reason } : { status: apiStatus };
@@ -270,11 +274,12 @@ export default function KanbanBoard() {
       return getTask(taskId);
     }).then((taskRes) => {
       console.log(`[Kanban] Refetched task ${taskId} status:`, taskRes.data?.status);
-      if (taskRes.data?.status !== apiStatus) {
+      const expectedFe = STATUS_FE[targetColId];
+      if (taskRes.data?.status !== expectedFe) {
         console.warn(`[Kanban] STATUS MISMATCH: PATCH sent "${apiStatus}" but GET returned "${taskRes.data?.status}"`);
-        showToast(locale === 'vi' ? `Status vẫn là "${taskRes.data?.status}", không phải "${apiStatus}"` : `Status is still "${taskRes.data?.status}", not "${apiStatus}"`, 'error');
+        showToast(locale === 'vi' ? `Status vẫn là "${taskRes.data?.status}", không phải "${expectedFe}"` : `Status is still "${taskRes.data?.status}", not "${expectedFe}"`, 'error');
       } else {
-        console.log(`[Kanban] Status confirmed: "${apiStatus}" — PATCH persisted OK`);
+        console.log(`[Kanban] Status confirmed: "${expectedFe}" — PATCH persisted OK`);
       }
     }).catch((err) => {
       console.error(`[Kanban] PATCH failed for task ${taskId}:`, err?.response?.status, err?.response?.data || err);
@@ -282,9 +287,7 @@ export default function KanbanBoard() {
       const msg = err?.response?.data?.message || err?.message || (locale === 'vi' ? 'Không thể cập nhật trạng thái' : 'Cannot update status');
       showToast(msg);
     });
-    setDraggedTaskId(null);
-    setDraggedFromCol(null);
-  }, [draggedTaskId, draggedFromCol, columns, locale]);
+  }, [columns, locale]);
 
   const handleCardClick = useCallback(async (taskId) => {
     setViewTask(taskId);
@@ -296,6 +299,93 @@ export default function KanbanBoard() {
       setViewTaskData(null);
     }
   }, []);
+
+  const handlePointerMove = useCallback((e) => {
+    const d = dragRef.current;
+    if (!d.taskId) return;
+    if (!d.active) {
+      const dx = e.clientX - d.startX;
+      const dy = e.clientY - d.startY;
+      if (Math.hypot(dx, dy) < 6) return;
+
+      d.active = true;
+      let fromColId = null;
+      for (const col of columns) {
+        if (col.tasks.some((t) => t.id === d.taskId)) {
+          fromColId = col.id;
+          break;
+        }
+      }
+      const allowed = ALLOWED_TRANSITIONS[fromColId];
+      if (fromColId && allowed && allowed.length === 0) {
+        d.taskId = null;
+        d.active = false;
+        cleanupDragListeners();
+        setWarningPopup({ from: fromColId, to: null });
+        return;
+      }
+      d.fromCol = fromColId;
+      setDraggedTaskId(d.taskId);
+      setDraggedFromCol(fromColId);
+      const found = columns.flatMap((c) => c.tasks).find((t) => t.id === d.taskId);
+      setDraggedTaskTitle(found?.title || '');
+      if (ghostRef.current) {
+        ghostRef.current.style.visibility = 'visible';
+        ghostRef.current.style.transform = `translate(${e.clientX + 14}px, ${e.clientY + 10}px)`;
+      }
+    }
+    if (ghostRef.current && ghostRef.current.style.visibility === 'visible') {
+      ghostRef.current.style.transform = `translate(${e.clientX + 14}px, ${e.clientY + 10}px)`;
+    }
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const colEl = el && el.closest ? el.closest('[data-kanban-col]') : null;
+    const colId = colEl ? colEl.getAttribute('data-kanban-col') : null;
+    setOverColId((prev) => (colId === prev ? prev : colId));
+  }, [columns, cleanupDragListeners]);
+
+  const handlePointerUp = useCallback((e) => {
+    const d = dragRef.current;
+    dragRef.current = { taskId: null, fromCol: null, startX: 0, startY: 0, active: false };
+    cleanupDragListeners();
+    if (ghostRef.current) ghostRef.current.style.visibility = 'hidden';
+    const wasDrag = d.active && d.taskId;
+    setOverColId(null);
+    setDraggedTaskId(null);
+    setDraggedFromCol(null);
+    if (!wasDrag) {
+      if (d.taskId) handleCardClick(d.taskId);
+      return;
+    }
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const colEl = el && el.closest ? el.closest('[data-kanban-col]') : null;
+    const targetColId = colEl ? colEl.getAttribute('data-kanban-col') : null;
+    if (!targetColId || targetColId === d.fromCol) return;
+    const allowed = ALLOWED_TRANSITIONS[d.fromCol];
+    if (!allowed || !allowed.includes(targetColId)) {
+      setWarningPopup({ from: d.fromCol, to: targetColId });
+      return;
+    }
+    const movingOutOfRecovery = ['backlog', 'pending', 'cancel'].includes(d.fromCol);
+    const movingIntoRecovery = ['backlog', 'pending', 'cancel'].includes(targetColId);
+    const movingBackToActive = movingOutOfRecovery && ['planning', 'done'].includes(targetColId);
+    if (movingIntoRecovery || movingBackToActive) {
+      setReasonPopup({ targetColId, taskId: d.taskId, fromCol: d.fromCol });
+      setReasonText('');
+      return;
+    }
+    doMoveTask(targetColId, d.taskId, d.fromCol);
+  }, [cleanupDragListeners, handleCardClick, doMoveTask]);
+
+  const handlePointerDown = useCallback((e, taskId) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    dragRef.current = { taskId, fromCol: null, startX: e.clientX, startY: e.clientY, active: false };
+    moveHandlerRef.current = handlePointerMove;
+    upHandlerRef.current = handlePointerUp;
+    window.addEventListener('pointermove', moveHandlerRef.current);
+    window.addEventListener('pointerup', upHandlerRef.current);
+    window.addEventListener('pointercancel', upHandlerRef.current);
+  }, [handlePointerMove, handlePointerUp]);
 
   const handleEdit = useCallback((task) => {
     setEditingTask(task);
@@ -314,29 +404,6 @@ export default function KanbanBoard() {
     setViewTaskData(null);
     loadKanban();
   }, [loadKanban]);
-
-  const handleDrop = useCallback((e, targetColId) => {
-    e.preventDefault();
-    setOverColId(null);
-    if (!draggedTaskId || !draggedFromCol || draggedFromCol === targetColId) {
-      setDraggedTaskId(null);
-      setDraggedFromCol(null);
-      return;
-    }
-    const allowed = ALLOWED_TRANSITIONS[draggedFromCol];
-    if (!allowed || !allowed.includes(targetColId)) {
-      setWarningPopup({ from: draggedFromCol, to: targetColId });
-      setDraggedTaskId(null);
-      setDraggedFromCol(null);
-      return;
-    }
-    if (['backlog', 'pending', 'cancel'].includes(targetColId)) {
-      setReasonPopup({ targetColId });
-      setReasonText('');
-      return;
-    }
-    doMoveTask(targetColId);
-  }, [draggedTaskId, draggedFromCol, doMoveTask]);
 
   if (loading) {
     return (
@@ -364,7 +431,7 @@ export default function KanbanBoard() {
             onChange={(e) => setAssigneeFilter(e.target.value)}
           >
             <option value="Tất cả mọi người">{locale === 'vi' ? 'Tất cả mọi người' : 'All People'}</option>
-            {members.map(m => <option key={m.id}>{m.name}</option>)}
+            {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg">
             <CalendarDays className="w-4 h-4 text-gray-400" />
@@ -395,16 +462,21 @@ export default function KanbanBoard() {
             <KanbanColumn
               key={column.id}
               column={column}
-              onDragStart={handleDragStart}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              isOver={overColId === column.id}
+              draggedTaskId={draggedTaskId}
+              onPointerDown={handlePointerDown}
               onCardClick={handleCardClick}
+              isOver={overColId === column.id}
             />
           ))}
         </div>
+        {draggedTaskId && (
+          <div
+            ref={ghostRef}
+            className="fixed left-0 top-0 z-[60] invisible pointer-events-none bg-indigo-600 text-white text-[11px] font-semibold px-3 py-1.5 rounded-lg shadow-xl flex items-center gap-2 max-w-[300px]"
+          >
+            <span className="truncate">{draggedTaskTitle}</span>
+          </div>
+        )}
       </div>
 
       {viewTask && viewTaskData && (
@@ -428,10 +500,18 @@ export default function KanbanBoard() {
 
       {reasonPopup && (
         <>
-          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => { setReasonPopup(null); setDraggedTaskId(null); setDraggedFromCol(null); }} />
+          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setReasonPopup(null)} />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm bg-white rounded-xl shadow-2xl z-50 p-6 space-y-4">
             <h3 className="text-base font-bold">{locale === 'vi' ? 'Nhập lý do' : 'Enter Reason'}</h3>
-            <p className="text-sm text-gray-500">{locale === 'vi' ? 'Vui lòng nhập lý do khi chuyển task sang trạng thái này' : 'Please enter a reason when moving task to this status'}</p>
+            <p className="text-sm text-gray-500">
+              {(() => {
+                const fromLabel = columnLabelOf(statusOptions, reasonPopup.fromCol, locale);
+                const toLabel = columnLabelOf(statusOptions, reasonPopup.targetColId, locale);
+                return locale === 'vi'
+                  ? `Vui lòng nhập lý do khi chuyển task từ "${fromLabel}" sang "${toLabel}"`
+                  : `Please enter a reason when moving task from "${fromLabel}" to "${toLabel}"`;
+              })()}
+            </p>
             <textarea
               className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-blue-500 focus:ring-0 outline-none resize-vertical h-20"
               value={reasonText}
@@ -441,16 +521,16 @@ export default function KanbanBoard() {
             />
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => { setReasonPopup(null); setDraggedTaskId(null); setDraggedFromCol(null); }}
+                onClick={() => setReasonPopup(null)}
                 className="px-4 py-2 border border-gray-200 rounded text-xs font-bold text-gray-500 hover:bg-gray-50"
               >
                 {locale === 'vi' ? 'Hủy' : 'Cancel'}
               </button>
               <button
                 onClick={() => {
-                  const target = reasonPopup.targetColId;
+                  const { targetColId, taskId, fromCol } = reasonPopup;
                   setReasonPopup(null);
-                  doMoveTask(target, reasonText.trim());
+                  doMoveTask(targetColId, taskId, fromCol, reasonText.trim());
                 }}
                 disabled={!reasonText.trim()}
                 className={`px-4 py-2 rounded text-xs font-bold text-white ${reasonText.trim() ? 'bg-blue-600 hover:opacity-90' : 'bg-gray-300 cursor-not-allowed'}`}
@@ -472,8 +552,12 @@ export default function KanbanBoard() {
             </div>
             <p className="text-sm text-gray-600">
               {locale === 'vi'
-                ? `Không được phép kéo task từ "${COLUMN_LABELS[warningPopup.from]?.[locale === 'vi' ? 'vi' : 'en'] || warningPopup.from}" sang "${COLUMN_LABELS[warningPopup.to]?.[locale === 'vi' ? 'vi' : 'en'] || warningPopup.to}"`
-                : `Cannot drag task from "${COLUMN_LABELS[warningPopup.from]?.en || warningPopup.from}" to "${COLUMN_LABELS[warningPopup.to]?.en || warningPopup.to}"`
+                ? (warningPopup.to
+                    ? `Không được phép kéo task từ "${columnLabelOf(statusOptions, warningPopup.from, locale)}" sang "${columnLabelOf(statusOptions, warningPopup.to, locale)}"`
+                    : `Không được phép kéo task ra khỏi cột "${columnLabelOf(statusOptions, warningPopup.from, locale)}"`)
+                : (warningPopup.to
+                    ? `Cannot drag task from "${columnLabelOf(statusOptions, warningPopup.from, locale)}" to "${columnLabelOf(statusOptions, warningPopup.to, locale)}"`
+                    : `Cannot drag task out of column "${columnLabelOf(statusOptions, warningPopup.from, locale)}"`)
               }
             </p>
             <div className="flex justify-end">

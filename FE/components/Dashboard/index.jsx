@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { AlertCircle, TriangleAlert, Bell, ChevronRight, RefreshCw, DatabaseX, Filter, BarChart3, FolderKanban, ListTodo } from 'lucide-react';
-import { getDashboardData } from '../../services/api';
+import { AlertCircle, TriangleAlert, Bell, ChevronRight, RefreshCw, DatabaseX, Filter, BarChart3, FolderKanban, ListTodo, Download, Loader2 } from 'lucide-react';
+import { getDashboardData, isTaskOverdue, exportDashboardExcel } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import KPICard from './KPICard';
 
@@ -83,6 +83,7 @@ export default function Dashboard() {
   const [projectTasksCache, setProjectTasksCache] = useState({});
   const [projectErrors, setProjectErrors] = useState({});
   const [projectLoading, setProjectLoading] = useState({});
+  const [exportingExcel, setExportingExcel] = useState(false);
   const abortRef = useRef(null);
 
   const periodKey = `${periodType}-${periodValue}-${year}`;
@@ -123,7 +124,7 @@ export default function Dashboard() {
             if (totalTasks[t.status] !== undefined) totalTasks[t.status]++;
             const due = t.dueDate ? new Date(t.dueDate) : null;
             if (due && !isNaN(due) && t.status !== 'Done' && t.status !== 'Cancel') {
-              if (due < now) {
+              if (isTaskOverdue(t.dueDate, t.statusKey || t.status)) {
                 overdueTasks.push({
                   taskName: t.name,
                   assigneeName: t.assignee || '',
@@ -282,6 +283,17 @@ export default function Dashboard() {
 
   const periodOptions = getPeriodOptions(periodType);
 
+  const handleExportExcel = async () => {
+    setExportingExcel(true);
+    try {
+      await exportDashboardExcel({ period: periodType, periodValue, year });
+    } catch (err) {
+      window.alert(`${locale === 'vi' ? 'Xuất Excel thất bại' : 'Excel export failed'}${err?.response?.status ? ` (HTTP ${err.response.status})` : ''}`);
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   return (
     <>
     <div>
@@ -322,6 +334,15 @@ export default function Dashboard() {
           title={({ vi: 'Làm mới', en: 'Refresh' })[locale]}
         >
           <RefreshCw className="w-4 h-4" />
+        </button>
+        <button
+          onClick={handleExportExcel}
+          disabled={exportingExcel}
+          className="px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 rounded transition-colors flex items-center gap-1 disabled:opacity-50"
+          title={({ vi: 'Xuất báo cáo Dashboard (Excel) theo kỳ đang xem', en: 'Export dashboard report (Excel) for this period' })[locale]}
+        >
+          {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {({ vi: 'Xuất Excel', en: 'Export Excel' })[locale]}
         </button>
       </div>
 

@@ -19,6 +19,11 @@ import {
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_RANGE = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - i);
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+// 3 cột cố định + 12 tháng × (Kế hoạch, Thực tế) + Tổng KH + Tổng TT
+const TABLE_COLS = 3 + MONTHS.length * 2 + 2;
+
+// BE lỗi 500 khi 1 request bulk save vượt ~120 dòng → chia lô an toàn.
+const CHUNK_SIZE = 80;
 
 function formatCurrency(n) {
   return (Number(n) || 0).toLocaleString('vi-VN');
@@ -44,6 +49,33 @@ function monthValue(rowMonths, m) {
   return Number(rowMonths?.[m]) || 0;
 }
 
+function subMonthTotal(cat, m) {
+  let total = 0;
+  for (const sub of (Array.isArray(cat.subcategories) ? cat.subcategories : [])) {
+    if (Number(sub.backup?.percent) > 0) total += monthValue(sub.backup?.months, m);
+    for (const it of (Array.isArray(sub.items) ? sub.items : [])) {
+      total += monthValue(it.months, m);
+    }
+  }
+  return total;
+}
+
+function categoryMonthValue(cat, m) {
+  const subs = Array.isArray(cat.subcategories) ? cat.subcategories : [];
+  if (subs.length > 0) return subMonthTotal(cat, m);
+  return monthValue(cat.months, m);
+}
+
+// Thực tế (trước VAT) do BE tổng hợp trong cây: `actuals` theo tháng ở từng cấp.
+// Dòng chi phí dự án hiện chỉ gắn tới nhóm (categoryId) nên cấp nhóm con / hạng mục nhỏ thường = 0.
+function actualOf(row, m) {
+  return monthValue(row?.actuals, m);
+}
+
+function hasActuals(row) {
+  return MONTHS.some((m) => actualOf(row, m) > 0);
+}
+
 function apiErrorMsg(err, fallback) {
   const m = err?.response?.data?.message;
   if (Array.isArray(m) && m.length) return m.join('; ');
@@ -65,7 +97,7 @@ function mergeMonths(serverMonths, localMonths) {
 
 function mapTreeToState(tree, prev) {
   if (!tree) return [];
-  const mapped = (tree.categories || []).map(cat => {
+  const mapped = (tree.categories || []).filter(cat => !cat.unassigned && cat.id).map(cat => {
     const prevCat = (prev || []).find(c => c.id === cat.id);
     const subs = Array.isArray(cat.subcategories) ? cat.subcategories : [];
     const mergedSubs = subs.map(s => {
@@ -108,6 +140,7 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
   const [loadError, setLoadError] = useState('');
   const [reloadTick, setReloadTick] = useState(0);
   const [permissions, setPermissions] = useState(null);
+  const [unassigned, setUnassigned] = useState([]);
   const loadSeqRef = useRef(0);
   const updatedAtRef = useRef(null);
 
@@ -121,11 +154,14 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
     setLoading(true);
     setLoadError('');
     setCategories([]);
+    setUnassigned([]);
     setCellErrors(new Map());
     getCategoryBudgetTree(year)
       .then(res => {
         if (seq !== loadSeqRef.current) return;
-        const cats = res.data?.categories || [];
+        const allCats = res.data?.categories || [];
+        const cats = allCats.filter(c => !c.unassigned && c.id);
+        setUnassigned(allCats.filter(c => c.unassigned));
         if (cats.length === 0 && canManage) {
           const defaults = [
             { name: 'I.BRAND MARKETING', percent: 0, sortOrder: 1 },
@@ -173,13 +209,16 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
   }, [hasDirty]);
 
   const grandTotal = useMemo(() => {
-    return categories.reduce((sum, cat) => sum + calcRowTotal(cat.months), 0);
+    return categories.reduce((sum, cat) => sum + MONTHS.reduce((s, m) => s + categoryMonthValue(cat, m), 0), 0);
   }, [categories]);
+  const grandActual = useMemo(() => [...categories, ...unassigned]
+    .reduce((sum, cat) => sum + MONTHS.reduce((s, m) => s + actualOf(cat, m), 0), 0), [categories, unassigned]);
 
   const refreshTree = async () => {
     try {
       const res = await getCategoryBudgetTree(year);
       setCategories(prev => mapTreeToState(res.data, prev));
+      setUnassigned((res.data?.categories || []).filter(c => c.unassigned));
       if (res.permissions) setPermissions(res.permissions);
       if (res.updatedAt) updatedAtRef.current = res.updatedAt;
     } catch (err) {
@@ -221,26 +260,6 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
       if (res.permissions) setPermissions(res.permissions);
       if (res.updatedAt) updatedAtRef.current = res.updatedAt;
     } catch { /* giữ nguyên dữ liệu hiện tại nếu tải lại lỗi */ }
-  };
-
-  const updateCategoryMonth = (catId, month, value) => {
-    const clean = sanitizeDigits(value);
-    setCategories(prev => prev.map(cat =>
-      cat.id === catId ? { ...cat, months: { ...(cat.months || {}), [month]: clean } } : cat
-    ));
-    const key = `${catId}:plan:${month}`;
-    setDirtyKeys(prev => {
-      if (prev.has(key)) return prev;
-      const next = new Set(prev);
-      next.add(key);
-      return next;
-    });
-    setCellErrors(prev => {
-      if (!prev.has(key)) return prev;
-      const next = new Map(prev);
-      next.delete(key);
-      return next;
-    });
   };
 
   const updateSubBackupMonth = (subId, month, value) => {
@@ -310,24 +329,40 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
     } catch (err) { addToast(apiErrorMsg(err, t('Lỗi khi thêm hạng mục con', 'Error adding item')), 'error'); }
   };
 
-  const collectValues = () => {
+  const buildAffectedValues = () => {
+    const itemIds = new Set();
+    const subIds = new Set();
+    for (const key of dirtyKeys) {
+      const atPlan = key.lastIndexOf(':plan:');
+      const atBackup = key.lastIndexOf(':backup:');
+      if (atPlan !== -1) itemIds.add(key.slice(0, atPlan));
+      else if (atBackup !== -1) subIds.add(key.slice(0, atBackup));
+    }
     const values = [];
+    const affectedCatIds = new Set();
     for (const cat of categories) {
-      for (const m of MONTHS) {
-        const amount = Number(cat.months?.[m]) || 0;
-        // Gửi cả amount = 0 để BE xóa giá trị tháng đó khi user đã xóa ô nhưng chưa lưu.
-        values.push({ categoryId: cat.id, month: m, amount });
-      }
       for (const sub of (Array.isArray(cat.subcategories) ? cat.subcategories : [])) {
-        if (Number(sub.backup?.percent) > 0) {
+        const subTouched = subIds.has(sub.id);
+        const itemTouched = (Array.isArray(sub.items) ? sub.items : []).some(it => itemIds.has(it.id));
+        if (subTouched || itemTouched) affectedCatIds.add(cat.id);
+        if (subTouched) {
           for (const m of MONTHS) {
-            values.push({ subcategoryId: sub.id, isBackup: true, month: m, amount: Number(sub.backup?.months?.[m]) || 0 });
+            values.push({ itemId: null, subcategoryId: sub.id, isBackup: true, month: m, amount: monthValue(sub.backup?.months, m) });
           }
         }
         for (const it of (Array.isArray(sub.items) ? sub.items : [])) {
-          for (const m of MONTHS) {
-            values.push({ itemId: it.id, isBackup: false, month: m, amount: Number(it.months?.[m]) || 0 });
+          if (itemIds.has(it.id)) {
+            for (const m of MONTHS) {
+              values.push({ itemId: it.id, isBackup: false, month: m, amount: monthValue(it.months, m) });
+            }
           }
+        }
+      }
+    }
+    for (const cat of categories) {
+      if (affectedCatIds.has(cat.id)) {
+        for (const m of MONTHS) {
+          values.push({ categoryId: cat.id, month: m, amount: categoryMonthValue(cat, m) });
         }
       }
     }
@@ -338,9 +373,26 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
     if (!hasDirty || saving) return;
     setSaving(true);
     try {
-      await saveCategoryBudgetValues(year, collectValues(), {
-        baseUpdatedAt: updatedAtRef.current || undefined,
-      });
+      // Chỉ gửi các dòng bị sửa (+ rollup nhóm cha) rồi chia lô ≤ 80 dòng:
+      // BE hiện trả 500 khi một request chứa ~>120 dòng values (giới hạn bulk insert).
+      const values = buildAffectedValues();
+      if (!values.length) {
+        addToast(t('Không có thay đổi để lưu', 'No changes to save'));
+        setDirtyKeys(new Set());
+        setCellErrors(new Map());
+        setMode('view');
+        await refreshTree();
+        if (onSaved) onSaved();
+        return;
+      }
+      for (let i = 0; i < values.length; i += CHUNK_SIZE) {
+        const chunk = values.slice(i, i + CHUNK_SIZE);
+        // Lấy baseUpdatedAt mới từng lô để tránh 412 do lô trước đã làm đổi updatedAt.
+        const fresh = await getCategoryBudgetTree(year);
+        await saveCategoryBudgetValues(year, chunk, {
+          baseUpdatedAt: fresh.updatedAt || undefined,
+        });
+      }
       addToast(t('Đã lưu chi phí tổng hạng mục', 'Category budget saved'));
       setDirtyKeys(new Set());
       setCellErrors(new Map());
@@ -370,6 +422,9 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
         addToast(err.response.data.message || t('Một số ô không hợp lệ. Vui lòng kiểm tra lại.', 'Some cells are invalid. Please review.'), 'error');
       } else {
         addToast(apiErrorMsg(err, t('Lỗi khi lưu', 'Error saving')), 'error');
+        // Lỗi server giữa chừng (vd 500 khi chia lô): một phần dữ liệu có thể đã lưu
+        // thành công → tải lại cây để UI khớp, giữ dirtyKeys để người dùng lưu lại phần còn lại.
+        await refreshTree();
       }
     } finally {
       setSaving(false);
@@ -383,7 +438,7 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
   const executeDelete = async () => {
     if (!confirmDelete) return;
     const { type, id } = confirmDelete;
-    if (type !== 'category') {
+    if (!type || !id) {
       setConfirmDelete(null);
       return;
     }
@@ -500,8 +555,8 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
                       <td className="py-3 px-3"><div className="h-3 w-56 bg-slate-200 animate-pulse rounded" /></td>
                       <td><div className="h-3 w-8 bg-slate-200 animate-pulse rounded" /></td>
                       <td><div className="h-3 w-8 bg-slate-200 animate-pulse rounded" /></td>
-                      {Array.from({ length: 13 }, () => (
-                        <td key={r} className="px-2"><div className="h-3 w-16 bg-slate-200 animate-pulse rounded" /></td>
+                      {Array.from({ length: 26 }, (_, c) => (
+                        <td key={c} className="px-2"><div className="h-3 w-16 bg-slate-200 animate-pulse rounded" /></td>
                       ))}
                     </tr>
                   ))}
@@ -529,23 +584,31 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
                     {t('Thao tác', 'Actions')}
                   </th>
                   {MONTHS.map(m => (
-                    <th key={m} colSpan={1} className="p-2 text-center border-r border-slate-300 bg-slate-50 tracking-wider">
+                    <th key={m} colSpan={2} className="p-2 text-center border-r border-slate-300 bg-slate-50 tracking-wider">
                       {t(`THÁNG ${m}`, `MONTH ${m}`)}
                     </th>
                   ))}
-                  <th colSpan={1} className="p-2 text-center bg-amber-600 text-white font-bold tracking-wider">
+                  <th colSpan={2} className="p-2 text-center bg-amber-600 text-white font-bold tracking-wider">
                     {t(`Total Y${year}`, `Total Y${year}`)}
                   </th>
                 </tr>
-                {/* Level 2: Kế hoạch */}
+                {/* Level 2: Kế hoạch | Thực tế (thực tế trước VAT, BE tổng hợp từ chi phí dự án + batch kho ghi vào nhóm) */}
                 <tr className="bg-slate-50 text-[11px] font-semibold text-slate-600 border-b border-slate-300 select-none">
                   {MONTHS.map(m => (
-                    <th key={m} className="py-1 px-1.5 text-center w-[84px] min-w-[84px] border-r border-slate-200 bg-blue-50/50 text-blue-900 font-medium">
-                      {t('Kế hoạch', 'Plan')}
-                    </th>
+                    <React.Fragment key={m}>
+                      <th className="py-1 px-1.5 text-center w-[84px] min-w-[84px] border-r border-slate-200 bg-blue-50/50 text-blue-900 font-medium">
+                        {t('Kế hoạch', 'Plan')}
+                      </th>
+                      <th className="py-1 px-1.5 text-center w-[84px] min-w-[84px] border-r border-slate-300 bg-emerald-50/60 text-emerald-800 font-medium" title={t('Chi phí thực tế trước VAT', 'Actual cost before VAT')}>
+                        {t('Thực tế', 'Actual')}
+                      </th>
+                    </React.Fragment>
                   ))}
                   <th className="py-1 px-1.5 text-center w-[90px] min-w-[90px] bg-amber-500 text-white font-bold">
                     {t('Tổng KH', 'Total Plan')}
+                  </th>
+                  <th className="py-1 px-1.5 text-center w-[90px] min-w-[90px] bg-emerald-600 text-white font-bold">
+                    {t('Tổng TT', 'Total Actual')}
                   </th>
                 </tr>
               </thead>
@@ -555,25 +618,32 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
                   const ratio = categories.reduce((s, c) => s + (Number(c.percent) || 0), 0);
                   return (
                     <tr className="bg-amber-50/40 font-bold border-b border-slate-300 text-slate-800 hover:bg-amber-50 transition-colors">
-                      <td className="budget-col-sticky bg-amber-50/80 p-2.5 text-red-600 font-bold tracking-tight border-r border-slate-200 z-10">
+                      <td className="budget-col-sticky bg-amber-50 p-2.5 text-red-600 font-bold tracking-tight border-r border-slate-200 z-10">
                         {t('Budget Marketing', 'Budget Marketing')}
                       </td>
-                      <td className="budget-col-sticky-2 bg-amber-50/80 p-2.5 text-center text-red-600 font-bold border-r border-slate-200 z-10">
+                      <td className="budget-col-sticky-2 bg-amber-50 p-2.5 text-center text-red-600 font-bold border-r border-slate-200 z-10">
                         {formatPercent(ratio)}%
                       </td>
-                      <td className="budget-col-sticky-3 bg-amber-50/80 p-2.5 text-center border-r border-slate-200 sticky-border-right z-10 text-slate-400">
+                      <td className="budget-col-sticky-3 bg-amber-50 p-2.5 text-center border-r border-slate-200 sticky-border-right z-10 text-slate-400">
                         —
                       </td>
                       {MONTHS.map(m => {
-                        const plan = categories.reduce((s, cat) => s + monthValue(cat.months, m), 0);
+                        const plan = categories.reduce((s, cat) => s + categoryMonthValue(cat, m), 0);
+                        const actual = [...categories, ...unassigned].reduce((s, cat) => s + actualOf(cat, m), 0);
                         return (
-                          <td key={m} className="p-1.5 text-right font-medium border-r border-slate-200 text-blue-900">
-                            {plan > 0 ? formatCurrency(plan) : formatCurrency(0)}
-                          </td>
+                          <React.Fragment key={m}>
+                            <td className="p-1.5 text-right font-medium border-r border-slate-200 text-blue-900">
+                              {formatCurrency(plan)}
+                            </td>
+                            <ActualCell value={actual} over={actual > plan} className="font-semibold border-r border-slate-300" />
+                          </React.Fragment>
                         );
                       })}
                       <td className="p-2 text-right bg-amber-100 text-red-700 font-extrabold">
                         {formatMoney(grandTotal)}
+                      </td>
+                      <td className={`p-2 text-right bg-emerald-100 font-extrabold ${grandActual > grandTotal ? 'text-red-700' : 'text-emerald-800'}`}>
+                        {formatMoney(grandActual)}
                       </td>
                     </tr>
                   );
@@ -589,7 +659,6 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
                     canManage={canManage}
                     canEdit={canEdit}
                     onEnterEdit={enterEdit}
-                    updateCategoryMonth={updateCategoryMonth}
                     updateSubBackupMonth={updateSubBackupMonth}
                     updateItemMonth={updateItemMonth}
                     onCreateSub={createSub}
@@ -598,6 +667,25 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
                     setConfirmDelete={setConfirmDelete}
                     t={t}
                   />
+                ))}
+
+                {unassigned.map((u) => (
+                  <tr key={`unassigned-${u.name}`} className="bg-slate-50 text-slate-700">
+                    <td className="budget-col-sticky bg-slate-100 p-2.5 border-r border-slate-200 z-10">
+                      <span className="font-bold tracking-wide uppercase text-[11px]">{u.name}</span>
+                      <span className="block text-[10px] font-normal text-slate-500">{t('Chi phí dự án chưa gắn nhóm hạng mục', 'Project cost without category group')}</span>
+                    </td>
+                    <td className="budget-col-sticky-2 bg-slate-100 p-2 text-center border-r border-slate-200 z-10 text-slate-400">—</td>
+                    <td className="budget-col-sticky-3 bg-slate-100 p-2 text-center border-r border-slate-200 sticky-border-right z-10 text-slate-400">—</td>
+                    {MONTHS.map(m => (
+                      <React.Fragment key={m}>
+                        <td className="p-1.5 text-right border-r border-slate-200 text-slate-400">—</td>
+                        <ActualCell value={actualOf(u, m)} className="border-r border-slate-300" />
+                      </React.Fragment>
+                    ))}
+                    <td className="p-2 text-right bg-slate-100 text-slate-400">—</td>
+                    <td className="p-2 text-right bg-emerald-50 font-bold text-emerald-800">{formatMoney(MONTHS.reduce((s, m) => s + actualOf(u, m), 0))}</td>
+                  </tr>
                 ))}
 
                 {canManage && (
@@ -612,7 +700,7 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
                     } catch (err) { addToast(apiErrorMsg(err, t('Lỗi khi thêm hạng mục', 'Error adding category')), 'error'); }
                   }}
                   t={t}
-                  colSpan={16}
+                  colSpan={TABLE_COLS}
                 />
                 )}
               </tbody>
@@ -649,7 +737,7 @@ export default function CategoryBudgetEntry({ onSaved, onDirtyChange, refreshKey
   );
 }
 
-function CategoryRow({ cat, mode, dirtyKeys, cellErrors, canManage, canEdit, onEnterEdit, updateCategoryMonth, updateSubBackupMonth, updateItemMonth, onCreateSub, onCreateItem, refreshTree, setConfirmDelete, t }) {
+function CategoryRow({ cat, mode, dirtyKeys, cellErrors, canManage, canEdit, onEnterEdit, updateSubBackupMonth, updateItemMonth, onCreateSub, onCreateItem, refreshTree, setConfirmDelete, t }) {
   const addToast = useToast();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(cat.name);
@@ -672,7 +760,7 @@ function CategoryRow({ cat, mode, dirtyKeys, cellErrors, canManage, canEdit, onE
   return (
     <React.Fragment>
       <tr className="bg-blue-50 text-blue-900 font-medium transition hover:bg-blue-100">
-        <td className="budget-col-sticky bg-blue-100 p-2.5 flex items-center space-x-2 border-r border-blue-200 z-10">
+        <td className="budget-col-sticky bg-blue-100 p-2.5 border-r border-blue-200 z-10">
           {editing ? (
             <input
               className="bg-white/80 text-blue-900 font-bold text-[11px] px-1.5 py-0.5 rounded border border-blue-300 focus:ring-1 focus:ring-blue-500 w-full"
@@ -720,33 +808,23 @@ function CategoryRow({ cat, mode, dirtyKeys, cellErrors, canManage, canEdit, onE
           )}
         </td>
         {MONTHS.map(m => {
-          const isDirty = dirtyKeys.has(`${cat.id}:plan:${m}`);
-          const errMsg = cellErrors.get(`${cat.id}:plan:${m}`);
-          const planVal = cat.months?.[m];
+          const planVal = categoryMonthValue(cat, m);
+          const actualVal = actualOf(cat, m);
           return (
-            <td
-              key={m}
-              className={`p-1 border-r border-blue-200/70 ${errMsg ? 'bg-red-100 text-red-600' : isDirty ? 'bg-blue-200/70' : ''}`}
-              onClick={() => { if (mode === 'view' && canEdit) onEnterEdit?.(); }}
-            >
-              {mode === 'edit' ? (
-                <NumberInput
-                  aria-label={`${cat.name} - ${t('Kế hoạch', 'Plan')} - ${t('Tháng', 'Month')} ${m}`}
-                  className="w-full bg-white/80 text-blue-900 font-medium text-right text-[11px] px-1.5 py-0.5 rounded border border-blue-200 focus:ring-1 focus:ring-blue-500"
-                  value={planVal || planVal === 0 ? planVal : ''}
-                  onChange={(e) => updateCategoryMonth(cat.id, m, e.target.value)}
-                />
-              ) : (
-                <span className="block text-right px-1 py-0.5 text-[11px] tabular-nums text-blue-900 font-medium cursor-pointer">
-                  {formatCurrency(monthValue(cat.months, m))}
+            <React.Fragment key={m}>
+              <td className="p-1 border-r border-blue-200/70 bg-blue-50/40">
+                <span className="block text-right px-1 py-0.5 text-[11px] tabular-nums text-blue-900 font-bold" title={t('Tự động tính tổng từ hạng mục con', 'Auto-summed from sub items')}>
+                  {formatCurrency(planVal)}
                 </span>
-              )}
-            </td>
+              </td>
+              <ActualCell value={actualVal} over={actualVal > planVal} className="font-bold border-r border-blue-200" />
+            </React.Fragment>
           );
         })}
         <td className="p-2 text-right bg-blue-100 font-bold">
-          {formatMoney(calcRowTotal(cat.months))}
+          {formatMoney(MONTHS.reduce((s, m) => s + categoryMonthValue(cat, m), 0))}
         </td>
+        <ActualTotalCell row={cat} plan={MONTHS.reduce((s, m) => s + categoryMonthValue(cat, m), 0)} className="bg-emerald-100 font-bold" />
       </tr>
 
       {subcategories.map(sub => {
@@ -781,7 +859,7 @@ function CategoryRow({ cat, mode, dirtyKeys, cellErrors, canManage, canEdit, onE
           label={t('+ Thêm nhóm con', '+ Add subcategory')}
           onAdd={async (name) => await onCreateSub(cat.id, subcategories.length + 1, name)}
           t={t}
-          colSpan={16}
+          colSpan={TABLE_COLS}
         />
       )}
     </React.Fragment>
@@ -846,15 +924,19 @@ function SubcategoryBlock({ sub, catId, mode, dirtyKeys, cellErrors, canManage, 
           )}
         </td>
         {subTotalByMonth.map((val, idx) => (
-          <td key={idx} className="p-1 border-r border-violet-200/70 bg-violet-50/40">
-            <span className="block text-right px-1 py-0.5 text-[11px] tabular-nums text-violet-900 font-bold">
-              {formatCurrency(val)}
-            </span>
-          </td>
+          <React.Fragment key={idx}>
+            <td className="p-1 border-r border-violet-200/70 bg-violet-50/40">
+              <span className="block text-right px-1 py-0.5 text-[11px] tabular-nums text-violet-900 font-bold">
+                {formatCurrency(val)}
+              </span>
+            </td>
+            <ActualCell value={hasActuals(sub) ? actualOf(sub, idx + 1) : null} over={actualOf(sub, idx + 1) > val} className="font-bold border-r border-violet-200" t={t} />
+          </React.Fragment>
         ))}
         <td className="p-2 text-right bg-violet-100 font-extrabold text-violet-900">
           {formatMoney(subTotalByMonth.reduce((s, v) => s + v, 0))}
         </td>
+        <ActualTotalCell row={sub} plan={subTotalByMonth.reduce((s, v) => s + v, 0)} className="bg-emerald-50 font-extrabold" t={t} />
       </tr>
 
       {backupPercent > 0 && (
@@ -876,8 +958,8 @@ function SubcategoryBlock({ sub, catId, mode, dirtyKeys, cellErrors, canManage, 
           const errMsg = cellErrors.get(`${sub.id}:backup:${m}`);
           const planVal = sub.backup?.months?.[m];
           return (
+            <React.Fragment key={m}>
             <td
-              key={m}
               className={`p-1 border-r border-amber-200/70 ${errMsg ? 'bg-red-100 text-red-600' : isDirty ? 'bg-amber-200/70' : ''}`}
               onClick={() => { if (mode === 'view' && canEdit) onEnterEdit?.(); }}
             >
@@ -894,11 +976,14 @@ function SubcategoryBlock({ sub, catId, mode, dirtyKeys, cellErrors, canManage, 
                 </span>
               )}
             </td>
+            <td className="p-1 border-r border-amber-200 text-right text-[11px] text-slate-400">—</td>
+            </React.Fragment>
           );
         })}
         <td className="p-2 text-right bg-amber-100 font-bold text-amber-900">
           {formatMoney(calcRowTotal(sub.backup?.months))}
         </td>
+        <td className="p-2 text-right bg-amber-50 text-slate-400">—</td>
       </tr>
       )}
 
@@ -925,7 +1010,7 @@ function SubcategoryBlock({ sub, catId, mode, dirtyKeys, cellErrors, canManage, 
           label={t('+ Thêm hạng mục nhỏ', '+ Add sub item')}
           onAdd={async (name) => await onCreateItem(sub.id, items.length + 1, name)}
           t={t}
-          colSpan={16}
+          colSpan={TABLE_COLS}
         />
       )}
     </React.Fragment>
@@ -989,8 +1074,8 @@ function ItemRow({ item, subId, mode, dirtyKeys, cellErrors, canManage, canEdit,
         const errMsg = cellErrors.get(`${item.id}:plan:${m}`);
         const planVal = item.months?.[m];
         return (
+          <React.Fragment key={m}>
           <td
-            key={m}
             className={`p-1 border-r border-slate-200 ${errMsg ? 'bg-red-100 text-red-600' : isDirty ? 'bg-violet-100' : ''}`}
             onClick={() => { if (mode === 'view' && canEdit) onEnterEdit?.(); }}
           >
@@ -1007,13 +1092,43 @@ function ItemRow({ item, subId, mode, dirtyKeys, cellErrors, canManage, canEdit,
               </span>
             )}
           </td>
+          <ActualCell value={hasActuals(item) ? actualOf(item, m) : null} over={actualOf(item, m) > monthValue(item.months, m)} className="border-r border-slate-300" t={t} />
+          </React.Fragment>
         );
       })}
       <td className="p-2 text-right bg-slate-50 font-semibold">
         {formatMoney(calcRowTotal(item.months))}
       </td>
+      <ActualTotalCell row={item} plan={calcRowTotal(item.months)} className="bg-emerald-50/60 font-semibold" t={t} />
     </tr>
   );
+}
+
+// Ô thực tế (chỉ đọc). value = null → chưa có chi phí gắn thẳng vào dòng này (thực tế tính ở cấp nhóm).
+function ActualCell({ value, over, className = '', t }) {
+  if (value == null) {
+    return (
+      <td
+        className={`p-1 text-right text-[11px] text-slate-300 bg-emerald-50/20 ${className}`}
+        title={t ? t('Chi phí thực tế đang được ghi nhận ở cấp nhóm hạng mục', 'Actual cost is recorded at the category group level') : undefined}
+      >
+        —
+      </td>
+    );
+  }
+  return (
+    <td className={`p-1 text-right text-[11px] tabular-nums bg-emerald-50/40 ${over ? 'text-red-600' : 'text-emerald-800'} ${className}`}>
+      {formatCurrency(value)}
+    </td>
+  );
+}
+
+function ActualTotalCell({ row, plan, className = '', t }) {
+  const total = MONTHS.reduce((s, m) => s + actualOf(row, m), 0);
+  if (!hasActuals(row) && t) {
+    return <td className={`p-2 text-right text-slate-300 ${className}`}>—</td>;
+  }
+  return <td className={`p-2 text-right ${total > plan ? 'text-red-700' : 'text-emerald-800'} ${className}`}>{formatMoney(total)}</td>;
 }
 
 function AddRow({ label, onAdd, t, colSpan }) {

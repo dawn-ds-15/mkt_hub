@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
-import { getClosedDeals, deleteClosedDeal } from '../../services/api';
+import { getClosedDeals, deleteClosedDeal, updateClosedDeal } from '../../services/api';
+import NumberInput from '../common/NumberInput';
+import DataImportModal from '../common/DataImportModal';
 
 const INITIAL_DISPLAY = 5;
 
@@ -13,6 +15,11 @@ export default function ClosedDealsTable({ refreshKey = 0 }) {
   const [showAll, setShowAll] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  // Sửa Final Fees của 1 won deal (chỉ gửi setupFee lên BE)
+  const [editingId, setEditingId] = useState(null);
+  const [draft, setDraft] = useState({ setupFee: '' });
+  const [savingId, setSavingId] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     loadClosedDeals();
@@ -50,6 +57,30 @@ export default function ClosedDealsTable({ refreshKey = 0 }) {
       );
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const startEdit = (deal) => {
+    setEditingId(deal.id);
+    setDraft({ setupFee: String(deal.finalFees ?? '') });
+  };
+
+  const saveEdit = async (deal) => {
+    setSavingId(deal.id);
+    try {
+      await updateClosedDeal(deal.id, { setupFee: draft.setupFee });
+      setDeals(prev => prev.map(d => (d.id === deal.id ? { ...d, finalFees: Number(draft.setupFee) || 0 } : d)));
+      setEditingId(null);
+      addToast(locale === 'vi' ? 'Đã lưu Final Fees' : 'Final fees saved');
+    } catch (error) {
+      console.error('Error updating closed deal:', error);
+      const beMsg = error?.response?.data?.message;
+      addToast(
+        `${locale === 'vi' ? 'Lưu phí thất bại' : 'Failed to save fees'}${beMsg ? `: ${Array.isArray(beMsg) ? beMsg.join(', ') : beMsg}` : ''}`,
+        'error'
+      );
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -127,12 +158,10 @@ export default function ClosedDealsTable({ refreshKey = 0 }) {
           </th>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Khách hàng' : 'Customer'}</th>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Hợp đồng' : 'Contract'}</th>
-          <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Final Fees</th>
+          <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-right">Final Fees</th>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Ngày ký' : 'Signed Date'}</th>
           <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Trạng thái' : 'Status'}</th>
-          {allowDelete && (
-            <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-center">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
-          )}
+          <th className="p-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider text-center">{locale === 'vi' ? 'Thao tác' : 'Actions'}</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-border-light">
@@ -149,7 +178,18 @@ export default function ClosedDealsTable({ refreshKey = 0 }) {
             </td>
             <td className="p-3 text-body-md font-medium">{deal.customer}</td>
             <td className="p-3 text-body-md">{deal.contract}</td>
-            <td className="p-3 text-data-display">{formatCurrency(deal.finalFees)}</td>
+            {editingId === deal.id ? (
+              <td className="p-2">
+                <NumberInput
+                  className="w-full min-w-[110px] border border-border-light rounded px-2 py-1 text-right text-data-display outline-none focus:ring-1 focus:ring-primary"
+                  value={draft.setupFee}
+                  onChange={(e) => setDraft({ setupFee: e.target.value })}
+                  aria-label="Final Fees"
+                />
+              </td>
+            ) : (
+              <td className="p-3 text-data-display text-right">{formatCurrency(deal.finalFees)}</td>
+            )}
             <td className="p-3 text-body-md">{formatDate(deal.signedDate)}</td>
             <td className="p-3">
               <span className="text-success font-semibold flex items-center gap-1">
@@ -157,18 +197,48 @@ export default function ClosedDealsTable({ refreshKey = 0 }) {
                 {locale === 'vi' ? 'Hoàn tất' : 'Completed'}
               </span>
             </td>
-            {allowDelete && (
-              <td className="p-3 text-center">
+            <td className="p-3 text-center">
+              <div className="flex items-center justify-center gap-1">
+                {editingId === deal.id ? (
+                  <>
+                    <button
+                      onClick={() => saveEdit(deal)}
+                      disabled={savingId === deal.id}
+                      title={locale === 'vi' ? 'Lưu' : 'Save'}
+                      className="w-8 h-8 rounded flex items-center justify-center text-success hover:bg-success/10 transition-colors disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">{savingId === deal.id ? 'sync' : 'check'}</span>
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      disabled={savingId === deal.id}
+                      title={locale === 'vi' ? 'Hủy' : 'Cancel'}
+                      className="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">close</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => startEdit(deal)}
+                    title={locale === 'vi' ? 'Sửa Final Fees' : 'Edit final fees'}
+                    className="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                  </button>
+                )}
+                {allowDelete && (
                 <button
                   onClick={() => handleDeleteDeal(deal)}
                   disabled={deletingId === deal.id}
                   title={locale === 'vi' ? 'Xoá mềm closed deal' : 'Soft delete closed deal'}
-                  className="w-8 h-8 rounded flex items-center justify-center mx-auto text-on-surface-variant hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  className="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[18px]">{deletingId === deal.id ? 'sync' : 'delete'}</span>
                 </button>
-              </td>
-            )}
+                )}
+              </div>
+            </td>
           </tr>
         ))}
       </tbody>
@@ -177,11 +247,22 @@ export default function ClosedDealsTable({ refreshKey = 0 }) {
 
   return (
     <div className="space-y-4">
+      {importOpen && (
+        <DataImportModal type="deals" onClose={() => setImportOpen(false)} onImported={loadClosedDeals} />
+      )}
       <div className="flex items-center justify-between">
         <h4 className="text-label-md font-semibold text-on-surface uppercase tracking-wider">
           {locale === 'vi' ? 'Chi tiết Closed Deal' : 'Closed Deal Detail'} {!loading && `(${deals.length})`}
         </h4>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="flex items-center gap-1 text-body-sm font-semibold text-primary hover:underline"
+            title={locale === 'vi' ? 'Import lịch sử won deal từ file CSV / Excel' : 'Import won deal history from CSV / Excel'}
+          >
+            <span className="material-symbols-outlined text-[18px]">upload_file</span>
+            Import
+          </button>
           {selectedIds.size > 0 && (
             <button
               onClick={handleBulkDelete}

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import {
   getInventoryItems,
@@ -9,15 +9,12 @@ import {
   getExpenseList,
   deleteExpense,
 } from '../../services/api';
+import { useInventoryCategories } from '../../hooks/useInventoryCategories';
 import { parseExpenseLines } from '../../utils/expenseMeta';
+import { getBatchExpenseCategory } from '../../utils/inventoryBudgetCategory';
 import BatchHistoryModal from './BatchHistoryModal';
 import StockOutModal from './StockOutModal';
-
-const CATEGORY_META = {
-  posm: { vi: 'POSM', en: 'POSM' },
-  gift: { vi: 'Quà tặng', en: 'Gift' },
-  print: { vi: 'Ấn phẩm in', en: 'Printed materials' },
-};
+import { BatchAttachmentsModal } from './BatchAttachments';
 
 const STATUS_META = {
   instock: { vi: 'Còn hàng', en: 'In stock', icon: 'check_circle', badge: 'bg-success/10 text-success border-success/20' },
@@ -41,6 +38,10 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-GB');
 }
 
+const dayKey = (iso) => (iso ? String(iso).slice(0, 10) : '');
+const batchPrice = (b) => Number(b.unitPriceAfterVat ?? b.unitPrice) || 0;
+const sortByReceivedDesc = (a, b) => dayKey(b.receivedDate).localeCompare(dayKey(a.receivedDate));
+
 function exportCSV(filename, rows) {
   if (!rows.length) return;
   const headers = Object.keys(rows[0]);
@@ -58,6 +59,7 @@ function exportCSV(filename, rows) {
 export default function InventoryTable({ refreshKey, onRequestOpen }) {
   const { locale } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
+  const { categories: categoryOptions, categoryValueOf, categoryDisplay } = useInventoryCategories();
 
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
@@ -66,6 +68,9 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [batchQuery, setBatchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
 
@@ -75,6 +80,7 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
 
   const [historyFor, setHistoryFor] = useState(null);
   const [stockOutFor, setStockOutFor] = useState(null);
+  const [attachmentsFor, setAttachmentsFor] = useState(null);
   const [toast, setToast] = useState(null);
   const [restoringId, setRestoringId] = useState(null);
 
@@ -146,28 +152,92 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
     }
   };
 
+  // Ô gõ (tìm kiếm, mã batch) chờ người dùng ngừng gõ 300ms rồi mới gọi BE
+  const [debounced, setDebounced] = useState({ search: '', batchQuery: '' });
+  useEffect(() => {
+    const next = { search: search.trim(), batchQuery: batchQuery.trim() };
+    const id = setTimeout(() => setDebounced((prev) => (
+      prev.search === next.search && prev.batchQuery === next.batchQuery ? prev : next
+    )), 300);
+    return () => clearTimeout(id);
+  }, [search, batchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debounced, category, dateFrom, dateTo]);
+
+  // Lọc + phân trang ở BE (search khớp cả mã batch; batchCode / receivedFrom / receivedTo lọc theo batch).
+  // Mỗi item BE trả vẫn kèm MỌI batch → FE chỉ đánh dấu / cộng các batch khớp bộ lọc ở `rows`.
+  const loadSeqRef = useRef(0);
   const loadItems = useCallback(async () => {
+    const seq = ++loadSeqRef.current;
     setLoading(true);
     setError(null);
     try {
-      const res = await getInventoryItems({ search: search || undefined, category: category || undefined, page, limit: pageSize });
+      const params = { page, limit: pageSize };
+      if (debounced.search) params.search = debounced.search;
+      if (category) params.category = category;
+      if (debounced.batchQuery) params.batchCode = debounced.batchQuery;
+      if (dateFrom) params.receivedFrom = dateFrom;
+      if (dateTo) params.receivedTo = dateTo;
+      const res = await getInventoryItems(params);
+      if (seq !== loadSeqRef.current) return;
       setItems(res.data || []);
-      setTotal(res.total ?? (res.data || []).length);
+      setTotal(Number(res.total) || 0);
     } catch (e) {
+      if (seq !== loadSeqRef.current) return;
       console.error('[Inventory] getInventoryItems:', e);
       setError(e);
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) setLoading(false);
     }
-  }, [search, category, page, pageSize]);
+  }, [page, pageSize, debounced, category, dateFrom, dateTo]);
 
   useEffect(() => {
     loadItems();
   }, [loadItems, refreshKey]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, category]);
+  const batchFilterActive = !!(batchQuery.trim() || dateFrom || dateTo);
+  const anyFilterActive = batchFilterActive || !!search.trim() || !!category;
+
+  const allBatchCodes = useMemo(() => {
+    const set = new Set();
+    for (const it of items) for (const b of it.batches || []) if (b.batchCode) set.add(b.batchCode);
+    return [...set].sort();
+  }, [items]);
+
+  // Mỗi dòng = 1 vật phẩm; `matched` = các batch thỏa bộ lọc ngày nhập / mã batch (hoặc tất cả nếu không lọc).
+  const rows = useMemo(() => {
+    const bq = batchQuery.trim().toLowerCase();
+    const out = [];
+    for (const it of items) {
+      const batches = (Array.isArray(it.batches) ? it.batches : []).filter((b) => !b.archivedAt);
+      const matched = batches.filter((b) => {
+        const d = dayKey(b.receivedDate);
+        if (dateFrom && (!d || d < dateFrom)) return false;
+        if (dateTo && (!d || d > dateTo)) return false;
+        if (bq && !String(b.batchCode || '').toLowerCase().includes(bq)) return false;
+        return true;
+      }).sort(sortByReceivedDesc);
+      const hasBatches = Array.isArray(it.batches);
+      out.push({
+        item: it,
+        matched,
+        batchCodes: matched.map((b) => b.batchCode).filter(Boolean),
+        qtyIn: hasBatches ? matched.reduce((sum, b) => sum + (Number(b.quantityIn) || 0), 0) : null,
+        stock: batchFilterActive ? matched.reduce((sum, b) => sum + (Number(b.currentStock) || 0), 0) : (Number(it.totalStock) || 0),
+      });
+    }
+    return out;
+  }, [items, batchQuery, dateFrom, dateTo, batchFilterActive]);
+
+  const clearFilters = () => {
+    setSearch('');
+    setCategory('');
+    setBatchQuery('');
+    setDateFrom('');
+    setDateTo('');
+  };
 
   const loadBatches = async (itemId) => {
     setExpandedId(itemId === expandedId ? null : itemId);
@@ -243,13 +313,16 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
       'Đơn giá': b.unitPrice,
       'Nhà cung cấp': b.supplier,
       'Hợp đồng': b.contractCode,
+      'Hạng mục chi phí': getBatchExpenseCategory(b)?.name || '',
       'Tồn hiện tại': b.currentStock,
       'Trạng thái': BATCH_STATUS_META[b.status]?.[locale] || b.status,
     })));
   };
 
   const expandedItem = items.find((i) => i.id === expandedId);
+  const expandedMatchedIds = new Set((rows.find((r) => r.item.id === expandedId)?.matched || []).map((b) => b.id));
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageRows = rows;
 
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-border-light shadow-sm overflow-hidden flex flex-col">
@@ -262,26 +335,69 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-xl pr-3 py-2 bg-surface-container-lowest rounded-lg border border-border-light focus:border-secondary outline-none text-body-sm w-full"
-              placeholder={t('Tìm vật phẩm...', 'Search items...')}
+              placeholder={t('Tìm vật phẩm / mã batch...', 'Search item / batch code...')}
             />
           </div>
         </div>
-        <div className="flex items-center gap-sm w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-sm w-full sm:w-auto flex-wrap">
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="px-3 py-2 bg-surface-container-lowest rounded-lg border border-border-light text-body-sm text-on-surface outline-none focus:border-secondary min-w-[120px]"
           >
             <option value="">{t('Tất cả danh mục', 'All categories')}</option>
-            {Object.entries(CATEGORY_META).map(([key, m]) => (
-              <option key={key} value={key}>{m[locale]}</option>
+            {categoryOptions.map(o => (
+              <option key={o.id} value={String(o.value).toLowerCase()}>{o.label}</option>
             ))}
           </select>
-          <button className="p-2 border border-border-light rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors" title={t('Bộ lọc', 'Filters')}>
-            <span className="material-symbols-outlined text-md">filter_list</span>
-          </button>
+          <input
+            value={batchQuery}
+            onChange={(e) => setBatchQuery(e.target.value)}
+            list="inventory-batch-codes"
+            className="px-3 py-2 bg-surface-container-lowest rounded-lg border border-border-light text-body-sm text-on-surface outline-none focus:border-secondary w-40"
+            placeholder={t('Mã batch', 'Batch code')}
+            title={t('Lọc theo mã batch', 'Filter by batch code')}
+          />
+          <datalist id="inventory-batch-codes">
+            {allBatchCodes.map((c) => <option key={c} value={c} />)}
+          </datalist>
+          <div className="flex items-center gap-1" title={t('Lọc theo ngày nhập kho', 'Filter by received date')}>
+            <span className="text-body-sm text-on-surface-variant whitespace-nowrap">{t('Ngày nhập', 'Received')}</span>
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-2 py-2 bg-surface-container-lowest rounded-lg border border-border-light text-body-sm text-on-surface outline-none focus:border-secondary"
+            />
+            <span className="text-on-surface-variant">–</span>
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-2 py-2 bg-surface-container-lowest rounded-lg border border-border-light text-body-sm text-on-surface outline-none focus:border-secondary"
+            />
+          </div>
+          {anyFilterActive && (
+            <button
+              onClick={clearFilters}
+              className="px-3 py-2 border border-border-light rounded-lg text-body-sm text-on-surface-variant hover:bg-surface-container-low transition-colors flex items-center gap-1 cursor-pointer"
+              title={t('Xóa bộ lọc', 'Clear filters')}
+            >
+              <span className="material-symbols-outlined text-sm">filter_alt_off</span>
+              {t('Xóa lọc', 'Clear')}
+            </button>
+          )}
         </div>
       </div>
+
+      {batchFilterActive && (
+        <div className="px-md py-2 border-b border-border-light bg-secondary/5 text-body-sm text-on-surface-variant flex items-center gap-2">
+          <span className="material-symbols-outlined text-[16px] text-secondary">info</span>
+          {t('Số lượng nhập, tồn kho và các thẻ tổng quan đang tính theo các batch khớp bộ lọc.', 'Imported qty, stock and summary cards reflect only the batches matching the filters.')}
+        </div>
+      )}
 
       {error && (
         <div className="p-md bg-danger/5 border-b border-danger/20 text-danger text-body-sm flex items-center gap-2">
@@ -293,11 +409,13 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[800px]">
+        <table className="w-full text-left border-collapse min-w-[1000px]">
           <thead className="bg-background-subtle border-b border-border-light">
             <tr>
+              <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium">{t('Mã batch', 'Batch code')}</th>
               <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium">{t('Vật phẩm', 'Item')}</th>
               <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium">{t('Danh mục', 'Category')}</th>
+              <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium text-right">{t('Số lượng nhập', 'Qty imported')}</th>
               <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium text-right">{t('Tổng tồn kho', 'Total stock')}</th>
               <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium text-right">{t('Đơn giá TB (sau VAT)', 'Avg. price (post-VAT)')}</th>
               <th className="p-md font-label-md text-label-md text-on-surface-variant font-medium text-center">{t('Trạng thái', 'Status')}</th>
@@ -305,32 +423,35 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light">
-            {!loading && items.length === 0 && (
+            {!loading && pageRows.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-md text-center text-on-surface-variant text-body-sm">
+                <td colSpan={8} className="p-md text-center text-on-surface-variant text-body-sm">
                   {t('Không có vật phẩm nào.', 'No items found.')}
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
-                <td colSpan={6} className="p-md text-center text-on-surface-variant text-body-sm">
+                <td colSpan={8} className="p-md text-center text-on-surface-variant text-body-sm">
                   <span className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin align-middle mr-2" />
                   {t('Đang tải...', 'Loading...')}
                 </td>
               </tr>
             )}
-            {items.map((item) => {
+            {!loading && pageRows.map((row) => {
+              const { item } = row;
               const st = STATUS_META[item.status] || STATUS_META.instock;
               const isExpanded = item.id === expandedId;
               return (
                 <ItemRow
                   key={item.id}
                   item={item}
+                  row={row}
                   st={st}
                   isExpanded={isExpanded}
                   locale={locale}
                   t={t}
+                  categoryDisplay={categoryDisplay}
                   onToggle={() => loadBatches(item.id)}
                   onEdit={() => onRequestOpen('edit', item)}
                   onDelete={() => handleDeleteItem(item)}
@@ -361,7 +482,7 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
               </div>
             </div>
             <div className="overflow-x-auto border border-border-light rounded-lg">
-              <table className="w-full text-left min-w-[900px]">
+              <table className="w-full text-left min-w-[1050px]">
                 <thead className="bg-surface-container-low border-b border-border-light">
                   <tr>
                     <th className="px-3 py-2.5 font-label-md text-label-md text-on-surface-variant">{t('Mã Batch', 'Batch code')}</th>
@@ -370,15 +491,17 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
                     <th className="px-3 py-2.5 font-label-md text-label-md text-on-surface-variant text-right">{t('Đơn giá', 'Unit price')}</th>
                     <th className="px-3 py-2.5 font-label-md text-label-md text-on-surface-variant">{t('Nhà cung cấp', 'Supplier')}</th>
                     <th className="px-3 py-2.5 font-label-md text-label-md text-on-surface-variant">{t('Hợp đồng', 'Contract')}</th>
+                    <th className="px-3 py-2.5 font-label-md text-label-md text-on-surface-variant">{t('Hạng mục chi phí', 'Expense category')}</th>
                     <th className="px-3 py-2.5 font-label-md text-label-md text-on-surface-variant text-right">{t('Tồn hiện tại', 'Current stock')}</th>
                     <th className="px-3 py-2.5 font-label-md text-label-md text-on-surface-variant text-center">{t('Trạng thái', 'Status')}</th>
+                    <th className="px-3 py-2.5 font-label-md text-label-md text-on-surface-variant text-center">{t('Hồ sơ', 'Documents')}</th>
                     <th className="px-3 py-2.5 font-label-md text-label-md text-on-surface-variant text-center">{t('Lịch sử', 'History')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-light font-body-sm text-body-sm">
                   {batchesLoading && (
                     <tr>
-                      <td colSpan={9} className="px-3 py-2.5 text-center text-on-surface-variant">
+                      <td colSpan={11} className="px-3 py-2.5 text-center text-on-surface-variant">
                         <span className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin align-middle mr-2" />
                         {t('Đang tải...', 'Loading...')}
                       </td>
@@ -386,7 +509,7 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
                   )}
                   {!batchesLoading && batches.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="px-3 py-2.5 text-center text-on-surface-variant">
+                      <td colSpan={11} className="px-3 py-2.5 text-center text-on-surface-variant">
                         {t('Chưa có batch nào.', 'No batches yet.')}
                       </td>
                     </tr>
@@ -394,18 +517,28 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
                   {batches.map((batch) => {
                     const bs = BATCH_STATUS_META[batch.status] || BATCH_STATUS_META.active;
                     return (
-                      <tr key={batch.id} className="hover:bg-surface-container-lowest">
+                      <tr key={batch.id} className={`hover:bg-surface-container-lowest ${batchFilterActive && !expandedMatchedIds.has(batch.id) ? 'opacity-50' : ''}`}>
                         <td className="px-3 py-2.5 font-data-mono text-data-mono font-medium text-secondary">{batch.batchCode}</td>
                         <td className="px-3 py-2.5">{formatDate(batch.receivedDate)}</td>
                         <td className="px-3 py-2.5 text-right tabular-nums">{formatNumber(batch.quantityIn)}</td>
                         <td className="px-3 py-2.5 text-right tabular-nums">{formatNumber(batch.unitPrice)}</td>
                         <td className="px-3 py-2.5">{batch.supplier || '—'}</td>
                         <td className="px-3 py-2.5 text-secondary hover:underline cursor-pointer">{batch.contractCode || '—'}</td>
+                        <td className="px-3 py-2.5">{getBatchExpenseCategory(batch)?.name || <span className="text-on-surface-variant">—</span>}</td>
                         <td className={`px-3 py-2.5 text-right font-medium tabular-nums ${batch.currentStock === 0 ? 'text-danger' : batch.status === 'active' && batch.currentStock < (batch.quantityIn * 0.3) ? 'text-warning' : ''}`}>
                           {formatNumber(batch.currentStock)}
                         </td>
                         <td className="px-3 py-2.5 text-center">
                           <span className={bs.badge}>{bs[locale]}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <button
+                            onClick={() => setAttachmentsFor({ item: expandedItem, batch })}
+                            className="p-1 text-on-surface-variant hover:text-secondary rounded hover:bg-surface-container-low transition-colors cursor-pointer"
+                            title={t('Hồ sơ liên quan', 'Related documents')}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">attach_file</span>
+                          </button>
                         </td>
                         <td className="px-3 py-2.5 text-center">
                           <button
@@ -478,6 +611,14 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
         />
       )}
 
+      {attachmentsFor && (
+        <BatchAttachmentsModal
+          item={attachmentsFor.item}
+          batch={attachmentsFor.batch}
+          onClose={() => setAttachmentsFor(null)}
+        />
+      )}
+
       {stockOutFor && (
         <StockOutModal
           item={stockOutFor}
@@ -501,12 +642,26 @@ export default function InventoryTable({ refreshKey, onRequestOpen }) {
   );
 }
 
-function ItemRow({ item, st, isExpanded, locale, t, onToggle, onEdit, onDelete, onStockOut }) {
-  const cat = CATEGORY_META[item.category] || { vi: item.category, en: item.category };
+function ItemRow({ item, row, st, isExpanded, locale, t, categoryDisplay, onToggle, onEdit, onDelete, onStockOut }) {
+  const cat = categoryDisplay(item.category);
   const statusTone = { instock: '', low: 'text-warning', out: 'text-danger' }[item.status] || '';
   return (
     <>
       <tr className={`bg-surface-container-lowest hover:bg-surface-container-low transition-colors cursor-pointer ${isExpanded ? 'border-l-2 border-l-secondary' : ''}`} onClick={onToggle}>
+        <td className="p-md font-data-mono text-data-mono text-secondary whitespace-nowrap" title={row.batchCodes.join(', ')}>
+          {row.batchCodes.length === 0 ? (
+            <span className="text-on-surface-variant">—</span>
+          ) : (
+            <>
+              {row.batchCodes[0]}
+              {row.batchCodes.length > 1 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-xs font-body-sm">
+                  +{row.batchCodes.length - 1}
+                </span>
+              )}
+            </>
+          )}
+        </td>
         <td className="p-md">
           <div className="flex items-center gap-md">
             <div className="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center shrink-0 border border-border-light overflow-hidden">
@@ -521,9 +676,12 @@ function ItemRow({ item, st, isExpanded, locale, t, onToggle, onEdit, onDelete, 
             </div>
           </div>
         </td>
-        <td className="p-md font-body-sm text-body-sm">{cat[locale]}</td>
+        <td className="p-md font-body-sm text-body-sm">{cat}</td>
+        <td className="p-md font-data-mono text-data-mono text-right tabular-nums">
+          {row.qtyIn == null ? '—' : <>{formatNumber(row.qtyIn)} <span className="text-on-surface-variant font-normal">{item.unit}</span></>}
+        </td>
         <td className={`p-md font-data-mono text-data-mono text-right font-medium tabular-nums ${statusTone}`}>
-          {formatNumber(item.totalStock)} <span className="text-on-surface-variant font-normal">{item.unit}</span>
+          {formatNumber(row.stock)} <span className="text-on-surface-variant font-normal">{item.unit}</span>
         </td>
         <td className="p-md font-data-mono text-data-mono text-right tabular-nums">{formatNumber(item.avgUnitPrice)} <span className="text-on-surface-variant font-normal">VND</span></td>
         <td className="p-md text-center">

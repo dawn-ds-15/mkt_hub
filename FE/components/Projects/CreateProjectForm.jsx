@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { X, Sparkles, Eye, User, CalendarDays, Clock4 } from 'lucide-react';
-import { updateProject, getMembers, getDropdownKeys, createProject, getChecklistTemplates } from '../../services/api';
+import { X, Sparkles, Eye, User, CalendarDays, Clock4, Link2 } from 'lucide-react';
+import { updateProject, getMembers, getDropdownKeys, createProject } from '../../services/api';
+import { loadChecklistTemplates } from '../../services/checklistTemplateStore';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useDropdownOptions } from '../../hooks/useDropdownOptions';
@@ -8,14 +9,21 @@ import { useDropdownOptions } from '../../hooks/useDropdownOptions';
 const FALLBACK_TYPES = ['Internal', 'Client', 'Workshop', 'Event', 'Exhibition', 'Webinar', 'Online Campaign', 'Lead Generation', 'Awards', 'Production'];
 const FALLBACK_STATUSES = ['Planning', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 
-// Checklist mẫu lấy từ BE (GET /v1/projects/checklist-templates) — cache module-level vì là nội dung chuẩn ít đổi
-let checklistCache = null;
-const fetchChecklists = async () => {
-  if (checklistCache) return checklistCache;
-  const res = await getChecklistTemplates();
-  checklistCache = res.data;
-  return checklistCache;
-};
+// Người dùng hay dán link thiếu scheme (drive.google.com/...) -> tự thêm https://
+function normalizeLink(value) {
+  const v = String(value || '').trim();
+  if (!v) return '';
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : `https://${v}`;
+}
+
+function isValidHttpLink(value) {
+  try {
+    const u = new URL(normalizeLink(value));
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 const PRIORITY_CHIP = {
   High: 'bg-red-100 text-red-700',
@@ -36,6 +44,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
   const [status, setStatus] = useState('');
   const [ownerId, setOwnerId] = useState('');
   const [deadline, setDeadline] = useState('');
+  const [driveLink, setDriveLink] = useState('');
   const [templateKey, setTemplateKey] = useState('');
   const [checklists, setChecklists] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -58,7 +67,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
   useEffect(() => {
     if (isEditing || checklists) return undefined;
     let cancelled = false;
-    fetchChecklists()
+    loadChecklistTemplates()
       .then((d) => { if (!cancelled) setChecklists(d); })
       .catch(() => { if (!cancelled) setChecklists({ templates: [], stakeholderOptions: [] }); });
     return () => { cancelled = true; };
@@ -95,6 +104,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
       setOwnerId(project.ownerId || '');
       const rawDeadline = project.deadlineRaw || project.deadline;
       setDeadline(rawDeadline ? rawDeadline.split('T')[0] : '');
+      setDriveLink(project.driveLink || '');
       setInitialized(true);
     }
   }, [project, initialized]);
@@ -136,6 +146,11 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
       setError(locale === 'vi' ? 'Vui lòng chọn hạn chót (bắt buộc cho loại dự án này)' : 'Deadline is required for this project type');
       return;
     }
+    if (driveLink.trim() && !isValidHttpLink(driveLink)) {
+      setErrorField('driveLink');
+      setError(locale === 'vi' ? 'Link Drive không hợp lệ. Vui lòng dán đường dẫn đầy đủ.' : 'Invalid Drive link. Please paste the full URL.');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -144,6 +159,7 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
         status,
         ownerId,
         deadline: deadline || undefined,
+        driveLink: normalizeLink(driveLink),
       };
       if (isEditing) {
         await updateProject(project.id, payload);
@@ -287,6 +303,23 @@ export default function CreateProjectForm({ project, onClose, onSuccess }) {
               onChange={(e) => { setDeadline(e.target.value); if (errorField === 'deadline') { setError(''); setErrorField(''); } }}
             />
           </div>
+        </div>
+        <div className="space-y-1">
+          <label className="text-label-sm font-bold text-on-surface-variant uppercase">{locale === 'vi' ? 'Link Drive' : 'Drive link'}</label>
+          <div className="relative">
+            <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-[18px] h-[18px] pointer-events-none" />
+            <input
+              className={`w-full pl-10 pr-4 py-2 bg-surface-container-low border rounded text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none ${errorField === 'driveLink' ? 'border-red-400' : 'border-outline-variant'}`}
+              type="url"
+              inputMode="url"
+              placeholder="https://drive.google.com/drive/folders/..."
+              value={driveLink}
+              onChange={(e) => { setDriveLink(e.target.value); if (errorField === 'driveLink') { setError(''); setErrorField(''); } }}
+            />
+          </div>
+          <p className="text-[11px] leading-[15px] text-on-surface-variant italic">
+            {locale === 'vi' ? 'Không bắt buộc. Link sẽ hiển thị ở trang chi tiết dự án.' : 'Optional. The link appears on the project detail page.'}
+          </p>
         </div>
         {error && (
           <div className="bg-red-50 border-l-4 border-danger p-3 rounded">

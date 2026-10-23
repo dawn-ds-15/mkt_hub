@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -10,8 +11,10 @@ import {
   Languages,
   LogOut,
   Boxes,
+  ChevronDown,
 } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { usePermissionMatrix, effectiveLevel, moduleKeyOfPath, currentUser } from '../../utils/permissions';
 
 const navItems = [
   { vi: 'Tổng quan', en: 'Dashboard', href: '/', icon: LayoutDashboard, count: null },
@@ -23,6 +26,39 @@ const navItems = [
   { vi: 'Quản lý Dữ liệu', en: 'Data Management', href: '/data', icon: Database, count: null },
 ];
 
+const moduleTabs = {
+  '/tasks': [
+    { key: 'tasks', vi: 'Danh sách Task', en: 'Task List', roles: ['manager', 'specialist'] },
+    { key: 'kanban', vi: 'Kanban', en: 'Kanban', roles: ['manager', 'specialist'] },
+    { key: 'timeline', vi: 'Timeline', en: 'Timeline', roles: ['manager', 'specialist'] },
+    { key: 'weekly', vi: 'Báo cáo Tuần', en: 'Weekly Report', roles: ['manager', 'specialist'] },
+  ],
+  '/leads': [
+    { key: 'view', vi: 'Xem & Phân tích', en: 'View & Analytics', roles: ['manager', 'specialist'] },
+    { key: 'input', vi: 'Nhập số liệu', en: 'Input Data', roles: ['manager', 'specialist'] },
+    { key: 'compare', vi: 'So sánh kỳ', en: 'Compare Periods', roles: ['manager', 'specialist'] },
+  ],
+  '/expense': [
+    { key: 'overview', vi: 'Tổng quan', en: 'Overview', roles: ['manager', 'specialist'] },
+    { key: 'budget', vi: 'Ngân sách', en: 'Budget', roles: ['manager', 'specialist'] },
+    { key: 'input', vi: 'Nhập chi phí', en: 'Input Expense', roles: ['manager', 'specialist'] },
+  ],
+  '/data': [
+    { key: 'members', vi: 'Thành viên', en: 'Members', roles: ['manager'] },
+    { key: 'permissions', vi: 'Phân quyền', en: 'Permissions', roles: ['manager'] },
+    { key: 'dropdown', vi: 'Cấu hình Dropdown', en: 'Dropdown Config', roles: ['manager'] },
+    { key: 'slack', vi: 'Cấu hình Slack', en: 'Slack Config', roles: ['manager'] },
+    { key: 'backup', vi: 'Sao lưu & Đặt lại', en: 'Backup & Reset', roles: ['manager'] },
+  ],
+};
+
+const moduleDefaultTab = {
+  '/tasks': 'tasks',
+  '/leads': 'view',
+  '/expense': 'budget',
+  '/data': 'members',
+};
+
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
 
@@ -30,14 +66,34 @@ function t(locale, strings) {
   return strings[locale] || strings.vi;
 }
 
+function getUserRole() {
+  try {
+    const u = JSON.parse(localStorage.getItem('mkt_hub_user'));
+    return u?.role || 'specialist';
+  } catch { return 'specialist'; }
+}
+
 export default function Sidebar({ open = false, onClose }) {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+  const currentTab = new URLSearchParams(location.search).get('tab');
   const { year, setYear, locale, toggleLocale } = useDashboard();
+  const role = getUserRole();
+  const [expanded, setExpanded] = useState(null);
+  const permState = usePermissionMatrix();
+  const me = currentUser();
+  const visibleNavItems = navItems.filter((item) => effectiveLevel(permState?.matrix || {}, me, moduleKeyOfPath(item.href)) !== 'none');
 
   const isActive = (item) =>
     currentPath === item.href || (item.href !== '/' && currentPath.startsWith(item.href));
+
+  const activeItem = visibleNavItems.find(isActive);
+  const activeHref = activeItem ? activeItem.href : null;
+
+  useEffect(() => {
+    setExpanded(activeHref ? activeHref : null);
+  }, [activeHref, currentPath]);
 
   return (
     <>
@@ -63,24 +119,57 @@ export default function Sidebar({ open = false, onClose }) {
         </div>
 
         <nav className="flex-1 space-y-0.5">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = isActive(item);
             const Icon = item.icon;
+            const subs = (moduleTabs[item.href] || []).filter((tb) => tb.roles.includes(role));
+            const isOpen = expanded === item.href;
+            const defaultTab = moduleDefaultTab[item.href];
+            const tabKey = (active && (currentTab || defaultTab)) || '';
             return (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={onClose}
-                className={`group flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all text-[12px] ${
-                  active
-                    ? 'bg-brand-50 text-brand-700 font-semibold'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/70'
-                }`}
-              >
-                <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-brand-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                <span className="font-body-md whitespace-nowrap flex-1">{item[locale]}</span>
-                {active && <span className="w-1.5 h-1.5 rounded-full bg-brand-600 shrink-0" />}
-              </Link>
+              <div key={item.href} className="space-y-0.5">
+                <Link
+                  to={item.href}
+                  onClick={() => {
+                    if (subs.length > 0) setExpanded(isOpen ? null : item.href);
+                    onClose();
+                  }}
+                  className={`group flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all text-[12px] ${
+                    active
+                      ? 'bg-brand-50 text-brand-700 font-semibold'
+                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/70'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-brand-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                  <span className="font-body-md whitespace-nowrap flex-1">{item[locale]}</span>
+                  {active && <span className="w-1.5 h-1.5 rounded-full bg-brand-600 shrink-0" />}
+                  {subs.length > 0 && (
+                    <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  )}
+                </Link>
+                {isOpen && subs.length > 0 && (
+                  <div className="ml-4 pl-2 border-l border-slate-200 space-y-0.5 py-0.5">
+                    {subs.map((tb) => {
+                      const tabActive = tabKey === tb.key;
+                      return (
+                        <Link
+                          key={tb.key}
+                          to={`${item.href}?tab=${tb.key}`}
+                          onClick={onClose}
+                          className={`group flex items-center gap-2 pl-2.5 pr-2 py-1.5 rounded-md transition-colors text-[11px] ${
+                            tabActive
+                              ? 'bg-brand-50 text-brand-700 font-semibold'
+                              : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100/70'
+                          }`}
+                        >
+                          <span className="whitespace-nowrap truncate flex-1">{tb[locale]}</span>
+                          {tabActive && <span className="w-1 h-1 rounded-full bg-brand-600 shrink-0" />}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>

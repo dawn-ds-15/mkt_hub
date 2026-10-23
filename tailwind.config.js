@@ -93,7 +93,7 @@ export default {
         lg: "24px",
         xl: "32px",
         "sidebar-width": "160px",
-        "topbar-height": "64px",
+        "topbar-height": "48px",
         "widget-padding": "20px",
         gutter: "20px",
         "container-margin": "24px",

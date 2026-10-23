@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { getBatchExpenseCategory } from '../../utils/inventoryBudgetCategory';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -30,6 +31,12 @@ export default function BatchHistoryModal({ item, batch, rows, error, onClose, o
               <p className="text-body-sm text-on-surface-variant mt-0.5">
                 {item?.name} {batch?.batchCode ? `— ${batch.batchCode}` : ''}
               </p>
+              {getBatchExpenseCategory(batch)?.name && (
+                <p className="text-xs text-on-surface-variant mt-0.5 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">account_balance_wallet</span>
+                  {t('Hạng mục chi phí:', 'Expense category:')} <span className="font-semibold text-on-surface">{getBatchExpenseCategory(batch).name}</span>
+                </p>
+              )}
             </div>
             <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface text-xl leading-none cursor-pointer">&times;</button>
           </div>

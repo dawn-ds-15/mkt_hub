@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { getInventoryOverview, getInventoryItems } from '../../services/api';
+import { getInventoryOverview } from '../../services/api';
 import InventoryMetrics from './InventoryMetrics';
 import InventoryTable from './InventoryTable';
 import InventoryFormModal from './InventoryFormModal';
@@ -23,16 +23,7 @@ export default function InventoryManagement() {
   const loadOverview = useCallback(async () => {
     try {
       const res = await getInventoryOverview();
-      const overview = res.data || {};
-      if (overview.totalStock == null) {
-        try {
-          const itemsRes = await getInventoryItems({ limit: 100000 });
-          overview.totalStock = (itemsRes.data || []).reduce((sum, it) => sum + (Number(it.totalStock) || 0), 0);
-        } catch (e) {
-          console.error('[Inventory] compute totalStock:', e);
-        }
-      }
-      setOverview(overview);
+      setOverview(res.data || {});
       setOverviewError(false);
     } catch (e) {
       console.error('[Inventory] getInventoryOverview:', e);

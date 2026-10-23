@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { getBackupData, createBackup, deleteBackup, resetSandbox, restoreBackup } from '../../services/api';
+import { getBackupData, createBackup, deleteBackup, resetSandbox, restoreBackup, exportFullData } from '../../services/api';
 
 export default function BackupReset() {
   const { locale } = useDashboard();
@@ -8,6 +8,18 @@ export default function BackupReset() {
   const [loading, setLoading] = useState(true);
   const [resetInput, setResetInput] = useState('');
   const [creating, setCreating] = useState(false);
+  const [exportingAll, setExportingAll] = useState(false);
+
+  const handleExportAll = async () => {
+    setExportingAll(true);
+    try {
+      await exportFullData();
+    } catch (err) {
+      window.alert(`${locale === 'vi' ? 'Xuất dữ liệu thất bại' : 'Export failed'}${err?.response?.status ? ` (HTTP ${err.response.status})` : ''}`);
+    } finally {
+      setExportingAll(false);
+    }
+  };
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, type = 'success') => {
@@ -98,10 +110,16 @@ export default function BackupReset() {
           <h2 className="font-headline-lg text-headline-lg text-on-surface">{locale === 'vi' ? 'Sao lưu & Đặt lại' : 'Backup & Reset'}</h2>
           <p className="text-on-surface-variant text-body-md mt-1">{locale === 'vi' ? 'Quản lý ảnh chụp hệ thống và môi trường khôi phục không gian làm việc.' : 'Manage system snapshots and workspace recovery environment.'}</p>
         </div>
+        <div className="flex items-center gap-2">
+        <button onClick={handleExportAll} disabled={exportingAll} className="flex items-center gap-2 border border-outline-variant text-on-surface px-4 py-2.5 rounded-lg font-title-md hover:bg-surface-container-low transition-all disabled:opacity-50" title={locale === 'vi' ? 'Tải toàn bộ dữ liệu hệ thống về máy' : 'Download all system data'}>
+          <span className={`material-symbols-outlined ${exportingAll ? 'animate-spin' : ''}`}>{exportingAll ? 'sync' : 'download'}</span>
+          {locale === 'vi' ? 'Xuất toàn bộ dữ liệu' : 'Export all data'}
+        </button>
         <button onClick={handleCreateBackup} disabled={creating} className="flex items-center gap-2 bg-primary text-on-primary px-6 py-2.5 rounded-lg font-title-md hover:bg-primary/90 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50">
           <span className="material-symbols-outlined">{creating ? 'sync' : 'cloud_upload'}</span>
           {creating ? (locale === 'vi' ? 'Đang tạo...' : 'Creating...') : (locale === 'vi' ? 'Tạo Sao lưu' : 'Create Backup')}
         </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-12 gap-6">

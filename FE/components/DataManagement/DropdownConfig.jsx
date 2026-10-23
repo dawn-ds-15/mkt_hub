@@ -16,64 +16,7 @@ const KEY_LABELS = {
   currency: { vi: 'Tiền tệ', en: 'Currency' },
   lead_source: { vi: 'Nguồn Leads', en: 'Lead Source' },
   opportunity_status: { vi: 'Trạng thái Cơ hội', en: 'Opportunity Status' },
-};
-
-// Bản dịch giá trị hiển thị (chỉ áp dụng khi locale = vi, không đổi dữ liệu gửi lên BE)
-const VALUE_LABELS = {
-  // Trạng thái chung
-  draft: 'Nháp',
-  signed: 'Đã ký',
-  expired: 'Hết hạn',
-  terminated: 'Đã chấm dứt',
-  active: 'Đang hoạt động',
-  inactive: 'Ngừng hoạt động',
-  pending: 'Chờ xử lý',
-  completed: 'Hoàn thành',
-  cancelled: 'Đã hủy',
-  canceled: 'Đã hủy',
-  planning: 'Lên kế hoạch',
-  processing: 'Đang thực hiện',
-  done: 'Hoàn thành',
-  backlog: 'Tồn đọng',
-  'on hold': 'Tạm dừng',
-  // Tiền tệ
-  usd: 'USD (Đô la Mỹ)',
-  vnd: 'VND (Việt Nam Đồng)',
-  eur: 'EUR (Euro)',
-  jpy: 'JPY (Yên Nhật)',
-  gbp: 'GBP (Bảng Anh)',
-  sgd: 'SGD (Đô la Singapore)',
-  dollar: 'Đô la Mỹ',
-  euro: 'Euro',
-  yen: 'Yên Nhật',
-  dong: 'Việt Nam Đồng',
-  // Nguồn Leads
-  website: 'Website',
-  facebook: 'Facebook',
-  linkedin: 'LinkedIn',
-  event: 'Sự kiện',
-  exhibition: 'Triển lãm',
-  webinar: 'Webinar',
-  referral: 'Giới thiệu',
-  'cold call': 'Gọi điện tư vấn',
-  email: 'Email',
-  'email campaign': 'Chiến dịch Email',
-  advertisement: 'Quảng cáo',
-  ads: 'Quảng cáo',
-  workshop: 'Workshop',
-  'online campaign': 'Chiến dịch Online',
-  'lead generation': 'Tìm kiếm Leads',
-  awards: 'Giải thưởng',
-  production: 'Sản xuất',
-  // Trạng thái cơ hội
-  open: 'Đang mở',
-  won: 'Đã chốt',
-  lost: 'Đã mất',
-  negotiation: 'Đang đàm phán',
-  'in progress': 'Đang tiến hành',
-  prospecting: 'Tiếp cận ban đầu',
-  qualification: 'Đánh giá nhu cầu',
-  proposal: 'Báo giá',
+  inventory_category: { vi: 'Danh mục Kho', en: 'Inventory Category' },
 };
 
 function prettifyKey(raw) {
@@ -89,12 +32,6 @@ function keyDisplayLabel(k, locale) {
   if (known) return known[locale] || known.vi;
   const label = k.label || k.key || '';
   return label.includes('_') ? prettifyKey(label) : label;
-}
-
-function valueDisplayLabel(val, locale) {
-  if (locale !== 'vi') return val.label;
-  const key = String(val.label || '').trim().toLowerCase();
-  return VALUE_LABELS[key] || val.label;
 }
 
 export default function DropdownConfig() {
@@ -113,6 +50,15 @@ export default function DropdownConfig() {
   const [deleting, setDeleting] = useState(false);
   const dragIndexRef = useRef(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  // window.confirm() làm input mất focus -> onBlur bắn lại handleRenameConfirm -> hộp thoại hiện lại liên tục.
+  // renameBusyRef chặn tái nhập; renamePromiseRef để nút Lưu chờ đổi tên xong rồi mới PUT (tránh PUT đè nhãn cũ).
+  const renameBusyRef = useRef(false);
+  const renamePromiseRef = useRef(null);
+  // Tên vừa bị từ chối (trùng hoặc lưu lỗi): giữ nguyên ô nhập để sửa tiếp,
+  // nhưng không hỏi/không gọi API lại cho tới khi người dùng sửa khác đi.
+  const renameRejectedRef = useRef(null);
+  const activeKeyRef = useRef(null);
+  useEffect(() => { activeKeyRef.current = activeKey; }, [activeKey]);
 
   useEffect(() => {
     getDropdownKeys().then((res) => {
@@ -156,43 +102,70 @@ export default function DropdownConfig() {
   };
 
   const handleRenameStart = (val) => {
+    renameRejectedRef.current = null;
     setRenamingId(val.id);
     setRenamingValue(val.label);
   };
 
-  const handleRenameConfirm = async () => {
-    if (!renamingValue.trim() || !activeKey) return;
+  const closeRename = () => {
+    renameRejectedRef.current = null;
+    setRenamingId(null);
+    setRenamingValue('');
+  };
+
+  const handleRenameConfirm = () => {
+    if (renameBusyRef.current) return renamePromiseRef.current;
+    const key = activeKeyRef.current;
+    if (!key || renamingId == null) return undefined;
+
     const trimmed = renamingValue.trim();
-    const duplicate = activeKey.values.some(v => v.isActive !== false && v.id !== renamingId && (v.label || '').trim().toLowerCase() === trimmed.toLowerCase());
+    if (trimmed && trimmed === renameRejectedRef.current) return undefined;
+    const originalLabel = key.values.find(v => v.id === renamingId)?.label || '';
+    // Bỏ trống hoặc không sửa gì: đóng ô nhập, không hỏi lại, không gọi API.
+    if (!trimmed || trimmed === originalLabel) {
+      closeRename();
+      return undefined;
+    }
+    const duplicate = key.values.some(v => v.isActive !== false && v.id !== renamingId && (v.label || '').trim().toLowerCase() === trimmed.toLowerCase());
     if (duplicate) {
+      renameRejectedRef.current = trimmed;
       addToast(locale === 'vi' ? 'Tên này đã tồn tại (không phân biệt hoa/thường)' : 'This name already exists (case-insensitive)', 'error');
-      return;
+      return undefined;
     }
-    const originalVal = activeKey.values.find(v => v.id === renamingId);
-    const originalLabel = originalVal?.label || '';
-    if (trimmed !== originalLabel) {
-      const msg = locale === 'vi'
-        ? `Đổi tên "${originalLabel}" thành "${trimmed}" sẽ cập nhật dữ liệu ở tất cả các task, dự án, lead đang sử dụng giá trị này.`
-        : `Renaming "${originalLabel}" to "${trimmed}" will update data across all tasks, projects, and leads using this value.`;
-      if (!window.confirm(msg)) return;
-    }
-    try {
-      await updateDropdownOption(activeKey.key, renamingId, trimmed);
-      const res = await getDropdownKeys();
-      const list = res.data || [];
-      setKeys(list);
-      const fresh = list.find(k => k.id === activeKey.id) || null;
-      setActiveKey(fresh);
-      setRenamingId(null);
-      setRenamingValue('');
-      addToast(locale === 'vi' ? 'Đã đổi tên' : 'Renamed successfully');
-    } catch (err) {
-      if (err?.response?.status === 409) {
-        addToast(locale === 'vi' ? 'Tên này đã tồn tại' : 'This name already exists', 'error');
-      } else {
-        addToast(locale === 'vi' ? 'Đổi tên thất bại' : 'Failed to rename', 'error');
+
+    renameBusyRef.current = true;
+    const run = (async () => {
+      try {
+        const msg = locale === 'vi'
+          ? `Đổi tên "${originalLabel}" thành "${trimmed}" sẽ cập nhật dữ liệu ở tất cả các task, dự án, lead đang sử dụng giá trị này.`
+          : `Renaming "${originalLabel}" to "${trimmed}" will update data across all tasks, projects, and leads using this value.`;
+        if (!window.confirm(msg)) {
+          closeRename();
+          return;
+        }
+        await updateDropdownOption(key.key, renamingId, trimmed);
+        const res = await getDropdownKeys();
+        const list = res.data || [];
+        setKeys(list);
+        const fresh = list.find(k => k.id === key.id) || null;
+        setActiveKey(fresh);
+        activeKeyRef.current = fresh;
+        closeRename();
+        addToast(locale === 'vi' ? 'Đã đổi tên' : 'Renamed successfully');
+      } catch (err) {
+        renameRejectedRef.current = trimmed;
+        if (err?.response?.status === 409) {
+          addToast(locale === 'vi' ? 'Tên này đã tồn tại' : 'This name already exists', 'error');
+        } else {
+          addToast(locale === 'vi' ? 'Đổi tên thất bại' : 'Failed to rename', 'error');
+        }
+      } finally {
+        renameBusyRef.current = false;
+        renamePromiseRef.current = null;
       }
-    }
+    })();
+    renamePromiseRef.current = run;
+    return run;
   };
 
   const handleDeleteClick = async (val) => {
@@ -227,15 +200,20 @@ export default function DropdownConfig() {
 
   // Lưu thay đổi: PUT full values array của khóa hiện tại lên BE (thứ tự + danh sách hiện tại)
   const handleSave = async () => {
-    if (!activeKey || saving) return;
+    if (saving) return;
     setSaving(true);
     try {
-      const activeValues = activeKey.values.filter(v => v.isActive !== false);
-      await reorderDropdownValues(activeKey.id, activeValues);
+      // Bấm Lưu khi đang mở ô đổi tên sẽ làm input blur -> đổi tên chạy trước.
+      // Phải chờ nó xong rồi mới PUT, nếu không PUT sẽ đẩy danh sách nhãn CŨ lên và nuốt mất tên vừa đổi.
+      if (renamePromiseRef.current) await renamePromiseRef.current;
+      const key = activeKeyRef.current;
+      if (!key) return;
+      const activeValues = key.values.filter(v => v.isActive !== false);
+      await reorderDropdownValues(key.id, activeValues);
       const res = await getDropdownKeys();
       const list = res.data || [];
       setKeys(list);
-      const fresh = list.find(k => k.id === activeKey.id) || null;
+      const fresh = list.find(k => k.id === key.id) || null;
       setActiveKey(fresh);
       addToast(locale === 'vi' ? 'Đã lưu thay đổi' : 'Changes saved');
     } catch (e) {
@@ -366,15 +344,15 @@ export default function DropdownConfig() {
                       autoFocus
                       className="flex-1 text-body-md text-on-surface bg-white border border-primary rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
                       value={renamingValue}
-                      onChange={(e) => setRenamingValue(e.target.value)}
+                      onChange={(e) => { renameRejectedRef.current = null; setRenamingValue(e.target.value); }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleRenameConfirm();
-                        if (e.key === 'Escape') setRenamingId(null);
+                        if (e.key === 'Escape') closeRename();
                       }}
                       onBlur={handleRenameConfirm}
                     />
                   ) : (
-                    <div className="flex-1 text-body-md text-on-surface">{valueDisplayLabel(val, locale)}</div>
+                    <div className="flex-1 text-body-md text-on-surface">{val.label}</div>
                   )}
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {renamingId !== val.id && (

@@ -66,7 +66,8 @@ function projectStats(p, avgCac, t) {
   const sqlPlan = Number(p.kpiSqlPlan) || 0;
   const sqlActual = Number(p.kpiSqlActual) || 0;
   const ratio = sqlPlan > 0 ? sqlActual / sqlPlan : null;
-  const projCac = sqlActual > 0 ? (p.actualCostDirect || 0) / sqlActual : null;
+  const closedActual = Number(p.kpiClosedDealActual) || 0;
+  const projCac = closedActual > 0 ? (p.actualCostDirect || 0) / closedActual : null;
   const overCeiling = projCac != null && avgCac != null && projCac > avgCac * 1.2;
   let badge = { label: t({ vi: 'Đang chạy', en: 'Running' }), cls: 'bg-surface-variant text-on-surface-variant' };
   if (ratio != null && ratio >= 1) badge = { label: t({ vi: 'Đạt KPI', en: 'On target' }), cls: 'bg-success/10 text-success' };
@@ -133,9 +134,9 @@ export default function PerformanceDashboard({ refreshKey, onViewAll }) {
   const roaDelta = roa != null && prevRoa != null ? roa - prevRoa : null;
 
   const avgCac = useMemo(() => {
-    const withSql = projects.filter((p) => (p.kpiSqlActual || 0) > 0);
-    if (!withSql.length) return null;
-    const vals = withSql.map((p) => (p.actualCostDirect || 0) / p.kpiSqlActual);
+    const withClosed = projects.filter((p) => (p.kpiClosedDealActual || 0) > 0);
+    if (!withClosed.length) return null;
+    const vals = withClosed.map((p) => (p.actualCostDirect || 0) / p.kpiClosedDealActual);
     return vals.reduce((s, v) => s + v, 0) / vals.length;
   }, [projects]);
 

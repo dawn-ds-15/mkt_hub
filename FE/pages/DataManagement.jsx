@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { BackupReset, DropdownConfig, ExportData, ImportData, SlackSettings, TeamMembers } from '../components/DataManagement';
+import { BackupReset, ChecklistTemplatesConfig, DropdownConfig, PermissionMatrix, SlackSettings, TeamMembers } from '../components/DataManagement';
 import { useDashboard } from '../contexts/DashboardContext';
 
 function getUserRole() {
@@ -11,10 +11,12 @@ function getUserRole() {
   } catch { return 'specialist'; }
 }
 
+// Import / Export đã chuyển vào từng module (feedback 26/09 T07): import task ở Danh sách task, won deal ở
+// Nhập số liệu, lịch sử KPI ở So sánh kỳ; xuất PDF ở Báo cáo tuần, Excel ở Tổng quan, toàn bộ dữ liệu ở Sao lưu.
 const allTabs = [
-  { vi: 'Import', en: 'Import', key: 'import', roles: ['specialist', 'manager'] },
-  { vi: 'Export', en: 'Export', key: 'export', roles: ['specialist', 'manager'] },
   { vi: 'Thành viên', en: 'Members', key: 'members', roles: ['manager'] },
+  { vi: 'Phân quyền', en: 'Permissions', key: 'permissions', roles: ['manager'] },
+  { vi: 'Mẫu checklist', en: 'Checklist Templates', key: 'templates', roles: ['manager'] },
   { vi: 'Cấu hình Dropdown', en: 'Dropdown Config', key: 'dropdown', roles: ['manager'] },
   { vi: 'Cấu hình Slack', en: 'Slack Config', key: 'slack', roles: ['manager'] },
   { vi: 'Sao lưu & Đặt lại', en: 'Backup & Reset', key: 'backup', roles: ['manager'] },
@@ -28,7 +30,8 @@ export default function DataManagementPage() {
     const filtered = allTabs.filter(t => t.roles.includes(role));
     return filtered.map(t => ({ label: t[locale] || t.vi, key: t.key }));
   }, [role, locale]);
-  const activeTab = searchParams.get('tab') || tabs[0]?.key || 'import';
+  const rawTab = searchParams.get('tab');
+  const activeTab = tabs.some((tb) => tb.key === rawTab) ? rawTab : (tabs[0]?.key || '');
 
   const setActiveTab = (key) => {
     setSearchParams({ tab: key }, { replace: true });
@@ -36,12 +39,12 @@ export default function DataManagementPage() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'import':
-        return <ImportData />;
-      case 'export':
-        return <ExportData />;
+      case 'permissions':
+        return <PermissionMatrix />;
       case 'members':
         return <TeamMembers />;
+      case 'templates':
+        return <ChecklistTemplatesConfig />;
       case 'slack':
         return <SlackSettings />;
       case 'dropdown':

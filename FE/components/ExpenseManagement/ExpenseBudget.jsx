@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useToast } from '../../contexts/ToastContext';
-import { getExpenseList, getCategoryBudgetDashboard } from '../../services/api';
+import { getCategoryBudgetDashboard, getCategoryBudgetTree } from '../../services/api';
 
 const CURRENT_YEAR = String(new Date().getFullYear());
 
@@ -15,40 +15,12 @@ function formatPercent(p) {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
 }
 
-// Đơn giá quy ước TRƯỚC VAT (xem ExpenseReports "trước VAT", getCategoryBudgetActuals)
-function preVatPrice(ln) {
-  if (ln.unitPriceBeforeVat != null && ln.unitPriceBeforeVat !== '') return Number(ln.unitPriceBeforeVat) || 0;
-  const base = Number(ln.actualUnitPrice ?? ln.unitPriceAfterVat ?? ln.unitPriceAfterVatSnapshot ?? 0);
-  const vatRate = ln.vatRateSnapshot != null ? Number(ln.vatRateSnapshot) : (ln.vatRate != null ? Number(ln.vatRate) : 0);
-  return vatRate > 0 ? Math.round(base / (1 + vatRate / 100)) : base;
-}
+const sumMonths = (months) => (Array.isArray(months)
+  ? months.reduce((s, v) => s + (Number(v) || 0), 0)
+  : Object.values(months || {}).reduce((s, v) => s + (Number(v) || 0), 0));
 
-function matchesCategory(ln, cat) {
-  const sameId = ln.categoryId && cat.categoryId && String(ln.categoryId) === String(cat.categoryId);
-  const lName = String(ln.hangMucLon || '').trim().toLowerCase();
-  const cName = String(cat.categoryName || '').trim().toLowerCase();
-  const sameName = lName && cName && lName === cName;
-  return Boolean(sameId || sameName);
-}
-
-function matchesYear(p) {
-  return String(p).includes(CURRENT_YEAR);
-}
-
-function matchesPeriodFilter(expensePeriod, periodType, periodValue, filterYear) {
-  if (!expensePeriod) return false;
-  const pStr = String(expensePeriod);
-  const pYear = parseInt(pStr.split('-')[0], 10);
-  const pMonth = parseInt(pStr.split('-')[1], 10);
-  if (periodType === 'year') {
-    return pYear === parseInt(filterYear, 10);
-  }
-  if (periodType === 'month') {
-    const [fv, fm] = (periodValue || '').split('-').map(Number);
-    return pYear === fv && pMonth === fm;
-  }
-  return true;
-}
+// Giá trị của 1 tháng trong map { "1": .., ..., "12": .. } (hoặc mảng 12 phần tử)
+const monthOf = (months, m) => Number(Array.isArray(months) ? months[m - 1] : months?.[m] ?? months?.[String(m)]) || 0;
 
 function getMonthOptions(year = CURRENT_YEAR) {
   return Array.from({ length: 12 }, (_, i) => ({
@@ -62,29 +34,18 @@ export default function ExpenseBudget({ refreshKey, onSaved }) {
   const addToast = useToast();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
   const [loading, setLoading] = useState(true);
-  const [expenses, setExpenses] = useState([]);
   const [dashboard, setDashboard] = useState(null);
+  const [treeCategories, setTreeCategories] = useState([]);
   const [permissions, setPermissions] = useState(null);
   const [periodType, setPeriodType] = useState('year');
   const [periodValue, setPeriodValue] = useState(CURRENT_YEAR);
   const budgetSeqRef = useRef(0);
 
   useEffect(() => {
-    let cancelled = false;
-    const fetchYear = periodType === 'month' ? (periodValue.split('-')[0] || CURRENT_YEAR)
-      : periodType === 'year' ? periodValue : CURRENT_YEAR;
-    getExpenseList(undefined, undefined, fetchYear)
-      .then((res) => {
-        if (!cancelled) setExpenses(Array.isArray(res.data) ? res.data : []);
-      })
-      .catch(() => {});
-    return () => { cancelled = true };
-  }, [periodType, periodValue]);
-
-  useEffect(() => {
     const seq = ++budgetSeqRef.current;
     setLoading(true);
     setDashboard(null);
+    setTreeCategories([]);
     const apiYear = periodType === 'month' ? (periodValue.split('-')[0] || CURRENT_YEAR)
       : periodType === 'year' ? periodValue : CURRENT_YEAR;
     getCategoryBudgetDashboard(apiYear)
@@ -100,12 +61,21 @@ export default function ExpenseBudget({ refreshKey, onSaved }) {
       .finally(() => {
         if (seq === budgetSeqRef.current) setLoading(false);
       });
+    getCategoryBudgetTree(apiYear)
+      .then((res) => {
+        if (seq !== budgetSeqRef.current) return;
+        setTreeCategories(Array.isArray(res.data?.categories) ? res.data.categories : []);
+      })
+      .catch(() => {
+        if (seq !== budgetSeqRef.current) return;
+        setTreeCategories([]);
+      });
     return () => {};
   }, [periodType, periodValue, refreshKey]);
 
-  const expenseFiltered = useMemo(() => (
-    expenses.filter((e) => matchesPeriodFilter(e.period, periodType, periodValue, CURRENT_YEAR))
-  ), [expenses, periodType, periodValue]);
+  const periodYear = periodType === 'month' ? (periodValue.split('-')[0] || CURRENT_YEAR) : periodValue;
+  const monthOptions = useMemo(() => getMonthOptions(periodYear), [periodYear]);
+  const periodMonth = periodType === 'month' ? Number(String(periodValue).split('-')[1]) || 0 : 0;
 
   const handlePeriodTypeChange = (newType) => {
     setPeriodType(newType);
@@ -113,44 +83,53 @@ export default function ExpenseBudget({ refreshKey, onSaved }) {
     else if (newType === 'month') setPeriodValue(`${CURRENT_YEAR}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
   };
 
-  const periodYear = periodType === 'month' ? (periodValue.split('-')[0] || CURRENT_YEAR) : periodValue;
-  const monthOptions = useMemo(() => getMonthOptions(periodYear), [periodYear]);
-
-  const totalBudget = Number(dashboard?.totalBudget) || 0;
-
+  // Kế hoạch = cây ngân sách (tab "Nhập chi phí tổng hạng mục"); Thực tế = BE tổng hợp trong cây
+  // (actuals/actualTotal, TRƯỚC VAT: dòng chi phí dự án ở snapshot mới nhất + batch kho ghi thẳng vào nhóm;
+  // dòng không gắn nhóm nằm ở nhóm ảo `unassigned`) → tổng khớp "Tổng chi phí" ở tab Tổng quan.
+  // Kỳ tháng: lấy đúng cột tháng đó của cả kế hoạch lẫn thực tế.
   const categoryRows = useMemo(() => {
-    if (dashboard?.categories && Array.isArray(dashboard.categories) && dashboard.categories.length > 0) {
-      return dashboard.categories.map((c) => {
-        const budgetPlan = Number(c.budget) != null && !Number.isNaN(Number(c.budget)) ? Number(c.budget)
-          : (totalBudget > 0 ? Math.round(totalBudget * (Number(c.percentage) || 0) / 100) : 0);
-        // Chi phí thực tế đã trừ vào nhóm: khớp line chi phí dự án theo categoryId/hạng mục lớn (trước VAT)
-        const actual = (expenseFiltered || []).reduce((sum, exp) => {
-          const lines = Array.isArray(exp.lines) ? exp.lines : [];
-          for (const ln of lines) {
-            if (!matchesCategory(ln, c)) continue;
-            const qty = Number(ln.actualQuantity) || Number(ln.actualQty) || 0;
-            sum += qty * preVatPrice(ln);
-          }
-          return sum;
-        }, 0);
-        const catRemaining = budgetPlan - actual;
-        const catUsage = budgetPlan > 0 ? (actual / budgetPlan * 100) : null;
-        return {
-          name: c.categoryName || '',
-          budgetPlan,
-          actual,
-          percent: c.percentage != null ? Number(c.percentage) : 0,
-          remaining: catRemaining,
-          usagePercent: catUsage,
-        };
+    const fromTree = Array.isArray(treeCategories) && treeCategories.length > 0;
+    const sourceCats = fromTree ? treeCategories : (dashboard?.categories || []);
+    const rows = [];
+    for (const c of sourceCats) {
+      const name = String(fromTree ? (c.name || '') : (c.categoryName || c.name || '')).trim();
+      if (!name) continue;
+      let budgetPlan;
+      let actual;
+      let percent;
+      if (fromTree) {
+        budgetPlan = periodMonth ? monthOf(c.months, periodMonth) : sumMonths(c.months);
+        actual = periodMonth ? monthOf(c.actuals, periodMonth) : (Number(c.actualTotal) || sumMonths(c.actuals));
+        percent = Number(c.percent) || 0;
+      } else {
+        budgetPlan = Number(c.budget) || 0;
+        actual = Number(c.actual ?? c.actualSpent) || 0;
+        percent = c.percentage != null ? Number(c.percentage) : 0;
+      }
+      rows.push({
+        name,
+        budgetPlan,
+        actual,
+        percent,
+        remaining: budgetPlan - actual,
+        usagePercent: budgetPlan > 0 ? (actual / budgetPlan * 100) : null,
+        // Nhóm ảo BE gom dòng chi phí dự án không gắn nhóm hạng mục (vd. "Vật phẩm" xuất kho cho dự án)
+        unassigned: Boolean(fromTree && c.unassigned),
       });
     }
-    return [];
-  }, [dashboard, totalBudget, expenseFiltered]);
+    return rows;
+  }, [treeCategories, dashboard, periodMonth]);
 
-  const actualSpent = Number(dashboard?.actualSpent) || 0;
-  const remaining = Number(dashboard?.remainingBudget) || 0;
-  const usedPercentage = dashboard?.usedPercentage;
+  const planTotal = categoryRows.reduce((s, r) => s + r.budgetPlan, 0);
+  const actualTotal = categoryRows.reduce((s, r) => s + r.actual, 0);
+  const dashboardTotal = Number(dashboard?.totalBudget) || 0;
+  const dashboardActual = Number(dashboard?.actualSpent) || 0;
+  const totalBudget = planTotal > 0 ? planTotal : dashboardTotal;
+  const actualSpent = actualTotal > 0 ? actualTotal : dashboardActual;
+  const remaining = totalBudget - actualSpent;
+  const usedPercentage = totalBudget > 0
+    ? (actualSpent / totalBudget) * 100
+    : (dashboard?.usedPercentage != null ? Number(dashboard.usedPercentage) : null);
 
   const budgetCards = [
     { label: locale === 'vi' ? 'Tổng ngân sách' : 'Total budget', value: formatCurrency(totalBudget) },
@@ -257,15 +236,17 @@ export default function ExpenseBudget({ refreshKey, onSaved }) {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse" style={{ tableLayout: 'fixed' }}>
                 <colgroup>
-                  <col style={{ width: '30%' }} />
-                  <col style={{ width: '23%' }} />
-                  <col style={{ width: '23%' }} />
-                  <col style={{ width: '24%' }} />
+                  <col style={{ width: '28%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '18%' }} />
                 </colgroup>
                 <thead>
                   <tr className="bg-background-subtle border-b border-border-light">
                     <th className="px-4 py-3 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">{locale === 'vi' ? 'Nhóm hạng mục' : 'Category group'}</th>
                     <th className="px-4 py-3 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider text-right">{locale === 'vi' ? 'Chi phí kế hoạch' : 'Plan Cost'}</th>
+                    <th className="px-4 py-3 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider text-right">{locale === 'vi' ? 'Chi phí thực tế' : 'Actual Cost'}</th>
                     <th className="px-4 py-3 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider text-right">{locale === 'vi' ? 'Còn lại' : 'Remaining'}</th>
                     <th className="px-4 py-3 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider text-right">{locale === 'vi' ? 'Sử dụng %' : 'Usage %'}</th>
                   </tr>
@@ -273,7 +254,7 @@ export default function ExpenseBudget({ refreshKey, onSaved }) {
                 <tbody className="divide-y divide-border-light">
                   {categoryRows.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-on-surface-variant">
+                      <td colSpan={5} className="px-4 py-8 text-center text-on-surface-variant">
                         {locale === 'vi' ? 'Chưa có dữ liệu chi phí' : 'No expense data'}
                       </td>
                     </tr>
@@ -281,8 +262,14 @@ export default function ExpenseBudget({ refreshKey, onSaved }) {
                     <>
                       {categoryRows.map((row) => (
                         <tr key={row.name} className="hover:bg-surface-bright transition-colors">
-                          <td className="px-4 py-3 text-[13px] font-medium text-on-surface truncate" title={row.name}>{row.name}</td>
-                          <td className="px-4 py-3 text-right font-data-mono text-[13px] text-on-surface">{formatCurrency(row.budgetPlan)}</td>
+                          <td className="px-4 py-3 text-[13px] font-medium text-on-surface truncate" title={row.unassigned ? t(`${row.name}: dòng chi phí dự án không thuộc nhóm hạng mục nào (vd. xuất kho vật phẩm cho dự án)`, `${row.name}: project cost lines without a category group`) : row.name}>
+                            <span className="uppercase">{row.name}</span>
+                            {row.unassigned && (
+                              <span className="block text-[11px] font-normal normal-case text-on-surface-variant">{t('Chi phí dự án chưa gắn nhóm hạng mục', 'Project cost without category group')}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right font-data-mono text-[13px] text-on-surface">{row.unassigned ? '—' : formatCurrency(row.budgetPlan)}</td>
+                          <td className={`px-4 py-3 text-right font-data-mono text-[13px] ${row.budgetPlan > 0 && row.actual > row.budgetPlan ? 'text-danger' : 'text-on-surface'}`}>{formatCurrency(row.actual)}</td>
                           <td className={`px-4 py-3 text-right font-data-mono text-[13px] font-semibold ${row.remaining < 0 ? 'text-danger' : 'text-on-surface'}`}>
                             {formatCurrency(row.remaining)}
                           </td>
@@ -299,6 +286,7 @@ export default function ExpenseBudget({ refreshKey, onSaved }) {
                       <tr className="border-t border-border-light bg-surface-muted/60">
                         <td className="px-4 py-3 font-bold text-on-surface text-[13px]">{locale === 'vi' ? 'Tổng cộng' : 'Total'}</td>
                         <td className="px-4 py-3 text-right font-bold font-data-mono text-on-surface text-[13px]">{formatCurrency(totalBudget)}</td>
+                        <td className="px-4 py-3 text-right font-bold font-data-mono text-on-surface text-[13px]">{formatCurrency(actualSpent)}</td>
                         <td className={`px-4 py-3 text-right font-bold font-data-mono text-[13px] ${remaining < 0 ? 'text-danger' : 'text-on-surface'}`}>
                           {formatCurrency(remaining)}
                         </td>

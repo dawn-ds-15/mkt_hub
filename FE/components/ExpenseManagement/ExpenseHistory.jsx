@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { getExpenseList, deleteExpense, getProjects, createInventoryTransaction, getExpenseHistory } from '../../services/api';
+import { getExpenseList, deleteExpense, getProjects, createInventoryTransaction, getExpenseHistory, getExpenseAttachmentBlob } from '../../services/api';
 import { getExpenseMeta, removeExpenseMeta, parseExpenseNote, parseExpenseLines } from '../../utils/expenseMeta';
+import { lineAttachments } from '../../utils/expenseAttachments';
 
 function formatCurrency(val) {
   return (val ?? 0).toLocaleString('vi-VN');
@@ -30,7 +31,9 @@ const expTime = (exp) => {
 };
 const compareExpDesc = (a, b) => expTime(b) - expTime(a);
 
-const lineKey = (ln) => String(ln.event || '').trim().toLowerCase() || String(ln.note || '').trim().toLowerCase();
+// Khóa so khớp giữa 2 phiên bản. KHÔNG dùng ghi chú làm khóa: sửa ghi chú sẽ
+// làm đổi khóa khiến cùng một dòng bị hiểu là "đã xoá" + "thêm mới".
+const lineKey = (ln) => String(ln.event || '').trim().toLowerCase() || `#${ln.no ?? ''}`;
 
 const formatDate = (d) => {
   const raw = String(d || '');
@@ -115,6 +118,19 @@ export default function ExpenseHistory({ refreshKey, onSaved, projectId, onProje
     const m = metaOf(exp);
     return !!(m && (m.contractDataUrl || m.contractFile));
   };
+  const openLineAttachment = async (att) => {
+    // Mở tab trước khi await để trình duyệt không chặn popup
+    const win = window.open('', '_blank');
+    try {
+      const blob = await getExpenseAttachmentBlob(att.id);
+      const url = URL.createObjectURL(blob);
+      if (win) win.location.href = url; else window.open(url, '_blank');
+    } catch {
+      if (win) win.close();
+      window.alert(t('Không mở được hồ sơ', 'Could not open the file'));
+    }
+  };
+
   // Tách các dòng chi phí của một bản ghi (BE lưu gộp theo Dự án + Kỳ)
   const linesOf = (exp) => {
     const beLines = Array.isArray(exp.lines) && exp.lines.length > 0 ? exp.lines : null;
@@ -137,6 +153,7 @@ export default function ExpenseHistory({ refreshKey, onSaved, projectId, onProje
           totalAfterVat: Math.round(qty * price * (1 + vat / 100)),
           note: ln.note || '',
           contractFile: ln.contractFile || '',
+          attachments: lineAttachments(ln),
         };
       });
     }
@@ -364,7 +381,8 @@ export default function ExpenseHistory({ refreshKey, onSaved, projectId, onProje
           const currentKeys = new Set(lines.map(lineKey).filter(Boolean));
           const kept = lines.map((ln) => {
             const pln = baseLines.find((l) => lineKey(l) === lineKey(ln)) || null;
-            const changed = pln && (ln.planned !== pln.planned || ln.amount !== pln.amount || ln.qty !== pln.qty || ln.date !== pln.date);
+            const noteChanged = String(ln.note || '').trim() !== String(pln?.note || '').trim();
+            const changed = pln && (ln.planned !== pln.planned || ln.amount !== pln.amount || ln.qty !== pln.qty || ln.date !== pln.date || noteChanged);
             return { ...ln, status: pln ? (changed ? 'changed' : 'same') : 'added', prev: pln };
           });
           const removed = baseLines.filter((l) => !currentKeys.has(lineKey(l)));
@@ -437,7 +455,7 @@ export default function ExpenseHistory({ refreshKey, onSaved, projectId, onProje
                         ))}
                       </div>
                       <div className="mt-2 border border-amber-200 rounded-lg overflow-auto">
-                        <table className="w-full text-left border-collapse min-w-[720px]">
+                        <table className="w-full text-left border-collapse min-w-[880px]">
                           <thead className="bg-amber-50">
                             <tr>
                               <th className="px-2 py-1.5 text-[10px] font-semibold text-amber-700 uppercase w-8">#</th>
@@ -446,6 +464,7 @@ export default function ExpenseHistory({ refreshKey, onSaved, projectId, onProje
                               <th className="px-2 py-1.5 text-[10px] font-semibold text-amber-700 uppercase text-right">{t('Kế hoạch (cũ → mới)', 'Planned (old → new)')}</th>
                               <th className="px-2 py-1.5 text-[10px] font-semibold text-amber-700 uppercase text-center">{t('SL (cũ → mới)', 'Qty (old → new)')}</th>
                               <th className="px-2 py-1.5 text-[10px] font-semibold text-amber-700 uppercase text-right">{t('Thành tiền (cũ → mới)', 'Amount (old → new)')}</th>
+                              <th className="px-2 py-1.5 text-[10px] font-semibold text-amber-700 uppercase">{t('Ghi chú (cũ → mới)', 'Note (old → new)')}</th>
                               <th className="px-2 py-1.5 text-[10px] font-semibold text-amber-700 uppercase text-center">{t('Trạng thái', 'Status')}</th>
                             </tr>
                           </thead>
@@ -468,6 +487,21 @@ export default function ExpenseHistory({ refreshKey, onSaved, projectId, onProje
                                 </td>
                                 <td className="px-2 py-1.5 text-sm text-right tabular-nums font-semibold whitespace-nowrap">
                                   {ln.prev ? formatCurrency(ln.prev.amount) : '—'} → {ln.status === 'removed' ? '—' : formatCurrency(ln.amount)}
+                                </td>
+                                <td className="px-2 py-1.5 text-xs max-w-[200px] whitespace-pre-wrap break-words">
+                                  {(() => {
+                                    const before = String(ln.prev?.note || '').trim();
+                                    const after = ln.status === 'removed' ? '' : String(ln.note || '').trim();
+                                    if (!before && !after) return <span className="text-gray-400">—</span>;
+                                    if (before === after) return <span className="text-gray-500">{after}</span>;
+                                    return (
+                                      <span className="text-gray-600">
+                                        <span className="line-through text-gray-400">{before || '—'}</span>
+                                        {' → '}
+                                        <span className="font-semibold text-amber-700">{after || '—'}</span>
+                                      </span>
+                                    );
+                                  })()}
                                 </td>
                                 <td className="px-2 py-1.5 text-center">{statusBadge(ln.status)}</td>
                               </tr>
@@ -495,6 +529,7 @@ export default function ExpenseHistory({ refreshKey, onSaved, projectId, onProje
                             <th className="px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase text-right">{t('Thành tiền', 'Amount')}</th>
                             <th className="px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase text-right">{t('Tổng cộng', 'Total (after VAT)')}</th>
                             <th className="px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase">{t('Ghi chú', 'Note')}</th>
+                            <th className="px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase">{t('Hồ sơ', 'Documents')}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -509,6 +544,24 @@ export default function ExpenseHistory({ refreshKey, onSaved, projectId, onProje
                               <td className="px-2 py-2 text-sm text-right tabular-nums font-semibold text-on-surface whitespace-nowrap">{formatCurrency(ln.amount)}</td>
                               <td className="px-2 py-2 text-sm text-right tabular-nums font-semibold text-primary whitespace-nowrap">{formatCurrency(ln.totalAfterVat)}</td>
                               <td className="px-2 py-2 text-xs text-gray-500 max-w-[160px] whitespace-pre-wrap break-words">{ln.note || '—'}</td>
+                              <td className="px-2 py-2 text-xs max-w-[140px]">
+                                {ln.attachments?.length > 0 ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    {ln.attachments.map((att) => (
+                                      <button
+                                        key={att.id}
+                                        type="button"
+                                        onClick={() => openLineAttachment(att)}
+                                        className="inline-flex items-center gap-1 max-w-full text-primary hover:underline"
+                                        title={att.name}
+                                      >
+                                        <span className="material-symbols-outlined text-[14px] shrink-0">description</span>
+                                        <span className="truncate">{att.name}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : <span className="text-gray-400">—</span>}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

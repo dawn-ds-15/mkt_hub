@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Plus, ListFilter, ChevronDown, X, Wallet, TrendingUp, Rocket, TriangleAlert, PieChart, ListChecks, Trash2, Timer, Megaphone, CalendarDays, CheckCircle2, CircleX, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getProjects, deleteProject } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { useDropdownOptions } from '../../hooks/useDropdownOptions';
 import CreateProjectForm from './CreateProjectForm';
 
 function getInitials(name) {
@@ -26,6 +27,14 @@ function fullNum(n) {
   return (Number(n) || 0).toLocaleString('vi-VN');
 }
 
+function daysRemaining(deadlineRaw) {
+  if (!deadlineRaw) return null;
+  const d = new Date(deadlineRaw);
+  if (isNaN(d.getTime())) return null;
+  const diffDays = (d.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  return diffDays > 0 ? Math.ceil(diffDays) : -Math.ceil(-diffDays);
+}
+
 function codeOf(p) {
   const tail = String(p.id).replace(/[^a-z0-9]/gi, '').slice(0, 5).toUpperCase();
   return `PRJ-${tail || 'MKT'}`;
@@ -40,16 +49,17 @@ const STATUS_OPTIONS = [
   { label: 'Tạm dừng', value: 'On Hold' },
 ];
 
-const TYPE_OPTIONS = ['Internal', 'Client', 'Research', 'Workshop', 'Event', 'Exhibition', 'Webinar'];
+const FALLBACK_TYPE_OPTIONS = ['workshop', 'event', 'exhibition', 'webinar', 'Online Campaign', 'Lead Generation', 'Awards', 'Production'];
 
-export default function ProjectListTable() {
+export default function ProjectListTable({ initialTypeFilter = 'All' }) {
   const { locale } = useDashboard();
   const navigate = useNavigate();
+  const typeDropdown = useDropdownOptions('project_type');
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
-  const [typeFilter, setTypeFilter] = useState('All');
-  const [showFilter, setShowFilter] = useState(false);
+  const [typeFilter, setTypeFilter] = useState(initialTypeFilter);
+  const [showFilter, setShowFilter] = useState(initialTypeFilter !== 'All');
   const [showCreate, setShowCreate] = useState(false);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState([]);
@@ -113,10 +123,25 @@ export default function ProjectListTable() {
     return { total, active, nearDeadline, totalBudget, allocated, avgProgress };
   }, [projects]);
 
+  const typeOptions = useMemo(() => {
+    const byKey = new Map();
+    const add = (raw) => {
+      const label = String(raw || '').trim();
+      if (label && !byKey.has(label.toLowerCase())) byKey.set(label.toLowerCase(), label);
+    };
+    const configured = typeDropdown.map((o) => o.label).filter(Boolean);
+    (configured.length ? configured : FALLBACK_TYPE_OPTIONS).forEach(add);
+    projects.forEach((p) => add(p.type));
+    return [...byKey.values()];
+  }, [typeDropdown, projects]);
+
   const filtered = useMemo(() => {
     let result = [...projects];
     if (statusFilter !== 'All') result = result.filter((p) => p.statusLabel === statusFilter);
-    if (typeFilter !== 'All') result = result.filter((p) => p.type === typeFilter);
+    if (typeFilter !== 'All') {
+      const wanted = typeFilter.toLowerCase();
+      result = result.filter((p) => String(p.type || '').trim().toLowerCase() === wanted);
+    }
     return result;
   }, [projects, statusFilter, typeFilter]);
 
@@ -149,29 +174,29 @@ export default function ProjectListTable() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-[24px] leading-[32px] font-bold text-on-surface">{locale === 'vi' ? 'Danh sách Dự án' : 'Project List'}</h2>
-          <p className="text-[14px] leading-[20px] text-on-surface-variant mt-1">
+          <h2 className="text-lg leading-[26px] font-bold text-on-surface">{locale === 'vi' ? 'Danh sách Dự án' : 'Project List'}</h2>
+          <p className="text-xs leading-[18px] text-on-surface-variant mt-1">
             {locale === 'vi' ? 'Quản lý và theo dõi tiến độ các chiến dịch marketing' : 'Manage and track marketing campaign progress'}
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-on-primary rounded-lg text-[14px] leading-[20px] font-semibold hover:bg-primary/90 transition-colors flex-1 sm:flex-none justify-center shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-on-primary rounded-lg text-xs leading-[18px] font-semibold hover:bg-primary/90 transition-colors flex-1 sm:flex-none justify-center shadow-sm"
           >
-            <Plus className="w-[18px] h-[18px]" />
+            <Plus className="w-4 h-4" />
             {locale === 'vi' ? 'Thêm dự án' : 'Add Project'}
           </button>
           <button
             onClick={() => setShowFilter(!showFilter)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-surface-container-lowest border border-border-light rounded-lg text-[14px] leading-[20px] hover:bg-surface-container-high transition-colors flex-1 sm:flex-none justify-center shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-lowest border border-border-light rounded-lg text-xs leading-[18px] hover:bg-surface-container-high transition-colors flex-1 sm:flex-none justify-center shadow-sm"
           >
-            <ListFilter className="w-[18px] h-[18px]" />
+            <ListFilter className="w-4 h-4" />
             {locale === 'vi' ? 'Bộ lọc' : 'Filter'}
           </button>
           <div className="relative flex-1 sm:flex-none">
             <select
-              className="w-full appearance-none pl-4 pr-8 py-2 bg-surface-container-lowest border border-border-light rounded-lg text-[14px] leading-[20px] hover:bg-surface-container-high transition-colors focus:outline-none focus:border-secondary shadow-sm cursor-pointer"
+              className="w-full appearance-none pl-3 pr-8 py-1.5 bg-surface-container-lowest border border-border-light rounded-lg text-xs leading-[18px] hover:bg-surface-container-high transition-colors focus:outline-none focus:border-secondary shadow-sm cursor-pointer"
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             >
@@ -179,7 +204,7 @@ export default function ProjectListTable() {
                 <option key={o.value} value={o.value}>{locale === 'vi' || o.label === 'Tất cả trạng thái' ? (o.value === 'All' ? o.label : o.label) : o.value}</option>
               ))}
             </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline w-5 h-5" />
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline w-4 h-4" />
           </div>
         </div>
       </div>
@@ -189,12 +214,12 @@ export default function ProjectListTable() {
           <span className="text-[12px] font-semibold text-on-surface-variant">{locale === 'vi' ? 'Loại dự án:' : 'Project type:'}</span>
           <div className="relative">
             <select
-              className="appearance-none pl-3 pr-8 py-1.5 bg-surface-container-lowest border border-border-light rounded-lg text-[14px] hover:bg-surface-container-high focus:outline-none focus:border-secondary cursor-pointer"
+              className="appearance-none pl-3 pr-8 py-1.5 bg-surface-container-lowest border border-border-light rounded-lg text-xs hover:bg-surface-container-high focus:outline-none focus:border-secondary cursor-pointer"
               value={typeFilter}
               onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
             >
               <option value="All">{locale === 'vi' ? 'Tất cả' : 'All'}</option>
-              {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+              {typeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline w-5 h-5" />
           </div>
@@ -209,48 +234,48 @@ export default function ProjectListTable() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-surface-container-lowest rounded-xl p-4 border border-border-light shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-shadow">
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-on-surface-variant text-[12px] leading-[16px] uppercase tracking-wider">{locale === 'vi' ? 'Tổng ngân sách năm' : 'Yearly total budget'}</span>
-            <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-secondary">
-              <Wallet className="w-[18px] h-[18px]" />
+        <div className="bg-surface-container-lowest rounded-xl p-2.5 border border-border-light shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-shadow">
+          <div className="flex justify-between items-start mb-1.5">
+            <span className="text-on-surface-variant text-[10px] leading-[14px] uppercase tracking-wider">{locale === 'vi' ? 'Tổng ngân sách năm' : 'Yearly total budget'}</span>
+            <div className="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-secondary">
+              <Wallet className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <h3 className="text-[20px] leading-[28px] font-bold text-on-surface">{compact(summary.totalBudget)} <span className="text-[14px] leading-[20px] text-outline font-normal">VND</span></h3>
-            <div className="flex items-center gap-1 mt-1 text-[12px] leading-[16px] text-success">
+            <h3 className="text-lg leading-[26px] font-bold text-on-surface">{compact(summary.totalBudget)} <span className="text-xs leading-[18px] text-outline font-normal">VND</span></h3>
+            <div className="flex items-center gap-1 mt-0.5 text-[10px] leading-[14px] text-success">
               <TrendingUp className="w-3.5 h-3.5" />
               <span>{locale === 'vi' ? `Đã phân bổ ${summary.allocated}%` : `Allocated ${summary.allocated}%`}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-surface-container-lowest rounded-xl p-4 border border-border-light shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-shadow">
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-on-surface-variant text-[12px] leading-[16px] uppercase tracking-wider">{locale === 'vi' ? 'Dự án đang chạy' : 'Active projects'}</span>
-            <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-tertiary-container">
-              <Rocket className="w-[18px] h-[18px]" />
+        <div className="bg-surface-container-lowest rounded-xl p-2.5 border border-border-light shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-shadow">
+          <div className="flex justify-between items-start mb-1.5">
+            <span className="text-on-surface-variant text-[10px] leading-[14px] uppercase tracking-wider">{locale === 'vi' ? 'Dự án đang chạy' : 'Active projects'}</span>
+            <div className="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-tertiary-container">
+              <Rocket className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <h3 className="text-[20px] leading-[28px] font-bold text-on-surface">{summary.active} <span className="text-[14px] leading-[20px] text-outline font-normal">{locale === 'vi' ? 'Chiến dịch' : 'Campaigns'}</span></h3>
-            <div className="flex items-center gap-1 mt-1 text-[12px] leading-[16px] text-warning">
+            <h3 className="text-lg leading-[26px] font-bold text-on-surface">{summary.active} <span className="text-xs leading-[18px] text-outline font-normal">{locale === 'vi' ? 'Chiến dịch' : 'Campaigns'}</span></h3>
+            <div className="flex items-center gap-1 mt-0.5 text-[10px] leading-[14px] text-warning">
               <TriangleAlert className="w-3.5 h-3.5" />
               <span>{summary.nearDeadline} {locale === 'vi' ? 'dự án chậm tiến độ' : 'projects delayed'}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-surface-container-lowest rounded-xl p-4 border border-border-light shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-shadow">
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-on-surface-variant text-[12px] leading-[16px] uppercase tracking-wider">{locale === 'vi' ? 'KPI Đạt được (TB)' : 'KPI Achieved (avg)'}</span>
-            <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-success">
-              <PieChart className="w-[18px] h-[18px]" />
+        <div className="bg-surface-container-lowest rounded-xl p-2.5 border border-border-light shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-shadow">
+          <div className="flex justify-between items-start mb-1.5">
+            <span className="text-on-surface-variant text-[10px] leading-[14px] uppercase tracking-wider">{locale === 'vi' ? 'KPI Đạt được (TB)' : 'KPI Achieved (avg)'}</span>
+            <div className="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-success">
+              <PieChart className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <h3 className="text-[20px] leading-[28px] font-bold text-on-surface">{summary.avgProgress}%</h3>
-            <div className="w-full bg-surface-container-high rounded-full h-1.5 mt-2">
+            <h3 className="text-lg leading-[26px] font-bold text-on-surface">{summary.avgProgress}%</h3>
+            <div className="w-full bg-surface-container-high rounded-full h-1.5 mt-1.5">
               <div className="bg-success h-1.5 rounded-full" style={{ width: `${summary.avgProgress}%` }} />
             </div>
           </div>
@@ -261,24 +286,24 @@ export default function ProjectListTable() {
         <div className="flex flex-wrap items-center justify-between gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
           <div className="flex items-center gap-2 min-w-0">
             <ListChecks className="w-5 h-5 text-primary" />
-            <span className="text-[14px] leading-[20px] font-semibold text-on-surface">
+            <span className="text-xs leading-[18px] font-semibold text-on-surface">
               {locale === 'vi' ? `Đã chọn ${selected.length} dự án` : `${selected.length} projects selected`}
             </span>
-            <span className="text-[12px] leading-[16px] text-on-surface-variant truncate hidden md:inline">
+            <span className="text-[10px] leading-[14px] text-on-surface-variant truncate hidden md:inline">
               {selectedNames.slice(0, 2).join(', ')}{selectedNames.length > 2 ? ` +${selectedNames.length - 2}` : ''}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSelected([])}
-              className="px-3 py-1.5 rounded-lg border border-border-light bg-surface-container-lowest text-[13px] leading-[18px] font-medium text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg border border-border-light bg-surface-container-lowest text-xs leading-[18px] font-medium text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
             >
               {locale === 'vi' ? 'Bỏ chọn' : 'Clear'}
             </button>
             <button
               onClick={handleBulkDelete}
               disabled={deleting}
-              className="px-4 py-1.5 rounded-lg bg-danger text-on-error text-[13px] leading-[18px] font-semibold hover:brightness-110 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              className="px-3 py-1.5 rounded-lg bg-danger text-on-error text-xs leading-[18px] font-semibold hover:brightness-110 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {deleting
@@ -291,10 +316,10 @@ export default function ProjectListTable() {
 
       <div className="bg-surface-container-lowest rounded-xl border border-border-light overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+          <table className="w-full text-left border-collapse min-w-[850px]">
             <thead>
               <tr className="bg-background-subtle border-b border-border-light">
-                <th className="py-2 px-4 w-[48px]">
+                <th className="py-2 px-3 w-[40px]">
                   <input
                     type="checkbox"
                     className="w-4 h-4 rounded border-outline-variant/50 text-primary focus:ring-primary/40 cursor-pointer"
@@ -302,18 +327,17 @@ export default function ProjectListTable() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="py-2 px-4 text-[12px] leading-[16px] text-on-surface-variant font-medium whitespace-nowrap uppercase">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
-                <th className="py-2 px-4 text-[12px] leading-[16px] text-on-surface-variant font-medium whitespace-nowrap uppercase">Owner</th>
-                <th className="py-2 px-4 text-[12px] leading-[16px] text-on-surface-variant font-medium whitespace-nowrap uppercase">{locale === 'vi' ? 'Tiến độ' : 'Progress'}</th>
-                <th className="py-2 px-4 text-[12px] leading-[16px] text-on-surface-variant font-medium whitespace-nowrap uppercase">KPI (Est. / Actual)</th>
-                <th className="py-2 px-4 text-[12px] leading-[16px] text-on-surface-variant font-medium whitespace-nowrap uppercase text-right">{locale === 'vi' ? 'Ngân sách (VND)' : 'Budget (VND)'}</th>
-                <th className="py-2 px-4 text-[12px] leading-[16px] text-on-surface-variant font-medium whitespace-nowrap uppercase text-center">{locale === 'vi' ? 'Hồ sơ' : 'Docs'}</th>
+                <th className="py-2 px-3 text-[10px] leading-[14px] text-on-surface-variant font-medium whitespace-nowrap uppercase">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
+                <th className="py-2 px-3 text-[10px] leading-[14px] text-on-surface-variant font-medium whitespace-nowrap uppercase">Owner</th>
+                <th className="py-2 px-3 text-[10px] leading-[14px] text-on-surface-variant font-medium whitespace-nowrap uppercase">{locale === 'vi' ? 'Tiến độ' : 'Progress'}</th>
+                <th className="py-2 px-3 text-[10px] leading-[14px] text-on-surface-variant font-medium whitespace-nowrap uppercase">KPI (Est. / Actual)</th>
+                <th className="py-2 px-3 text-[10px] leading-[14px] text-on-surface-variant font-medium whitespace-nowrap uppercase text-center">{locale === 'vi' ? 'Hồ sơ' : 'Docs'}</th>
               </tr>
             </thead>
-            <tbody className="text-[14px] leading-[20px] text-on-surface">
+            <tbody className="text-xs leading-[18px] text-on-surface">
               {pageRows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-on-surface-variant">
+                  <td colSpan={6} className="py-8 text-center text-on-surface-variant">
                     {locale === 'vi' ? 'Không tìm thấy dự án nào' : 'No projects found'}
                   </td>
                 </tr>
@@ -321,9 +345,10 @@ export default function ProjectListTable() {
               {pageRows.map((p) => {
                 const budgetTotal = (p.budgetPlanDirect || 0) + (p.budgetPlanOverhead || 0);
                 const actualTotal = (p.actualCostDirect || 0) + (p.actualCostOverhead || 0);
-                const spentPct = budgetTotal > 0 ? Math.round((actualTotal / budgetTotal) * 100) : 0;
                 const overBudget = budgetTotal > 0 && actualTotal > budgetTotal;
                 const delayed = p.status === 'near_deadline' || p.status === 'overdue' || p.statusLabel === 'On Hold';
+                const delayedAlarm = p.status === 'near_deadline' || p.status === 'overdue';
+                const daysLeft = delayedAlarm ? daysRemaining(p.deadlineRaw) : null;
                 const kpiPlan = Number(p.kpiRawLeadsPlan) || 0;
                 const kpiActual = Number(p.kpiRawLeadsActual) || 0;
                 const hasKpi = kpiPlan > 0 || kpiActual > 0;
@@ -333,7 +358,7 @@ export default function ProjectListTable() {
                     onClick={() => navigate(`/projects/${p.id}`)}
                     className={`border-b border-border-light hover:bg-surface-bright transition-colors group cursor-pointer ${overBudget ? 'bg-error-container bg-opacity-10' : ''}`}
                   >
-                    <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
+                    <td className="py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         className="w-4 h-4 rounded border-outline-variant/50 text-primary focus:ring-primary/40 cursor-pointer"
@@ -341,21 +366,33 @@ export default function ProjectListTable() {
                         onChange={() => toggleSelect(p.id)}
                       />
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-2.5 px-3">
                       <div className="flex items-start gap-2">
-                        <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0 mt-0.5">
-                          {delayed ? <Timer className="w-[18px] h-[18px] text-warning" /> : <Megaphone className="w-[18px] h-[18px] text-secondary" />}
+                        <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0 mt-0.5">
+                          {delayed ? <Timer className="w-4 h-4 text-warning" /> : <Megaphone className="w-4 h-4 text-secondary" />}
                         </div>
                         <div>
-                          <p className="text-[18px] leading-[26px] font-semibold text-on-surface group-hover:text-secondary transition-colors">{p.name}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="font-data-mono text-outline text-[12px] bg-surface-container-high px-1.5 py-0.5 rounded">{codeOf(p)}</span>
-                            <span className="text-on-surface-variant text-[12px] flex items-center gap-1">
+                          <p className="text-[13px] leading-[18px] font-semibold text-on-surface group-hover:text-secondary transition-colors">{p.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="font-data-mono text-outline text-[10px] bg-surface-container-high px-1.5 py-0.5 rounded">{codeOf(p)}</span>
+                            <span className="text-on-surface-variant text-[10px] flex items-center gap-1">
                               <CalendarDays className="w-3.5 h-3.5" />{p.deadline}
                             </span>
                           </div>
+                          {delayedAlarm && daysLeft != null && (
+                            <span
+                              className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                                daysLeft <= 0 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
+                              }`}
+                              title={locale === 'vi' ? 'Số ngày còn lại/hết hạn so với hạn chót' : 'Days left/overdue vs deadline'}
+                            >
+                              {daysLeft <= 0
+                                ? (locale === 'vi' ? `Quá hạn ${Math.abs(daysLeft)} ngày` : `${Math.abs(daysLeft)} days overdue`)
+                                : (locale === 'vi' ? `Còn ${daysLeft} ngày` : `${daysLeft} days left`)}
+                            </span>
+                          )}
                           {overBudget && (
-                            <div className="flex items-center gap-1 text-danger text-[12px] mt-1">
+                            <div className="flex items-center gap-1 text-danger text-[10px] mt-0.5">
                               <TriangleAlert className="w-3.5 h-3.5" />
                               {locale === 'vi' ? 'Vượt ngân sách dự kiến' : 'Over projected budget'}
                             </div>
@@ -363,7 +400,7 @@ export default function ProjectListTable() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-2.5 px-3">
                       <div className="flex items-center gap-1.5">
                         <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center border border-border-light">
                           {getInitials(p.owner)}
@@ -371,17 +408,17 @@ export default function ProjectListTable() {
                         <span>{p.owner}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-4 w-[160px]">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-[13px]">{p.progress}%</span>
-                        <span className={`text-[12px] ${delayed ? 'text-warning' : 'text-on-surface-variant'}`}>{delayed ? 'Delayed' : 'On track'}</span>
+                    <td className="py-2.5 px-3 w-[150px]">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-medium text-xs">{p.progress}%</span>
+                        <span className={`text-[10px] ${delayed ? 'text-warning' : 'text-on-surface-variant'}`}>{delayed ? 'Delayed' : 'On track'}</span>
                       </div>
                       <div className="w-full bg-surface-container-high rounded-full h-1.5">
                         <div className={`h-1.5 rounded-full ${delayed ? 'bg-warning' : 'bg-secondary'}`} style={{ width: `${p.progress}%` }} />
                       </div>
                     </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-1.5 text-[13px]">
+                    <td className="py-2.5 px-3">
+                      <div className="flex items-center gap-1.5 text-xs">
                         <span className="w-1.5 h-1.5 rounded-full bg-outline" />
                         <span className="text-on-surface-variant w-[52px]">{locale === 'vi' ? 'Leads:' : 'Leads:'}</span>
                         {hasKpi ? (
@@ -393,24 +430,20 @@ export default function ProjectListTable() {
                         )}
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-right font-data-mono">
-                      <div className={`font-medium ${overBudget ? 'text-danger' : 'text-on-surface'}`}>{fullNum(budgetTotal)}</div>
-                      <div className="text-on-surface-variant text-[12px] mt-1">{locale === 'vi' ? 'Đã chi:' : 'Spent:'} {compact(actualTotal)} ({spentPct}%)</div>
-                    </td>
-                    <td className="py-4 px-4 text-center">
+                    <td className="py-2.5 px-3 text-center">
                       {(p.documentsCount || 0) > 0 ? (
                         <span
                           className="inline-flex text-success"
                           title={locale === 'vi' ? `Đã có ${p.documentsCount} hồ sơ` : `${p.documentsCount} document(s)`}
                         >
-                          <CheckCircle2 className="w-[18px] h-[18px]" />
+                          <CheckCircle2 className="w-4 h-4" />
                         </span>
                       ) : (
                         <span
                           className="inline-flex text-outline"
                           title={locale === 'vi' ? 'Chưa có hồ sơ' : 'No documents'}
                         >
-                          <CircleX className="w-[18px] h-[18px]" />
+                          <CircleX className="w-4 h-4" />
                         </span>
                       )}
                     </td>
@@ -421,24 +454,24 @@ export default function ProjectListTable() {
           </table>
         </div>
 
-        <div className="border-t border-border-light p-4 flex items-center justify-between bg-background-subtle">
-          <span className="text-[14px] leading-[20px] text-on-surface-variant">
+        <div className="border-t border-border-light p-3 flex items-center justify-between bg-background-subtle">
+          <span className="text-xs leading-[18px] text-on-surface-variant">
             {locale === 'vi' ? `Hiển thị ${startRow}-${endRow} trong số ${filtered.length} dự án` : `Showing ${startRow}-${endRow} of ${filtered.length} projects`}
           </span>
           <div className="flex items-center gap-1">
             <button
               disabled={safePage === 1}
               onClick={() => setPage(safePage - 1)}
-              className="w-8 h-8 flex items-center justify-center rounded border border-border-light bg-surface-container-lowest text-outline hover:bg-surface-container-high transition-colors disabled:opacity-50"
+              className="w-7 h-7 flex items-center justify-center rounded border border-border-light bg-surface-container-lowest text-outline hover:bg-surface-container-high transition-colors disabled:opacity-50"
             >
-              <ChevronLeft className="w-[18px] h-[18px]" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
             {pages.map((pg, i) => (
               <span key={pg} className="flex items-center">
                 {i > 0 && pages[i - 1] !== pg - 1 && <span className="text-on-surface-variant px-1">...</span>}
                 <button
                   onClick={() => setPage(pg)}
-                  className={`w-8 h-8 flex items-center justify-center rounded border text-[14px] leading-[20px] transition-colors ${
+                  className={`w-7 h-7 flex items-center justify-center rounded border text-xs leading-[18px] transition-colors ${
                     safePage === pg
                       ? 'border-secondary bg-secondary-container text-on-secondary-container font-medium'
                       : 'border-border-light bg-surface-container-lowest text-on-surface hover:bg-surface-container-high'
@@ -451,9 +484,9 @@ export default function ProjectListTable() {
             <button
               disabled={safePage === totalPages}
               onClick={() => setPage(safePage + 1)}
-              className="w-8 h-8 flex items-center justify-center rounded border border-border-light bg-surface-container-lowest text-outline hover:bg-surface-container-high transition-colors disabled:opacity-50"
+              className="w-7 h-7 flex items-center justify-center rounded border border-border-light bg-surface-container-lowest text-outline hover:bg-surface-container-high transition-colors disabled:opacity-50"
             >
-              <ChevronRight className="w-[18px] h-[18px]" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>

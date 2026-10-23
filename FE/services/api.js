@@ -1,4 +1,6 @@
 import { filterDeleted, markDeleted, getDeletedIds, restoreDeleted } from '../utils/softDelete';
+import { getDriveLink, setDriveLink, clearDriveLink } from '../utils/projectDriveLinks';
+import { mergeSubtasks } from '../utils/subtasks';
 import { clearEvents } from '../services/eventsStore';
 import axios from 'axios';
 
@@ -16,15 +18,26 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   if (config.method === 'get') {
-    config.params = { ...config.params, _t: Date.now() };
+    config.headers['Cache-Control'] = 'no-cache, no-store';
   }
   return config;
 });
+
+// 403 theo ma trận quyền → thông báo rõ ràng cho mọi chỗ đang hiện err.response.data.message / err.message
+const MODULE_PERMISSION_MESSAGES = {
+  ERR_MODULE_VIEW_ONLY: 'Bạn chỉ có quyền xem ở module này — thay đổi không được lưu. Liên hệ quản lý để được cấp quyền.',
+  ERR_MODULE_NO_ACCESS: 'Tài khoản của bạn không có quyền truy cập module này.',
+};
 
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     const body = err.response?.data;
+    const permissionMsg = err.response?.status === 403 && MODULE_PERMISSION_MESSAGES[body?.errorCode];
+    if (permissionMsg) {
+      if (body && typeof body === 'object') body.message = permissionMsg;
+      err.message = permissionMsg;
+    }
     const isUnauthorized = err.response?.status === 401 || body?.statusCode === 401 || body?.message === 'Unauthorized';
     if (isUnauthorized && !err.config?.url?.includes('/auth/login')) {
       localStorage.removeItem(TOKEN_KEY);
@@ -47,10 +60,95 @@ function getInitials(name) {
   return name.split(' ').map(w => w[0]).slice(-2).join('').toUpperCase();
 }
 
+// Trạng thái task — 7 khóa chuẩn nội bộ, khớp 1:1 với 7 cột Kanban.
+// Nhãn hiển thị lấy từ dropdown `task_status` (người dùng gõ sao hiện vậy), nên mọi nhãn
+// phải quy về khóa chuẩn qua normalizeTaskStatus() trước khi dùng làm logic hay gửi lên BE.
+export const TASK_STATUS_KEYS = ['Overdue', 'Planning', 'Processing', 'Done', 'Pending', 'Cancel', 'Backlog'];
+
+export const TASK_STATUS_FALLBACK_LABELS = {
+  Overdue: 'Quá hạn',
+  Planning: 'Chưa làm',
+  Processing: 'Đang làm',
+  Done: 'Hoàn thành',
+  Pending: 'Chờ xử lý',
+  Cancel: 'Đã hủy',
+  Backlog: 'Tồn đọng',
+};
+
+const TASK_STATUS_ALIASES = {
+  // khóa chuẩn FE
+  overdue: 'Overdue', planning: 'Planning', processing: 'Processing',
+  done: 'Done', pending: 'Pending', cancel: 'Cancel', backlog: 'Backlog',
+  // giá trị BE
+  'to do': 'Planning', todo: 'Planning', 'in progress': 'Processing',
+  review: 'Pending', cancelled: 'Cancel', canceled: 'Cancel',
+  // nhãn tiếng Việt (chấp nhận cả "hủy"/"huỷ" và các biến thể cũ)
+  'quá hạn': 'Overdue', 'chưa làm': 'Planning', 'đang làm': 'Processing',
+  'hoàn thành': 'Done', 'chờ xử lý': 'Pending', 'đang chờ': 'Pending',
+  'đã hủy': 'Cancel', 'đã huỷ': 'Cancel', 'tồn đọng': 'Backlog',
+  'lên kế hoạch': 'Planning', 'đang thực hiện': 'Processing',
+};
+
+export function normalizeTaskStatus(value) {
+  return TASK_STATUS_ALIASES[String(value ?? '').trim().toLowerCase()] || null;
+}
+
 function taskStatusToMock(status, isOverdue) {
-  if (isOverdue || status === 'Overdue') return 'overdue';
-  const beToFe = { 'To Do': 'Planning', 'In Progress': 'Processing', 'Review': 'Pending', 'Done': 'Done', 'Cancel': 'Cancel', 'Backlog': 'Backlog' };
-  return beToFe[status] || (['Planning', 'Processing', 'Done', 'Backlog', 'Pending', 'Cancel'].includes(status) ? status : 'Planning');
+  const key = normalizeTaskStatus(status);
+  if (isOverdue || key === 'Overdue') return 'overdue';
+  return key || 'Planning';
+}
+
+// Ngày (YYYY-MM-DD, giờ địa phương) của một hạn chót. BE lưu dueDate dạng UTC 00:00
+// ("2026-09-24T00:00:00.000Z") nghĩa là ngày 24 -> lấy nguyên phần ngày; các mốc giờ khác
+// (vd. cuối ngày, 00:00 giờ VN = 17:00Z hôm trước) thì quy về ngày theo giờ máy.
+const pad2 = (n) => String(n).padStart(2, '0');
+const localDateKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+export function taskDateKey(value) {
+  if (!value) return null;
+  if (value instanceof Date) return isNaN(value) ? null : localDateKey(value);
+  const s = String(value).trim();
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})(?:T00:00(?::00(?:\.0+)?)?(?:Z|[+-]00:?00)?)?$/);
+  if (m) return m[1];
+  const d = new Date(s);
+  return isNaN(d) ? null : localDateKey(d);
+}
+
+// Quá hạn = đã QUA ngày đến hạn (từ ngày hôm sau). Task đến hạn hôm nay chưa quá hạn.
+// Task đã Hoàn thành / Đã hủy không bao giờ quá hạn.
+export function isTaskOverdue(dueDate, status, completedDate) {
+  const key = normalizeTaskStatus(status);
+  if (key === 'Done' || key === 'Cancel' || completedDate) return false;
+  const due = taskDateKey(dueDate);
+  if (!due) return false;
+  return due < localDateKey(new Date());
+}
+
+// Sắp hạn = chưa quá hạn, đang ở Planning/Processing/Pending, hạn chót trong [hôm nay, hôm nay + days].
+// Dùng chung cho badge Topbar và bộ lọc Danh sách Task để số đếm khớp danh sách.
+export function isTaskDueSoon(task, days = 3) {
+  if (!task || task.status === 'overdue') return false;
+  if (!['Planning', 'Processing', 'Pending'].includes(task.statusKey || task.status)) return false;
+  const due = taskDateKey(task.dueDate);
+  if (!due) return false;
+  const today = new Date();
+  const horizon = new Date(today);
+  horizon.setDate(horizon.getDate() + days);
+  return due >= localDateKey(today) && due <= localDateKey(horizon);
+}
+
+// Cờ quá hạn cuối cùng: có dueDate thì FE tự tính theo ngày (bỏ qua isOverdue của BE,
+// vốn có thể lệch múi giờ), không có dueDate thì mới dùng cờ BE.
+function resolveOverdue(t) {
+  if (t?.dueDate) return isTaskOverdue(t.dueDate, t.status, t.completedDate);
+  return Boolean(t?.isOverdue);
+}
+
+// `status` bị gộp thành 'overdue' khi task trễ hạn nên mất trạng thái thật.
+// Form sửa task cần trạng thái thật -> luôn kèm thêm statusKey.
+function taskStatusKey(status) {
+  return normalizeTaskStatus(status) || String(status || '').trim() || 'Planning';
 }
 
 function projectStatusToMock(status, deadline) {
@@ -254,14 +352,16 @@ export const getDashboardData = async (periodType = 'year', periodValue = '2026'
   } else {
     if (rawAlerts.overdue) rawAlerts = { ...rawAlerts, overdue: filterDeleted('tasks', rawAlerts.overdue) };
   }
-  const overdueRaw = Array.isArray(rawAlerts) ? rawAlerts : rawAlerts?.overdue ?? [];
+  // Chỉ coi là quá hạn khi đã qua ngày đến hạn (task đến hạn hôm nay chưa quá hạn).
+  const overdueRaw = (Array.isArray(rawAlerts) ? rawAlerts : rawAlerts?.overdue ?? [])
+    .filter(a => !(a.dueDate || a.due) || isTaskOverdue(a.dueDate || a.due));
   const upcomingRaw = Array.isArray(rawAlerts) ? [] : rawAlerts?.upcoming ?? [];
   const filterByYear = (items) => items.filter(a => {
     const d = a.dueDate || a.due;
     return d ? String(new Date(d).getFullYear()) === String(year) : true;
   });
   const filteredAlerts = Array.isArray(rawAlerts)
-    ? filterByYear(rawAlerts)
+    ? filterByYear(overdueRaw)
     : { overdue: filterByYear(overdueRaw), upcoming: filterByYear(upcomingRaw) };
   const alerts = transformAlerts(filteredAlerts);
   const taskStatus = transformTaskStatus(d.taskStatus ?? d.task_status ?? {});
@@ -395,7 +495,9 @@ function mapProject(p) {
     id: p.id,
     name: p.name,
     type: p.type,
+    isLeadSource: Boolean(p.isLeadSource),
     createdAt: p.createdAt || p.createdAtDate || null,
+    driveLink: p.driveLink ?? p.driveUrl ?? p.metadata?.driveLink ?? getDriveLink(p.id) ?? '',
     owner: p.owner?.name || 'Unknown',
     ownerId: p.ownerId || p.owner?.id || '',
     deadline: p.deadline ? formatDate(p.deadline) : 'No deadline',
@@ -428,7 +530,8 @@ function mapProject(p) {
       assignee: t.assignee?.name || 'Unknown',
       due: t.dueDate ? formatDate(t.dueDate) : '-',
       dueDate: t.dueDate || null,
-      status: taskStatusToMock(t.status, t.isOverdue),
+      status: taskStatusToMock(t.status, resolveOverdue(t)),
+      statusKey: taskStatusKey(t.status),
       statusLabel: t.status,
     })),
   };
@@ -459,19 +562,61 @@ export const getChecklistTemplates = async () => {
   };
 };
 
+export const createChecklistTemplate = async (payload) => {
+  const res = await api.post('/v1/projects/checklist-templates', payload);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const updateChecklistTemplate = async (key, payload) => {
+  const res = await api.put(`/v1/projects/checklist-templates/${key}`, payload);
+  return { data: res.data?.data ?? res.data };
+};
+
+export const deleteChecklistTemplate = async (key) => {
+  await api.delete(`/v1/projects/checklist-templates/${key}`);
+  return { success: true };
+};
+
+export const updateStakeholderOptions = async (stakeholderOptions) => {
+  const res = await api.put('/v1/projects/checklist-templates/stakeholder-options', { stakeholderOptions });
+  return { data: res.data?.data ?? res.data };
+};
+
+// BE có thể chưa nhận trường driveLink và trả 400 vì payload lạ.
+// Thử lại một lần không kèm driveLink để không chặn việc lưu dự án.
+const retryWithoutDriveLink = (err, data, send) => {
+  const status = err?.response?.status;
+  if (status !== 400 || !('driveLink' in data)) throw err;
+  const { driveLink: _omit, ...rest } = data;
+  return send(rest);
+};
+
 export const createProject = async (data) => {
-  const res = await api.post('/v1/projects', data);
+  const send = (payload) => api.post('/v1/projects', payload);
+  const res = await send(data).catch((err) => retryWithoutDriveLink(err, data, send));
+  const raw = res.data?.data ?? res.data ?? {};
+  // BE chưa chắc lưu driveLink -> giữ bản dự phòng ở FE theo id vừa tạo.
+  if (raw?.id && 'driveLink' in data) setDriveLink(raw.id, data.driveLink);
   return { data: res.data };
 };
 
 export const updateProject = async (id, data) => {
-  const res = await api.patch(`/v1/projects/${id}`, data);
+  const send = (payload) => api.patch(`/v1/projects/${id}`, payload);
+  const res = await send(data).catch((err) => retryWithoutDriveLink(err, data, send));
+  if ('driveLink' in data) setDriveLink(id, data.driveLink);
   return { data: res.data };
+};
+
+// Kế hoạch / thực tế của dự án theo snapshot chi phí mới nhất (BE tính, cùng quy ước màn Nhập chi phí dự án)
+export const getProjectExpenseSummary = async (id) => {
+  const res = await api.get(`/v1/projects/${id}/expense-summary`);
+  return { data: res.data?.data ?? res.data };
 };
 
 export const deleteProject = async (id) => {
   await api.delete(`/v1/projects/${id}`);
   markDeleted('projects', id);
+  try { clearDriveLink(id); } catch { /* noop */ }
   try { clearEvents(id); } catch { /* noop */ }
   try { localStorage.removeItem(`mkt_hub_daily_actuals_${id}`); } catch { /* noop */ }
   return { success: true };
@@ -527,6 +672,17 @@ export const deleteProjectDocument = async (docId) => {
 
 // ===================== TASKS =====================
 
+const normalizeSubtasks = (arr) => (Array.isArray(arr) ? arr.map((s, idx) => {
+  if (s === null || s === undefined) return null;
+  if (typeof s === 'string') return { id: null, text: s, done: false, doneDate: null };
+  return {
+    id: s.id ?? null,
+    text: String(s.text || s.name || s.title || ''),
+    done: Boolean(s.done || s.checked || s.completed),
+    doneDate: s.doneDate || s.completedDate || null,
+  };
+}).filter(s => s && s.text.trim()) : []);
+
 export const getTaskList = async (filters = {}) => {
   const params = {};
   if (filters.project && filters.project !== 'Tất cả' && filters.project !== 'All Projects') {
@@ -550,10 +706,6 @@ export const getTaskList = async (filters = {}) => {
   const tasks = Array.isArray(rawTasks) ? rawTasks : [];
   return {
     data: tasks.map((t) => {
-      const now = new Date();
-      const dueDate = t.dueDate ? new Date(t.dueDate) : null;
-      const completed = t.completedDate || t.status === 'Done' || t.status === 'Cancel';
-      const isOverdueLocal = dueDate && dueDate < now && !completed;
       return {
         id: t.id,
         project: t.project?.name || '-',
@@ -562,7 +714,8 @@ export const getTaskList = async (filters = {}) => {
         assignee: { initials: getInitials(t.assignee?.name || ''), name: t.assignee?.name || 'Unknown' },
         assigneeId: t.assignee?.id || t.assigneeId || '',
         stakeholders: (t.stakeholders || []).join(', '),
-        status: taskStatusToMock(t.status, isOverdueLocal || t.isOverdue),
+        status: taskStatusToMock(t.status, resolveOverdue(t)),
+        statusKey: taskStatusKey(t.status),
         priority: t.priority?.toLowerCase() || 'medium',
         start: t.startDate ? formatDate(t.startDate) : '-',
         startDate: t.startDate || '',
@@ -577,6 +730,7 @@ export const getTaskList = async (filters = {}) => {
         remark: t.remark || '',
         reason: t.reason || '',
         neededSupportBod: t.neededSupportBod || '',
+        subtasks: normalizeSubtasks(t.subtasks),
       };
     }),
     total: res.data?.stats?.total || tasks.length,
@@ -603,7 +757,8 @@ export const getTask = async (id) => {
       description: t.description || '',
       assignee: { name: t.assignee?.name || 'Unknown' },
       stakeholders: Array.isArray(t.stakeholders) ? t.stakeholders.join(', ') : (t.stakeholders || ''),
-      status: taskStatusToMock(t.status, t.isOverdue),
+      status: taskStatusToMock(t.status, resolveOverdue(t)),
+      statusKey: taskStatusKey(t.status),
       priority: t.priority?.toLowerCase() || 'medium',
       start: t.startDate ? formatDate(t.startDate) : '-',
       startDate: t.startDate || '',
@@ -613,13 +768,13 @@ export const getTask = async (id) => {
       completedDate: t.completedDate || '',
       linkUrl: typeof t.link === 'string' ? t.link : (t.link?.url || null),
       remark: t.remark || '',
+      subtasks: normalizeSubtasks(t.subtasks),
     },
   };
 };
 
 export const createTask = async (data) => {
-  const statusMap = { Planning: 'To Do', Processing: 'In Progress', Pending: 'Review', Backlog: 'Backlog', Done: 'Done', Cancel: 'Cancel' };
-  const beStatus = statusMap[data.status] || data.status || 'To Do';
+  const beStatus = taskStatusToApi(data.status) || 'To Do';
   const res = await api.post('/v1/tasks', {
     name: data.title || data.name,
     description: data.description || '',
@@ -632,6 +787,7 @@ export const createTask = async (data) => {
     assigneeId: data.assigneeId,
     startDate: data.startDate,
     stakeholders: data.stakeholders || [],
+    subtasks: data.subtasks || [],
     link: data.link,
     remark: data.remark,
     neededSupportBod: data.neededSupportBod,
@@ -639,9 +795,27 @@ export const createTask = async (data) => {
   return { data: res.data };
 };
 
+const FE_TO_BE_STATUS = {
+  Planning: 'To Do',
+  Processing: 'In Progress',
+  Pending: 'Review',
+  Backlog: 'Backlog',
+  Done: 'Done',
+  Cancel: 'Cancel',
+  Overdue: 'Overdue',
+};
+
+export const taskStatusToApi = (value) => {
+  const key = normalizeTaskStatus(value);
+  return key ? FE_TO_BE_STATUS[key] : value;
+};
+
 export const updateTask = async (id, data) => {
-  console.log(`[API] updateTask(${id}) payload:`, data);
-  const res = await api.patch(`/v1/tasks/${id}`, data);
+  const payload = { ...data };
+  if (payload.title && !payload.name) payload.name = payload.title;
+  if (payload.status) payload.status = taskStatusToApi(payload.status);
+  console.log(`[API] updateTask(${id}) payload:`, payload);
+  const res = await api.patch(`/v1/tasks/${id}`, payload);
   console.log(`[API] updateTask(${id}) response:`, res.status, res.data);
   return { data: res.data };
 };
@@ -654,15 +828,6 @@ export const deleteTask = async (id) => {
 // ===================== KANBAN =====================
 
 
-const beToFeStatus = {
-  'Planning': 'Planning', 'To Do': 'Planning',
-  'Processing': 'Processing', 'In Progress': 'Processing',
-  'Pending': 'Pending', 'Review': 'Pending',
-  'Done': 'Done',
-  'Cancel': 'Cancel',
-  'Backlog': 'Backlog',
-  'Overdue': 'Overdue',
-};
 
 const feStatusMeta = {
   planning: { title: 'CHƯA LÀM', badge: 'bg-slate-100 text-slate-700' },
@@ -682,8 +847,8 @@ export const getKanbanData = async () => {
     merged.overdue = { id: 'overdue', title: 'QUÁ HẠN', badgeColor: 'bg-red-100 text-red-700', badgeCount: 0, tasks: [] };
   }
   for (const col of columns) {
-    const feStatus = beToFeStatus[col.status] || col.status;
-    const id = feStatus.toLowerCase();
+    const feStatus = normalizeTaskStatus(col.status) || col.status;
+    const id = String(feStatus).toLowerCase();
     if (!merged[id]) {
       const meta = feStatusMeta[id] || { title: feStatus.toUpperCase(), badge: 'bg-gray-50 text-gray-600' };
       merged[id] = { id, title: meta.title, badgeColor: meta.badge, badgeCount: 0, tasks: [] };
@@ -691,23 +856,45 @@ export const getKanbanData = async () => {
     const deletedTasks = getDeletedIds('tasks');
     for (const t of col.tasks) {
       if (deletedTasks.has(t.id)) continue;
-      const isOverdue = t.isOverdue;
-      const isDone = t.status === 'Done' || t.status === 'done' || t.status === 'Cancel' || t.status === 'cancel';
+      const isOverdue = resolveOverdue(t);
+      const doneKey = normalizeTaskStatus(t.status);
+      const isDone = doneKey === 'Done' || doneKey === 'Cancel';
       const targetId = isOverdue && !isDone ? 'overdue' : id;
       merged[targetId].tasks.push({
         id: t.id,
         title: t.name,
+        taskName: t.name,
+        status: isOverdue && !isDone ? 'overdue' : (doneKey || feStatus),
+        statusKey: taskStatusKey(t.status),
         project: t.project?.name || '-',
         assignee: t.assignee?.name || 'Unknown',
+        assigneeId: t.assignee?.id || t.assigneeId || '',
         priority: t.priority || 'Medium',
         due: t.dueDate ? formatDate(t.dueDate) : '-',
         dueDate: t.dueDate || '',
+        startDate: t.startDate || '',
+        completedDate: t.completedDate || '',
         dueColor: isOverdue ? 'text-red-500' : isDone ? 'text-green-600' : 'text-gray-400',
         statusIcon: isOverdue ? 'error' : isDone ? 'check_circle' : 'east',
         statusColor: isOverdue ? 'text-red-500' : isDone ? 'text-green-600' : 'text-amber-500',
         avatar: getInitials(t.assignee?.name || ''),
         overdue: isOverdue,
         done: isDone,
+        description: t.description || '',
+        remark: t.remark || '',
+        reason: t.reason || '',
+        neededSupportBod: t.neededSupportBod || '',
+        execWeek: t.execWeek || '',
+        execYear: t.execYear || '',
+        link: typeof t.link === 'object' ? t.link : (t.link ? { url: typeof t.link === 'string' ? t.link : '' } : null),
+        linkUrl: typeof t.link === 'string' ? t.link : (t.link?.url || null),
+        stakeholders: (t.stakeholders || []).join(', '),
+        subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(s => ({
+          id: s.id ?? null,
+          text: String(s.text || s.name || s.title || ''),
+          done: Boolean(s.done || s.checked || s.completed),
+          doneDate: s.doneDate || s.completedDate || null,
+        })).filter(s => s.text) : [],
       });
     }
   }
@@ -719,13 +906,115 @@ export const getKanbanData = async () => {
 
 // ===================== WEEKLY REPORTS =====================
 
+function isoWeekRange(week, year) {
+  const w = Number(week);
+  const y = Number(year);
+  if (!w || !y) return null;
+  const jan4 = Date.UTC(y, 0, 4);
+  const day = new Date(jan4).getUTCDay();
+  const dMon = day === 0 ? 7 : day;
+  const thu = jan4 + (4 - dMon) * 86400000 + (w - 1) * 7 * 86400000;
+  const startISO = new Date(thu - 3 * 86400000).toISOString().slice(0, 10);
+  const endISO = new Date(thu + 3 * 86400000).toISOString().slice(0, 10);
+  return { startISO, endISO };
+}
+
+const getWeeklyDoneByCompletedDate = async (filters, period, sections) => {
+  const range = isoWeekRange(period.week ?? filters.week, period.year ?? filters.year);
+  if (!range) return null;
+  const taskParams = {};
+  if (filters.projectId) taskParams.projectId = filters.projectId;
+  if (filters.memberId) taskParams.assigneeId = filters.memberId;
+  const res = await api.get('/v1/tasks', { params: taskParams });
+  const tasks = Array.isArray(res.data?.data) ? res.data.data : [];
+  const byDate = tasks.filter((t) => {
+    if (String(t.status || '').toLowerCase() !== 'done') return false;
+    const cd = String(t.completedDate || '').slice(0, 10);
+    return cd >= range.startISO && cd <= range.endISO;
+  });
+  const byDateIds = new Set(byDate.map((t) => t.id));
+  const legacy = (sections.done || []).filter((t) => !t.completedDate && (!t.id || !byDateIds.has(t.id)));
+  const merged = [...byDate, ...legacy];
+  const seen = new Set();
+  return merged.filter((t) => {
+    if (t.id && seen.has(t.id)) return false;
+    if (t.id) seen.add(t.id);
+    return true;
+  });
+};
+
 export const getWeeklyReport = async (filters = {}) => {
   const params = { week: filters.week || 29, year: filters.year || 2026 };
   if (filters.projectId) params.projectId = filters.projectId;
+  if (filters.memberId) params.memberId = filters.memberId;
   const res = await api.get('/v1/weekly-reports', { params });
   const r = res.data?.data ?? res.data ?? {};
   const period = r.period ?? {};
-  const sections = r.sections ?? {};
+  // Lọc theo người phụ trách: gửi memberId cho BE và lọc lại ở FE cho mọi mục có assignee
+  // (danh sách 'done' bị FE tính lại từ /v1/tasks nên trước đây bỏ qua bộ lọc này).
+  const matchesMember = (t) => {
+    if (!filters.memberId) return true;
+    const aid = t?.assigneeId || t?.assignee?.id;
+    return !aid || String(aid) === String(filters.memberId);
+  };
+  const rawSections = r.sections ?? {};
+  const sections = Object.fromEntries(Object.entries(rawSections).map(([k, v]) => [k, Array.isArray(v) ? v.filter(matchesMember) : v]));
+  let done = sections.done || [];
+  try {
+    const computedDone = await getWeeklyDoneByCompletedDate(filters, period, sections);
+    if (computedDone) done = computedDone;
+  } catch { /* keep BE done */ }
+  let weekSubTasks = [];
+  let weekBacklog = null;
+  const subtaskLookup = {};
+  try {
+    const planParams = {};
+    if (filters.projectId) planParams.projectId = filters.projectId;
+    if (filters.memberId) planParams.assigneeId = filters.memberId;
+    const planRes = await api.get('/v1/tasks', { params: planParams });
+    const rawTasks = Array.isArray(planRes.data?.data) ? planRes.data.data : [];
+    const week = Number(filters.week);
+    const weekRange = isoWeekRange(week, Number(filters.year));
+    rawTasks.forEach((t) => {
+      subtaskLookup[t.id] = mergeSubtasks(t.id, t.subtasks);
+    });
+    weekSubTasks = rawTasks
+      .filter(matchesMember)
+      .map((t) => {
+        const st = subtaskLookup[t.id] || [];
+        if (!st.length) return null;
+        const inExecWeek = t.execWeek != null && Number(t.execWeek) === week;
+        const filtered = weekRange
+          ? st.filter((s) => (s.doneDate && s.doneDate >= weekRange.startISO && s.doneDate <= weekRange.endISO) || (!s.doneDate && inExecWeek))
+          : st;
+        if (!filtered.length) return null;
+        return {
+          id: t.id,
+          projectId: t.projectId || t.project?.id || '',
+          taskName: t.name,
+          project: t.project?.name || '-',
+          status: t.status,
+          assignee: t.assignee?.name || 'Unknown',
+          dueDate: t.dueDate || '',
+          subtasks: filtered,
+        };
+      })
+      .filter(Boolean);
+    const backlogStatuses = ['backlog', 'review', 'cancel'];
+    const byWeek = rawTasks.filter(matchesMember).filter((t) => {
+      if (!backlogStatuses.includes(String(t.status || '').toLowerCase())) return false;
+      return t.execWeek != null && Number(t.execWeek) === week;
+    });
+    const seen = new Set();
+    weekBacklog = [
+      ...byWeek,
+      ...(sections.backlog || []).filter((t) => !t.id),
+    ].filter((t) => {
+      if (t.id && seen.has(t.id)) return false;
+      if (t.id) seen.add(t.id);
+      return true;
+    });
+  } catch { weekSubTasks = []; }
   return {
     data: {
       week: period.week ?? filters.week,
@@ -739,31 +1028,48 @@ export const getWeeklyReport = async (filters = {}) => {
         backlogNotes: r.log.backlogNotes || '',
         bodNotes: r.log.bodNotes || '',
       } : null,
-      completed: filterDeleted('tasks', (sections.done || [])).map((t) => ({
+      completed: filterDeleted('tasks', done.filter(matchesMember)).map((t) => ({
+        id: t.id,
+        projectId: t.projectId || t.project?.id || '',
         code: t.id?.slice(0, 8) || '-',
+        project: t.project?.name || '-',
         name: t.name,
         result: 'Hoàn thành',
         assignee: t.assignee?.name || 'Unknown',
+        status: t.status || 'Done',
+        subtasks: mergeSubtasks(t.id, t.subtasks),
       })),
       nextWeek: filterDeleted('tasks', (sections.nextWeekPlan || [])).map((t) => ({
+        id: t.id,
+        projectId: t.projectId || t.project?.id || '',
         schedule: t.startDate ? formatDate(t.startDate) : '-',
+        project: t.project?.name || '-',
         item: t.name,
+        activity: t.description || '',
         deadline: t.dueDate ? formatDate(t.dueDate) : '-',
         priority: t.priority === 'High' ? 'High' : 'Normal',
+        assignee: t.assignee?.name || 'Unknown',
+        status: t.status || 'To Do',
+        subtasks: subtaskLookup[t.id] || mergeSubtasks(t.id, t.subtasks),
       })),
-      backlog: filterDeleted('tasks', (sections.backlog || [])).map((t) => ({
+      backlog: filterDeleted('tasks', (weekBacklog ?? (sections.backlog || []))).map((t) => ({
+        id: t.id,
+        projectId: t.projectId || t.project?.id || '',
         title: t.name,
         tag: 'BLOCKER',
         tagClass: 'bg-error text-on-error',
-        description: t.reason || 'Không có lý do',
+        description: t.reason || t.remark || t.description || 'Không có lý do',
         note: t.remark || '',
         icon: 'info',
         cardClass: 'bg-error-container/10 border-error/20',
       })),
       bod: (sections.bodSupport || []).map((t) => ({
+        id: t.id,
+        projectId: t.projectId || t.project?.id || '',
         project: t.project?.name || '-',
         description: t.neededSupportBod || '',
       })),
+      weekSubTasks,
     },
   };
 };
@@ -782,9 +1088,10 @@ export const saveWeeklyLog = async (data) => {
   return { data: res.data };
 };
 
-export const exportWeeklyReport = async (week, year, projectId) => {
+export const exportWeeklyReport = async (week, year, projectId, memberId) => {
   const params = { week, year };
   if (projectId) params.projectId = projectId;
+  if (memberId) params.memberId = memberId;
   const res = await api.get('/v1/weekly-reports/export.txt', { params, responseType: 'blob' });
   const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/plain' }));
   const a = document.createElement('a');
@@ -1229,11 +1536,10 @@ export const saveMonthlyActuals = async (data) => {
 // ===================== OPPORTUNITIES =====================
 
 function mapOppFromBE(o) {
-  const sizeMap = { 'Enterprise': 'S', 'Medium': 'M' };
   return {
     id: o.id,
     companyName: o.companyName || '',
-    size: sizeMap[o.size] || o.size || 'S',
+    size: o.size || 'S',
     project: o.project?.name || o.projectName || '',
     projectId: o.projectId || '',
     contractName: o.contractName || o.contract || '',
@@ -1241,10 +1547,23 @@ function mapOppFromBE(o) {
     expectedCloseDate: o.expectedCloseDate || '',
     initiationDate: o.initiationDate || '',
     status: o.status || 'active',
+    createdAt: o.createdAt || o.created_at || '',
   };
 }
 
-export const getOpportunities = async (year) => {
+export const getOpportunities = async (year, projectId) => {
+  try {
+    const params = {};
+    if (projectId) params.projectId = projectId;
+    const res = await api.get('/v1/leads-kpis/opportunities', { params });
+    const d = res.data?.data ?? res.data ?? {};
+    const list = Array.isArray(d) ? d : (d.opportunities ?? d.items ?? []);
+    if (Array.isArray(list)) {
+      return { data: list.map(mapOppFromBE) };
+    }
+  } catch (e) {
+    /* fall through to weekly extraction */
+  }
   try {
     const res = await api.get('/v1/leads-kpis/weekly', { params: { year } });
     const d = res.data?.data ?? res.data ?? {};
@@ -1256,10 +1575,9 @@ export const getOpportunities = async (year) => {
 };
 
 export const addOpportunity = async (data) => {
-  const feToBeSize = { 'S': 'Enterprise', 'M': 'Medium', 'L': 'Enterprise' };
   const res = await api.post('/v1/leads-kpis/opportunities', {
     companyName: data.companyName,
-    size: feToBeSize[data.size] || 'Enterprise',
+    size: data.size || 'Enterprise',
     projectId: data.projectId || undefined,
     contractName: data.contractName || undefined,
     setupFee: Number(data.fees) || 0,
@@ -1270,10 +1588,9 @@ export const addOpportunity = async (data) => {
 };
 
 export const updateOpportunity = async (id, data) => {
-  const feToBeSize = { 'S': 'Enterprise', 'M': 'Medium', 'L': 'Enterprise' };
   const res = await api.patch(`/v1/leads-kpis/opportunities/${id}`, {
     companyName: data.companyName,
-    size: feToBeSize[data.size] || 'Enterprise',
+    size: data.size || 'Enterprise',
     projectId: data.projectId || undefined,
     contractName: data.contractName || undefined,
     setupFee: Number(data.fees) || 0,
@@ -1319,15 +1636,34 @@ export const getClosedDeals = async (projectId) => {
   }
 };
 
+// Bản ghi won deal nguyên gốc từ BE (dùng tính ROAS/CAC: cần dealValue + initiationDate của opp nguồn)
+export const getClosedDealsRaw = async () => {
+  const res = await api.get('/v1/leads-kpis/closed-deals');
+  const list = res.data?.data ?? res.data ?? [];
+  return { data: filterDeleted('closed_deals', Array.isArray(list) ? list.filter((d) => !d.archivedAt) : []) };
+};
+
+// Số liệu Raw Leads / MQL / SQL theo ngày của mọi dự án trong khoảng [from, to] (YYYY-MM-DD)
+export const getLeadDailyActuals = async (from, to) => {
+  const res = await api.get('/v1/leads-kpis/daily-actuals', { params: { from, to } });
+  const list = res.data?.data ?? res.data ?? [];
+  return { data: Array.isArray(list) ? list : [] };
+};
+
+// Chỉ gửi các trường người dùng thực sự sửa: trước đây luôn gửi cả monthlyFee: 0 / setupFee: 0 khi thiếu
+// → sửa một won deal là ghi đè các trường đó ở BE. FE không quản lý phí tháng nên không bao giờ gửi monthlyFee.
 export const updateClosedDeal = async (id, data) => {
-  const res = await api.put(`/v1/leads-kpis/closed-deals/${id}`, {
-    companyName: data.companyName || data.customer,
-    size: data.size,
-    contractName: data.contractName || data.contract || undefined,
-    setupFee: Number(data.setupFee ?? data.finalFees ?? 0),
-    monthlyFee: Number(data.monthlyFee ?? 0),
-    closedDate: data.closedDate || data.signedDate,
-  });
+  const body = {};
+  const companyName = data.companyName ?? data.customer;
+  if (companyName !== undefined) body.companyName = companyName;
+  if (data.size !== undefined) body.size = data.size;
+  const contractName = data.contractName ?? data.contract;
+  if (contractName !== undefined) body.contractName = contractName || undefined;
+  const setupFee = data.setupFee ?? data.finalFees;
+  if (setupFee !== undefined && setupFee !== '') body.setupFee = Number(setupFee) || 0;
+  const closedDate = data.closedDate ?? data.signedDate;
+  if (closedDate) body.closedDate = closedDate;
+  const res = await api.put(`/v1/leads-kpis/closed-deals/${id}`, body);
   return { data: res.data?.data ?? res.data };
 };
 
@@ -1556,6 +1892,20 @@ export const updateExpenseLine = async (lineId, data) => {
   return { data: res.data?.data ?? res.data };
 };
 
+// Hồ sơ liên quan của dòng chi phí — nhiều file / dòng. Snapshot mới gắn lại file cũ qua attachmentIds khi tạo dòng.
+export const uploadExpenseLineAttachments = async (lineId, files) => {
+  const formData = new FormData();
+  for (const f of files) formData.append('files', f);
+  const res = await api.post(`/v1/expenses/lines/${lineId}/attachments`, formData);
+  const list = res.data?.data ?? res.data ?? [];
+  return { data: Array.isArray(list) ? list : [] };
+};
+
+export const getExpenseAttachmentBlob = async (attachmentId) => {
+  const res = await api.get(`/v1/expenses/attachments/${attachmentId}/file`, { responseType: 'blob' });
+  return res.data;
+};
+
 export const deleteExpenseLine = async (lineId) => {
   const res = await api.delete(`/v1/expenses/lines/${lineId}`);
   return { data: res.data };
@@ -1710,9 +2060,14 @@ export const getCategoryBudgetActuals = async (year) => {
         for (const exp of Array.isArray(raw) ? raw : []) {
           const expMonth = monthOf(exp.expenseDate) || monthOf(exp.period) || exp.month;
           for (const ln of Array.isArray(exp.lines) ? exp.lines : []) {
+            const month = monthOf(ln.expenseDate) || expMonth;
+            const directAmt = Number(ln.actualAmount ?? ln.totalAmount ?? ln.amount ?? 0);
+            if (directAmt > 0) {
+              track(ln.hangMucLon || ln.categoryName, month, directAmt);
+              continue;
+            }
             const qty = Number(ln.actualQuantity ?? 0);
             const price = preVatPrice(ln);
-            const month = monthOf(ln.expenseDate) || expMonth;
             track(ln.hangMucLon || ln.categoryName, month, qty * price);
           }
         }
@@ -1722,8 +2077,11 @@ export const getCategoryBudgetActuals = async (year) => {
   return { data: actualByCat };
 };
 
-export const getExpenseOverview = async (period) => {
-  const res = await api.get('/v1/expenses/overview', { params: { period: period || String(new Date().getFullYear()) } });
+// period: YYYY | YYYY-MM | YYYY-QX; projectId tuỳ chọn
+export const getExpenseOverview = async (period, projectId) => {
+  const params = { period: period || String(new Date().getFullYear()) };
+  if (projectId) params.projectId = projectId;
+  const res = await api.get('/v1/expenses/overview', { params });
   const raw = res.data?.data ?? res.data;
   return { data: raw };
 };
@@ -1960,7 +2318,10 @@ export const exportFullData = async () => {
   const url = window.URL.createObjectURL(new Blob([res.data]));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `mkthub-full-export-${new Date().toISOString().slice(0, 10)}.zip`;
+  // BE hiện trả file Excel; đặt đuôi theo content-type để file mở được
+  const type = String(res.headers?.['content-type'] || '');
+  const ext = type.includes('spreadsheetml') ? 'xlsx' : type.includes('json') ? 'json' : 'zip';
+  a.download = `mkthub-full-export-${new Date().toISOString().slice(0, 10)}.${ext}`;
   a.click();
   window.URL.revokeObjectURL(url);
   return { success: true };
@@ -2005,6 +2366,20 @@ export const deleteMember = async (id) => {
   await api.delete(`/v1/data-management/members/${id}`);
   markDeleted('members', id);
   return { success: true };
+};
+
+// --- Ma trận quyền theo tài khoản: { [userId]: { [module]: 'none' | 'view' | 'edit' } }, chỉ ô đặt riêng ---
+export const getPermissionMatrix = async () => {
+  const res = await api.get('/v1/permissions/matrix');
+  const body = res.data?.data ?? res.data ?? {};
+  return { matrix: body.matrix || {}, updatedAt: body.updatedAt || null };
+};
+
+// Chỉ quản lý (khác → 403). Thay thế toàn bộ ma trận.
+export const savePermissionMatrix = async (matrix) => {
+  const res = await api.put('/v1/permissions/matrix', { matrix });
+  const body = res.data?.data ?? res.data ?? {};
+  return { matrix: body.matrix || matrix, updatedAt: body.updatedAt || null };
 };
 
 export const changePassword = async (oldPassword, newPassword) => {
@@ -2101,10 +2476,11 @@ export const resetSandbox = async () => {
 const DROPDOWN_DEFAULTS = [
   { id: 'dd_1', key: 'project_type', label: 'Loại Project', values: ['workshop', 'event', 'exhibition', 'webinar', 'Online Campaign', 'Lead Generation', 'Awards', 'Production'].map(v => ({ id: `pt_${v}`, label: v })) },
   { id: 'dd_2', key: 'project_status', label: 'Trạng thái Project', values: ['Planning', 'Active', 'On Hold', 'Completed', 'Cancelled'].map(v => ({ id: `ps_${v}`, label: v })) },
-  { id: 'dd_3', key: 'task_status', label: 'Trạng thái Task', values: ['Planning', 'Processing', 'Done', 'Pending', 'Backlog', 'Cancel'].map(v => ({ id: `ts_${v}`, label: v })) },
+  { id: 'dd_3', key: 'task_status', label: 'Trạng thái Task', values: TASK_STATUS_KEYS.map(k => ({ id: `ts_${k}`, label: TASK_STATUS_FALLBACK_LABELS[k] })) },
   { id: 'dd_4', key: 'task_priority', label: 'Độ ưu tiên Task', values: ['High', 'Medium', 'Low'].map(v => ({ id: `tp_${v}`, label: v })) },
   { id: 'dd_5', key: 'company_size', label: 'Phân khúc Khách hàng', values: ['Enterprise', 'Medium'].map(v => ({ id: `cs_${v}`, label: v })) },
   { id: 'dd_6', key: 'stakeholder', label: 'Stakeholders', values: ['BOD', 'Sales Team', 'Dev Team', 'CS Team', 'Partner'].map(v => ({ id: `sh_${v}`, label: v })) },
+  { id: 'dd_7', key: 'inventory_category', label: 'Danh mục Kho', values: ['POSM', 'Gift', 'Print'].map(v => ({ id: `ic_${v}`, label: v })) },
 ];
 
 let dropdownCache = [];
@@ -2224,6 +2600,28 @@ export const getInventoryItems = async (params = {}) => {
   return { data: list, total: raw?.total ?? list.length };
 };
 
+// Mã batch đã có trong kho chưa (BE so sánh bỏ khoảng trắng, không phân biệt hoa/thường). excludeId = batch đang sửa.
+// BE trả cả { exists, itemName } lẫn { data: { exists, itemName } } → đọc data trước.
+export const checkBatchCode = async (code, excludeId) => {
+  const params = { code };
+  if (excludeId) params.excludeId = excludeId;
+  const res = await api.get('/v1/inventory/batches/check-code', { params });
+  const body = res.data?.data ?? res.data ?? {};
+  return { exists: Boolean(body.exists), itemName: body.itemName || '' };
+};
+
+// Danh sách đầy đủ (cho dropdown / popup): đi lần lượt các trang 100 item thay vì 1 request limit khổng lồ
+const INVENTORY_PAGE_LIMIT = 100;
+export const getAllInventoryItems = async (params = {}) => {
+  const all = [];
+  for (let page = 1; page <= 50; page += 1) {
+    const res = await getInventoryItems({ ...params, page, limit: INVENTORY_PAGE_LIMIT });
+    all.push(...res.data);
+    if (res.data.length < INVENTORY_PAGE_LIMIT || all.length >= res.total) break;
+  }
+  return { data: all, total: all.length };
+};
+
 export const getInventoryItem = async (id) => {
   const res = await api.get(`/v1/inventory/items/${id}`);
   return { data: res.data?.data ?? res.data };
@@ -2298,6 +2696,50 @@ export const createInventoryTransaction = async (data) => {
     note: data.note || undefined,
   });
   return { data: res.data?.data ?? res.data };
+};
+
+// Hồ sơ liên quan của batch (hóa đơn, hợp đồng...). Contract đề xuất cho BE, mirror /v1/projects/{id}/documents:
+//   GET    /v1/inventory/batches/{batchId}/attachments          -> { data: Attachment[] }
+//   POST   /v1/inventory/batches/{batchId}/attachments          multipart, field `files` (nhiều file) -> { data: Attachment[] }
+//   DELETE /v1/inventory/attachments/{id}                       -> { data: { success: true } }
+//   GET    /v1/inventory/attachments/{id}/file                  -> file stream
+// Attachment = { id, batchId, name, size, mimeType, url, uploadedBy, uploadedAt }
+const mapInventoryAttachment = (a) => ({
+  id: a.id,
+  batchId: a.batchId,
+  name: a.name || a.fileName || a.originalName || '',
+  size: Number(a.size) || 0,
+  type: a.mimeType || '',
+  url: a.url || null,
+  uploadedAt: a.uploadedAt || a.createdAt || null,
+});
+
+export const getBatchAttachments = async (batchId) => {
+  const res = await api.get(`/v1/inventory/batches/${batchId}/attachments`);
+  const list = res.data?.data ?? res.data ?? [];
+  return { data: (Array.isArray(list) ? list : []).map(mapInventoryAttachment) };
+};
+
+export const uploadBatchAttachments = async (batchId, files) => {
+  const fd = new FormData();
+  for (const f of Array.isArray(files) ? files : [files]) {
+    if (f) fd.append('files', f);
+  }
+  const res = await api.post(`/v1/inventory/batches/${batchId}/attachments`, fd);
+  const list = res.data?.data ?? res.data ?? [];
+  return { data: (Array.isArray(list) ? list : [list]).filter(Boolean).map(mapInventoryAttachment) };
+};
+
+export const deleteInventoryAttachment = async (attachmentId) => {
+  await api.delete(`/v1/inventory/attachments/${attachmentId}`);
+  return { success: true };
+};
+
+export const downloadInventoryAttachment = async (att) => {
+  // Ưu tiên path theo id (đi qua axios baseURL + Bearer token); `url` tuyệt đối từ BE chỉ dùng khi thiếu id.
+  const target = att.id ? `/v1/inventory/attachments/${att.id}/file` : att.url;
+  const res = await api.get(target, { responseType: 'blob' });
+  return res.data;
 };
 
 export const getPipelineBySegment = async (periodType, periodValue, year, projectId) => {
@@ -2417,6 +2859,10 @@ export default {
   getTaskList,
   getKanbanData,
   getChecklistTemplates,
+  createChecklistTemplate,
+  updateChecklistTemplate,
+  deleteChecklistTemplate,
+  updateStakeholderOptions,
   createProject,
   updateProject,
   deleteProject,

@@ -4,6 +4,7 @@ import {
   ChevronRight, PlayCircle, CalendarDays, CheckCircle2, CircleX, PauseCircle,
   Clock4, ShieldCheck, TriangleAlert, ArrowRight, CloudUpload, Loader2, Trash2,
   FileText, FileSpreadsheet, ImageIcon, FileType2, CircleDot, Circle,
+  FolderOpen, ExternalLink,
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import {
@@ -13,13 +14,12 @@ import {
   updateProjectDocument,
   deleteProjectDocument,
   getKpiCardsData,
-  getCategoryBudgetTree,
+  getProjectExpenseSummary,
   DOC_CATEGORY,
 } from '../services/api';
 import { useDashboard } from '../contexts/DashboardContext';
 import { useToast } from '../contexts/ToastContext';
 import CreateProjectForm from '../components/Projects/CreateProjectForm';
-import ProjectExpenses from '../components/ExpenseManagement/ProjectExpenses';
 
 const statusConfig = {
   near_deadline: { label: 'Sắp hết hạn', bg: 'bg-amber-100', text: 'text-amber-700', icon: Clock4 },
@@ -85,7 +85,7 @@ function docIcon(type, name) {
 function CircularProgress({ value }) {
   const clamped = Math.max(0, Math.min(100, value || 0));
   return (
-    <div className="relative w-32 h-32 flex items-center justify-center">
+    <div className="relative w-24 h-24 flex items-center justify-center">
       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
         <path
           d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -98,7 +98,7 @@ function CircularProgress({ value }) {
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-[24px] leading-[32px] font-semibold text-on-surface">{Math.round(clamped)}%</span>
+        <span className="text-lg leading-[26px] font-semibold text-on-surface">{Math.round(clamped)}%</span>
       </div>
     </div>
   );
@@ -120,7 +120,7 @@ function KpiMiniCard({ label, actual, plan, locale, isMoney, planLabel }) {
     <div className="flex flex-col p-2 rounded-lg bg-background border border-surface-container-high">
       <span className="font-label-md text-label-md text-on-surface-variant mb-1">{label}</span>
       <div className="flex items-end gap-2">
-        <span className="text-[20px] leading-[28px] font-semibold text-on-surface truncate">{display}</span>
+        <span className="text-lg leading-[26px] font-semibold text-on-surface truncate">{display}</span>
         {delta && <span className={`font-data-mono text-data-mono ${deltaColor} text-xs mb-[2px]`}>{delta}</span>}
       </div>
       {hasPlan && <span className="font-label-md text-label-md text-on-surface-variant mt-1">{planLabel || (locale === 'vi' ? 'Kế hoạch: ' : 'Plan: ')}{fmt(plan)}</span>}
@@ -140,8 +140,8 @@ export default function ProjectDetail() {
   const [docsLoading, setDocsLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [expenseTotals, setExpenseTotals] = useState({ directCost: 0, overheadCost: 0, total: 0, usedCategoryIds: [], usedCategoryNames: [] });
-  const [categoryBudgetTree, setCategoryBudgetTree] = useState(null);
+  // Ngân sách dự án = số KH / TT nhập ở Quản lý chi phí > Nhập chi phí dự án (trước VAT)
+  const [budgetSummary, setBudgetSummary] = useState(null);
   const fileInputRef = useRef(null);
   const addToast = useToast();
 
@@ -155,10 +155,21 @@ export default function ProjectDetail() {
   useEffect(() => { reloadDocs(); }, [reloadDocs]);
 
   useEffect(() => {
-    getCategoryBudgetTree(year)
-      .then((res) => setCategoryBudgetTree(res.data))
-      .catch(() => setCategoryBudgetTree(null));
-  }, [year]);
+    let cancelled = false;
+    setBudgetSummary(null);
+    getProjectExpenseSummary(id)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const planned = Number(data?.plannedBeforeVat) || 0;
+        const actual = Number(data?.actualBeforeVat) || 0;
+        setBudgetSummary({ planned, actual, actualAfterVat: Number(data?.actualAfterVat) || 0, lineCount: planned || actual ? 1 : 0 });
+      })
+      .catch((e) => {
+        console.error('[ProjectDetail] getProjectExpenseSummary:', e);
+        if (!cancelled) setBudgetSummary({ planned: 0, actual: 0, actualAfterVat: 0, lineCount: 0, error: true });
+      });
+    return () => { cancelled = true; };
+  }, [id]);
 
   const handleFiles = async (fileList) => {
     const files = Array.from(fileList || []);
@@ -241,30 +252,12 @@ const load = useCallback(() => {
     ? { label: locale === 'vi' ? 'Chậm tiến độ' : 'Behind schedule', color: 'text-danger', icon: TriangleAlert }
     : { label: locale === 'vi' ? 'Tốt (Đúng hạn)' : 'Healthy (On track)', color: 'text-success', icon: ShieldCheck };
 
-  const projectPlanFromCategories = (() => {
-    if (!categoryBudgetTree || !Array.isArray(categoryBudgetTree.categories)) return 0;
-    const usedIds = new Set(expenseTotals.usedCategoryIds || []);
-    const usedNames = new Set(expenseTotals.usedCategoryNames || []);
-    if (usedIds.size === 0 && usedNames.size === 0) return 0;
-    const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-    let total = 0;
-    for (const cat of categoryBudgetTree.categories) {
-      const catId = String(cat.id || cat.categoryId || '');
-      const catName = String(cat.name || '').trim().toLowerCase();
-      const matchedById = usedIds.has(catId) && catId;
-      const matchedByName = usedNames.has(catName) && catName;
-      if (!matchedById && !matchedByName) continue;
-      const months = cat.months || {};
-      for (const m of MONTHS) {
-        total += Number(months[m]) || 0;
-      }
-    }
-    return total;
-  })();
-
-  const plannedTotal = projectPlanFromCategories || ((project?.budgetPlanDirect || 0) + (project?.budgetPlanOverhead || 0));
-  const actualTotal = expenseTotals.directCost + expenseTotals.overheadCost;
-  const spendPct = plannedTotal ? Math.min(100, Math.round((actualTotal / plannedTotal) * 100)) : 0;
+  const plannedTotal = budgetSummary?.planned || 0;
+  const actualTotal = budgetSummary?.actual || 0;
+  const remainingTotal = plannedTotal - actualTotal;
+  const usedPct = plannedTotal > 0 ? Math.round((actualTotal / plannedTotal) * 100) : null;
+  const spendPct = usedPct != null ? Math.min(100, Math.max(0, usedPct)) : 0;
+  const overBudget = plannedTotal > 0 && actualTotal > plannedTotal;
 
   const recentTasks = project?.tasks || [];
 
@@ -295,7 +288,7 @@ const load = useCallback(() => {
     <Layout title={locale === 'vi' ? 'Chi tiết Dự án' : 'Project Detail'}>
       <div className="max-w-[1440px] mx-auto">
         {/* Page Header */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="mb-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md mb-1">
               <Link to="/projects" className="hover:text-primary transition-colors">{locale === 'vi' ? 'Dự án' : 'Projects'}</Link>
@@ -303,7 +296,7 @@ const load = useCallback(() => {
               <span className="text-on-surface">{locale === 'vi' ? 'Chi tiết' : 'Detail'}</span>
             </div>
             <div className="flex items-center gap-4 flex-wrap">
-              <h2 className="text-[24px] leading-[32px] font-semibold text-on-surface">{project.name}</h2>
+              <h2 className="text-lg leading-[26px] font-semibold text-on-surface">{project.name}</h2>
               <span className={`inline-flex items-center px-2 py-[2px] rounded-full font-label-md text-label-md ${st.bg} ${st.text}`}>
                 <st.icon className="w-3.5 h-3.5 mr-1" />
                 {locale === 'vi' ? st.label : ({
@@ -316,7 +309,7 @@ const load = useCallback(() => {
           <div className="flex gap-2">
             <button
               onClick={() => setShowEdit(true)}
-              className="px-4 py-2 rounded-lg border border-border-light text-on-surface text-[14px] leading-[20px] font-medium hover:bg-surface-container-highest transition-colors"
+              className="px-3 py-1.5 rounded-lg border border-border-light text-on-surface text-xs leading-[18px] font-medium hover:bg-surface-container-highest transition-colors"
             >
               {locale === 'vi' ? 'Chỉnh sửa' : 'Edit'}
             </button>
@@ -324,21 +317,21 @@ const load = useCallback(() => {
         </div>
 
         {/* Bento Grid Layout */}
-        <div className="grid grid-cols-12 gap-5">
+        <div className="grid grid-cols-12 gap-3">
           {/* Progress / Health Card (Span 4) */}
-          <div className="col-span-12 md:col-span-4 bg-surface-container-lowest border border-border-light rounded-lg p-4 flex flex-col relative overflow-hidden group">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Tiến độ' : 'Progress'}</h3>
+          <div className="col-span-12 md:col-span-4 bg-surface-container-lowest border border-border-light rounded-lg p-3 flex flex-col relative overflow-hidden group">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm leading-[20px] font-semibold text-on-surface">{locale === 'vi' ? 'Tiến độ' : 'Progress'}</h3>
             </div>
             <div className="flex-1 flex flex-col justify-center items-center">
               <div className="mb-2">
                 <CircularProgress value={project.progress} />
               </div>
               <div className="flex items-center gap-1 font-label-md text-label-md">
-                <health.icon className={`w-4 h-4 ${health.color}`} />
+                <health.icon className={`w-3.5 h-3.5 ${health.color}`} />
                 <span className={health.color}>{health.label}</span>
               </div>
-              <div className="flex items-center gap-4 mt-4 text-on-surface-variant font-label-md text-label-md">
+              <div className="flex items-center gap-4 mt-3 text-on-surface-variant font-label-md text-label-md">
                 <span>{project.tasksCompleted}/{project.tasksTotal} {locale === 'vi' ? 'task' : 'tasks'}</span>
                 <span>·</span>
                 <span>{locale === 'vi' ? 'Hạn: ' : 'Deadline: '}{project.deadline}</span>
@@ -347,11 +340,11 @@ const load = useCallback(() => {
           </div>
 
           {/* KPIs Card (Span 8) */}
-          <div className="col-span-12 md:col-span-8 bg-surface-container-lowest border border-border-light rounded-lg p-4 flex flex-col group">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Chỉ số cốt lõi (KPIs)' : 'Core KPIs'}</h3>
+          <div className="col-span-12 md:col-span-8 bg-surface-container-lowest border border-border-light rounded-lg p-3 flex flex-col group">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm leading-[20px] font-semibold text-on-surface">{locale === 'vi' ? 'Chỉ số cốt lõi (KPIs)' : 'Core KPIs'}</h3>
             </div>
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
               <KpiMiniCard
                 label={locale === 'vi' ? 'Tổng Leads' : 'Raw Leads'}
                 actual={project.kpiRawLeadsActual}
@@ -378,38 +371,63 @@ const load = useCallback(() => {
             </div>
           </div>
 
-          {/* Budget Card (Span 6) */}
-          <div className="col-span-12 md:col-span-6 bg-surface-container-lowest border border-border-light rounded-lg p-4 flex flex-col group">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Ngân sách dự án' : 'Project Budget'}</h3>
-              <button onClick={() => navigate('/expense')} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Mở module Chi phí' : 'Open Expense module'}>
-                <ArrowRight className="w-5 h-5" />
+          {/* Budget Card (Span 6) — KH vs TT lấy từ Nhập chi phí dự án (trước VAT) */}
+          <div className="col-span-12 md:col-span-6 bg-surface-container-lowest border border-border-light rounded-lg p-3 flex flex-col group">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm leading-[20px] font-semibold text-on-surface">{locale === 'vi' ? 'Ngân sách dự án' : 'Project Budget'}</h3>
+              <button onClick={() => navigate(`/expense?tab=input&projectId=${id}`)} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Mở bảng nhập chi phí của dự án' : 'Open project expense entry'}>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex flex-col gap-2 flex-1 justify-center">
-              <div className="flex justify-between items-end">
-                <span className="text-[14px] leading-[20px] text-on-surface-variant">{locale === 'vi' ? 'Thực tế (Actual)' : 'Actual'}</span>
-                <span className="font-data-mono text-data-mono text-on-surface font-semibold">{fmtVND(actualTotal)}</span>
+            {budgetSummary == null ? (
+              <div className="flex-1 flex items-center justify-center text-on-surface-variant">
+                <Loader2 className="w-5 h-5 animate-spin" />
               </div>
-              <div className="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
-                <div className="h-full bg-secondary-container rounded-full" style={{ width: `${spendPct}%` }} />
-              </div>
-              <div className="flex justify-between items-start mt-1">
-                <span className="font-label-md text-label-md text-on-primary-container">{locale === 'vi' ? `Đã tiêu: ${spendPct}%` : `Spent: ${spendPct}%`}</span>
-                <div className="text-right">
-                  <span className="font-label-md text-label-md text-on-surface-variant block">{locale === 'vi' ? 'Kế hoạch (Planned)' : 'Planned'}</span>
-                  <span className="font-data-mono text-data-mono text-on-surface block">{fmtVND(plannedTotal)}</span>
+            ) : (
+              <div className="flex flex-col gap-2 flex-1 justify-center">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <span className="text-xs leading-[18px] text-on-surface-variant block">{locale === 'vi' ? 'Kế hoạch' : 'Planned'}</span>
+                    <span className="font-data-mono text-xs text-on-surface font-semibold">{fmtVND(plannedTotal)}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs leading-[18px] text-on-surface-variant block">{locale === 'vi' ? 'Thực tế' : 'Actual'}</span>
+                    <span className={`font-data-mono text-xs font-semibold ${overBudget ? 'text-danger' : 'text-on-surface'}`}>{fmtVND(actualTotal)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs leading-[18px] text-on-surface-variant block">{overBudget ? (locale === 'vi' ? 'Vượt' : 'Over') : (locale === 'vi' ? 'Còn lại' : 'Remaining')}</span>
+                    <span className={`font-data-mono text-xs font-semibold ${overBudget ? 'text-danger' : 'text-success'}`}>{fmtVND(Math.abs(remainingTotal))}</span>
+                  </div>
                 </div>
+                <div className="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${overBudget ? 'bg-danger' : 'bg-secondary-container'}`} style={{ width: `${spendPct}%` }} />
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className={`font-label-md text-label-md ${overBudget ? 'text-danger' : 'text-on-primary-container'}`}>
+                    {locale === 'vi' ? 'Đã dùng: ' : 'Used: '}{usedPct != null ? `${usedPct}%` : '—'}
+                  </span>
+                  <span className="font-label-md text-label-md text-on-surface-variant text-right">
+                    {locale === 'vi' ? 'Giá trước VAT' : 'Before VAT'}
+                    {budgetSummary.actualAfterVat ? ` · ${locale === 'vi' ? 'TT sau VAT' : 'Actual after VAT'}: ${fmtVND(budgetSummary.actualAfterVat)}` : ''}
+                  </span>
+                </div>
+                {budgetSummary.lineCount === 0 && (
+                  <span className="text-xs text-on-surface-variant italic">
+                    {budgetSummary.error
+                      ? (locale === 'vi' ? 'Không tải được chi phí dự án.' : 'Failed to load project expenses.')
+                      : (locale === 'vi' ? 'Chưa nhập chi phí cho dự án này.' : 'No expenses entered for this project yet.')}
+                  </span>
+                )}
               </div>
-            </div>
+            )}
           </div>
 
           {/* Recent Tasks (Span 6) */}
-          <div className="col-span-12 md:col-span-6 bg-surface-container-lowest border border-border-light rounded-lg p-4 flex flex-col group">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Công việc gần nhất' : 'Recent Tasks'}</h3>
+          <div className="col-span-12 md:col-span-6 bg-surface-container-lowest border border-border-light rounded-lg p-3 flex flex-col group">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm leading-[20px] font-semibold text-on-surface">{locale === 'vi' ? 'Công việc gần nhất' : 'Recent Tasks'}</h3>
               <button onClick={() => navigate(`/tasks?projectId=${id}`)} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Mở module Công việc' : 'Open Tasks module'}>
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
             {recentTasks.length > 0 ? (
@@ -417,10 +435,10 @@ const load = useCallback(() => {
                 {recentTasks.slice(0, 5).map((task, idx) => {
                   const meta = taskMeta(task);
                   return (
-                    <li key={idx} className="flex items-center justify-between p-2 rounded hover:bg-background transition-colors">
+                    <li key={idx} className="flex items-center justify-between p-1.5 rounded hover:bg-background transition-colors">
                       <div className="flex items-center gap-2">
-                        <meta.icon className={`w-[18px] h-[18px] ${meta.iconClass}`} />
-                        <span className={`text-[14px] leading-[20px] truncate max-w-[220px] ${meta.done ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{task.name}</span>
+                        <meta.icon className={`w-4 h-4 ${meta.iconClass}`} />
+                        <span className={`text-xs leading-[18px] truncate max-w-[220px] ${meta.done ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{task.name}</span>
                       </div>
                       <div className="flex items-center gap-4">
                         <span className={`font-label-md text-label-md ${task.status === 'overdue' ? 'text-danger' : 'text-on-surface-variant'}`}>{dueLabel(task.dueDate || task.due, locale)}</span>
@@ -439,38 +457,54 @@ const load = useCallback(() => {
             )}
           </div>
 
-          {/* Incurred Expenses (Span 12) */}
-          <div className="col-span-12 bg-surface-container-lowest border border-border-light rounded-lg p-4 flex flex-col group">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Chi phí phát sinh' : 'Incurred Expenses'}</h3>
-              <button onClick={() => navigate(`/expense?tab=input&projectId=${id}`)} className="text-on-surface-variant group-hover:text-secondary-container transition-colors" title={locale === 'vi' ? 'Xem lịch sử chi phí dự án' : 'View project expense history'}>
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-            <ProjectExpenses projectId={project.id} onDataLoaded={setExpenseTotals} />
-          </div>
-
           {/* Contracts & Documents (Span 12) */}
-          <div className="col-span-12 bg-surface-container-lowest border border-border-light rounded-lg p-4 flex flex-col group">
-            <div className="mb-4">
+          <div className="col-span-12 bg-surface-container-lowest border border-border-light rounded-lg p-3 flex flex-col group">
+            <div className="mb-3">
               <div className="flex items-center gap-2">
-                <h3 className="text-[18px] leading-[26px] font-semibold text-on-surface">{locale === 'vi' ? 'Hợp đồng & Hồ sơ' : 'Contracts & Documents'}</h3>
+                <h3 className="text-sm leading-[20px] font-semibold text-on-surface">{locale === 'vi' ? 'Hợp đồng & Hồ sơ' : 'Contracts & Documents'}</h3>
                 {docs.length > 0 && (
-                  <span className="px-2 py-[1px] rounded-full bg-secondary-container text-on-secondary-container text-[12px] leading-[16px] font-semibold">{docs.length}</span>
+                  <span className="px-2 py-[1px] rounded-full bg-secondary-container text-on-secondary-container text-[10px] leading-[14px] font-semibold">{docs.length}</span>
                 )}
               </div>
             </div>
+            {project.driveLink ? (
+              <a
+                href={project.driveLink}
+                target="_blank"
+                rel="noreferrer"
+                title={project.driveLink}
+                className="mb-3 flex items-center gap-2.5 p-2.5 rounded-lg border border-border-light bg-background-subtle hover:bg-surface-container-low transition-colors group/drive"
+              >
+                <FolderOpen className="w-4 h-4 flex-shrink-0 text-secondary" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs leading-[18px] font-semibold text-on-surface group-hover/drive:text-secondary transition-colors">
+                    {locale === 'vi' ? 'Thư mục Drive của dự án' : 'Project Drive folder'}
+                  </p>
+                  <p className="text-[10px] leading-[14px] text-on-surface-variant truncate">{project.driveLink}</p>
+                </div>
+                <ExternalLink className="w-4 h-4 flex-shrink-0 text-on-surface-variant group-hover/drive:text-secondary transition-colors" />
+              </a>
+            ) : (
+              <div className="mb-3 flex items-center gap-2.5 p-2.5 rounded-lg border border-dashed border-border-light text-on-surface-variant">
+                <FolderOpen className="w-4 h-4 flex-shrink-0" />
+                <p className="text-[11px] leading-[15px]">
+                  {locale === 'vi'
+                    ? 'Chưa có link Drive. Bấm "Chỉnh sửa" để thêm link cho dự án này.'
+                    : 'No Drive link yet. Use "Edit" to add one for this project.'}
+                </p>
+              </div>
+            )}
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
               onClick={() => fileInputRef.current && fileInputRef.current.click()}
-              className={`mb-4 p-6 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${
+              className={`mb-3 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${
                 dragOver ? 'border-primary bg-primary/5' : 'border-surface-container-high bg-background-subtle hover:bg-surface-container-low'
               }`}
             >
-              {uploading ? <Loader2 className={`w-8 h-8 animate-spin transition-colors ${dragOver ? 'text-primary' : 'text-on-surface-variant'}`} /> : <CloudUpload className={`w-8 h-8 transition-colors ${dragOver ? 'text-primary' : 'text-on-surface-variant'}`} />}
-              <p className="text-[14px] leading-[20px] text-on-surface-variant">
+              {uploading ? <Loader2 className={`w-6 h-6 animate-spin transition-colors ${dragOver ? 'text-primary' : 'text-on-surface-variant'}`} /> : <CloudUpload className={`w-6 h-6 transition-colors ${dragOver ? 'text-primary' : 'text-on-surface-variant'}`} />}
+              <p className="text-xs leading-[18px] text-on-surface-variant">
                 {uploading
                   ? (locale === 'vi' ? 'Đang tải lên...' : 'Uploading...')
                   : locale === 'vi'
@@ -486,12 +520,12 @@ const load = useCallback(() => {
               />
             </div>
             {docs.length > 0 ? (
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-1.5">
                 {[...docs].map((doc) => {
                     const DocIcon = docIcon(doc.type, doc.name);
                     return (
-                  <li key={doc.id} className="flex items-center gap-3 p-2 rounded-lg border border-surface-container-high hover:bg-background transition-colors">
-                    <DocIcon className={`w-5 h-5 flex-shrink-0 ${DocIcon === FileText ? 'text-secondary-container' : 'text-primary'}`} />
+                  <li key={doc.id} className="flex items-center gap-3 p-1.5 rounded-lg border border-surface-container-high hover:bg-background transition-colors">
+                    <DocIcon className={`w-4 h-4 flex-shrink-0 ${DocIcon === FileText ? 'text-secondary-container' : 'text-primary'}`} />
                     <div className="flex-1 min-w-0">
                       <a
                         href={doc.url || undefined}
@@ -504,18 +538,18 @@ const load = useCallback(() => {
                           }
                         }}
                         title={locale === 'vi' ? 'Nhấn để xem hồ sơ' : 'Click to view document'}
-                        className="block text-[14px] leading-[20px] text-on-surface truncate hover:text-secondary hover:underline cursor-pointer"
+                        className="block text-xs leading-[18px] text-on-surface truncate hover:text-secondary hover:underline cursor-pointer"
                       >
                         {doc.name}
                       </a>
-                      <p className="text-[12px] leading-[16px] text-on-surface-variant">
+                      <p className="text-[10px] leading-[14px] text-on-surface-variant">
                         {fmtSize(doc.size)} · {new Date(doc.uploadedAt).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-GB')}
                       </p>
                     </div>
                     <select
                       value={doc.category}
                       onChange={(e) => handleChangeCategory(doc, e.target.value)}
-                      className="pl-3 pr-2 py-1.5 rounded-lg border border-border-light bg-background-subtle text-[13px] leading-[18px] text-on-surface hover:bg-surface-container-high focus:outline-none focus:border-secondary cursor-pointer"
+                      className="pl-3 pr-2 py-1.5 rounded-lg border border-border-light bg-background-subtle text-xs leading-[18px] text-on-surface hover:bg-surface-container-high focus:outline-none focus:border-secondary cursor-pointer"
                       title={locale === 'vi' ? 'Loại tài liệu' : 'Document type'}
                     >
                       <option value={DOC_CATEGORY.HOSO}>{locale === 'vi' ? 'Hồ sơ' : 'Document'}</option>
@@ -524,16 +558,16 @@ const load = useCallback(() => {
                     <button
                       onClick={() => handleDeleteDoc(doc)}
                       title={locale === 'vi' ? 'Xoá hồ sơ' : 'Delete document'}
-                      className="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:text-danger hover:bg-error-container transition-colors"
+                      className="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-danger hover:bg-error-container transition-colors"
                     >
-                      <Trash2 className="w-[18px] h-[18px]" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </li>
                     );
                   })}
               </ul>
             ) : (
-              <div className="flex items-center justify-center py-6 text-on-surface-variant text-[14px] leading-[20px]">
+              <div className="flex items-center justify-center py-4 text-on-surface-variant text-xs leading-[18px]">
                 {docsLoading
                   ? (locale === 'vi' ? 'Đang tải hồ sơ...' : 'Loading documents...')
                   : (locale === 'vi' ? 'Chưa có hồ sơ nào cho dự án này.' : 'No documents for this project yet.')}

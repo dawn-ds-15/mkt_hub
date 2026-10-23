@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Zap, Download, BarChart3, CheckCircle2, ClipboardList, CircleAlert, LifeBuoy, Save, Loader2, Check, MessageSquare, TrendingUp, Brain, BellRing } from 'lucide-react';
-import { getWeeklyReport, saveWeeklyLog, exportWeeklyReport, getProjects, getMembers } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
+import { Zap, Download, BarChart3, CheckCircle2, ClipboardList, CircleAlert, LifeBuoy, Save, Loader2, Check, MessageSquare, TrendingUp, Brain, BellRing, ListChecks } from 'lucide-react';
+import { getWeeklyReport, saveWeeklyLog, exportWeeklyReport, exportWeeklyReportPDF, getProjects, getMembers } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 function getISOWeek() {
@@ -15,8 +16,38 @@ function getISOWeek() {
 const CURRENT_YEAR = new Date().getFullYear();
 const CURRENT_WEEK = getISOWeek();
 
+function formatDoneDate(v) {
+  if (!v || typeof v !== 'string') return '';
+  const [y, m, d] = v.split('-');
+  if (!y || !m || !d) return v;
+  return `${d}/${m}/${y}`;
+}
+
+function taskStatusMeta(status, locale) {
+  const vi = {
+    'To Do': { label: 'Chưa làm', cls: 'bg-slate-100 text-slate-700' },
+    'In Progress': { label: 'Đang làm', cls: 'bg-blue-100 text-blue-700' },
+    'Review': { label: 'Chờ xử lý', cls: 'bg-purple-100 text-purple-700' },
+    'Done': { label: 'Hoàn thành', cls: 'bg-green-100 text-green-700' },
+    'Backlog': { label: 'Tồn đọng', cls: 'bg-amber-100 text-amber-700' },
+    'Cancel': { label: 'Đã huỷ', cls: 'bg-gray-100 text-gray-600' },
+  };
+  const en = {
+    'To Do': 'To Do',
+    'In Progress': 'In Progress',
+    'Review': 'Review',
+    'Done': 'Done',
+    'Backlog': 'Backlog',
+    'Cancel': 'Cancelled',
+  };
+  const key = status || 'To Do';
+  const meta = vi[key] || { label: key, cls: 'bg-slate-100 text-slate-700' };
+  return { ...meta, label: locale === 'en' ? (en[key] || key) : meta.label };
+}
+
 export default function WeeklyReport() {
   const { locale } = useDashboard();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -86,8 +117,34 @@ export default function WeeklyReport() {
   };
 
   const handleExport = () => {
-    exportWeeklyReport(filters.week, filters.year, filters.projectId);
+    exportWeeklyReport(filters.week, filters.year, filters.projectId, filters.memberId);
   };
+
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      await exportWeeklyReportPDF({ week: filters.week, year: filters.year, project: filters.projectId || 'all', member: filters.memberId || undefined });
+    } catch (err) {
+      setError(`${locale === 'vi' ? 'Xuất PDF thất bại' : 'PDF export failed'}${err?.response?.status ? ` (HTTP ${err.response.status})` : ''}`);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  // Bấm vào task -> mở tab Danh sách task, lọc theo dự án của task và mở sẵn task đó để cập nhật.
+  const openTask = (item) => {
+    if (!item?.id) return;
+    const qs = new URLSearchParams({ tab: 'tasks' });
+    if (item.projectId) qs.set('projectId', item.projectId);
+    qs.set('taskId', item.id);
+    navigate(`/tasks?${qs.toString()}`);
+  };
+  const openTitle = locale === 'vi' ? 'Mở task để xem / cập nhật' : 'Open task to view / update';
+  const rowProps = (item) => (item?.id
+    ? { onClick: () => openTask(item), title: openTitle, className: 'hover:bg-blue-50/60 align-top cursor-pointer' }
+    : { className: 'hover:bg-gray-50 align-top' });
+  const taskNameCls = (item) => (item?.id ? 'text-primary hover:underline' : 'text-gray-800');
 
   const yearOptions = [];
   for (let y = CURRENT_YEAR; y >= CURRENT_YEAR - 4; y--) yearOptions.push(y);
@@ -144,6 +201,10 @@ export default function WeeklyReport() {
             <Zap className="w-[18px] h-[18px]" />
             {locale === 'vi' ? 'Tự động điền' : 'Auto Fill'}
           </button>
+          <button onClick={handleExportPdf} disabled={exportingPdf} className="px-4 py-2 bg-surface-container-high text-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-surface-variant transition-colors border border-outline-variant disabled:opacity-50">
+            {exportingPdf ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <Download className="w-[18px] h-[18px]" />}
+            {locale === 'vi' ? 'Xuất PDF' : 'Export PDF'}
+          </button>
           <button onClick={handleExport} className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded flex items-center gap-2 hover:bg-primary/90 transition-colors">
             <Download className="w-[18px] h-[18px]" />
             {locale === 'vi' ? 'Xuất TXT' : 'Export TXT'}
@@ -170,35 +231,122 @@ export default function WeeklyReport() {
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }} className="mb-4">
+          <div className="space-y-4">
             <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
               <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900"><CheckCircle2 className="w-[18px] h-[18px] text-green-600 align-text-bottom" /> {locale === 'vi' ? '1. Công việc đã hoàn thành' : '1. Completed Work'}</h4>
+                <h4 className="text-sm font-bold text-gray-900"><CheckCircle2 className="w-[18px] h-[18px] text-green-600 align-text-bottom" /> {locale === 'vi' ? '1. Công việc đã làm' : '1. Completed Work'}</h4>
                 <span className="text-[11px] text-gray-400">{data.completed.length}</span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full table-fixed text-left text-xs">
+                  <colgroup>
+                    <col className="w-[18%]" />
+                    <col className="w-[27%]" />
+                    <col className="w-[30%]" />
+                    <col className="w-[16%]" />
+                    <col className="w-[9%]" />
+                  </colgroup>
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Mã' : 'Code'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
                       <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Task</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-center">{locale === 'vi' ? 'Kết quả' : 'Result'}</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-right">{locale === 'vi' ? 'Người làm' : 'Assignee'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Hoạt động' : 'Activity'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Người thực hiện' : 'Assignee'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-center">{locale === 'vi' ? 'Tình trạng' : 'Status'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {data.completed.map((item, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 text-gray-500">{item.code}</td>
-                        <td className="px-3 py-2 font-medium text-gray-800">{item.name}</td>
-                        <td className="px-3 py-2 text-center">
-                          <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-semibold">{item.result === 'Hoàn thành' ? (locale === 'vi' ? 'Hoàn thành' : 'Completed') : item.result}</span>
+                      <tr key={item.id || i} {...rowProps(item)}>
+                        <td className="px-3 py-2 text-gray-600 break-words">{item.project}</td>
+                        <td className={`px-3 py-2 font-medium break-words ${taskNameCls(item)}`}>{item.name}</td>
+                        <td className="px-3 py-2">
+                          {item.subtasks && item.subtasks.length > 0 ? (
+                            <div className="space-y-1 min-w-0">
+                              {item.subtasks.map((st, j) => (
+                                <div key={j} className="flex items-center gap-1.5 min-w-0">
+                                  <input type="checkbox" checked={st.done} readOnly disabled className="w-3.5 h-3.5 accent-blue-600 shrink-0" />
+                                  <span className={`text-[11px] flex-1 min-w-0 break-words ${st.done ? 'line-through text-gray-400' : 'text-gray-600'}`}>{st.text}</span>
+                                  {st.doneDate && (
+                                    <span className="text-[10px] text-gray-400 whitespace-nowrap">{formatDoneDate(st.doneDate)}</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
                         </td>
-                        <td className="px-3 py-2 text-right text-gray-600">{item.assignee}</td>
+                        <td className="px-3 py-2 text-gray-600 break-words">{item.assignee}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-semibold">{locale === 'vi' ? 'Hoàn thành' : 'Completed'}</span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {data.completed.length === 0 && (
+                  <div className="p-4 text-center text-gray-400">{locale === 'vi' ? 'Không có công việc hoàn thành' : 'No completed work'}</div>
+                )}
+              </div>
+            </section>
+
+            <section className="bg-white border border-outline-variant overflow-hidden rounded-xl">
+              <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
+                <h4 className="text-sm font-bold text-gray-900"><ListChecks className="w-[18px] h-[18px] text-indigo-600 align-text-bottom" /> {locale === 'vi' ? 'Task nhỏ cần làm trong tuần' : 'Sub-tasks to do this week'}</h4>
+                <span className="text-[11px] text-gray-400">
+                  {(() => { const total = (data.weekSubTasks || []).reduce((n, g) => n + g.subtasks.length, 0); const done = (data.weekSubTasks || []).reduce((n, g) => n + g.subtasks.filter(s => s.done).length, 0); return `${done}/${total}`; })()}
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full table-fixed text-left text-xs">
+                  <colgroup>
+                    <col className="w-[12%]" />
+                    <col className="w-[18%]" />
+                    <col className="w-[45%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[15%]" />
+                  </colgroup>
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Task' : 'Task'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Task nhỏ' : 'Sub-task'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-center">{locale === 'vi' ? 'Hoàn thành' : 'Done'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Ngày cần hoàn thành' : 'Required date'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {(data.weekSubTasks || []).map((group, gi) => (
+                      group.subtasks.map((st, si) => (
+                        <tr key={`${gi}-${si}`} {...rowProps(group)}>
+                          {si === 0 && (
+                            <td rowSpan={group.subtasks.length} className="px-3 py-2 text-gray-600 break-words align-top">
+                              {group.project}
+                            </td>
+                          )}
+                          {si === 0 && (
+                            <td rowSpan={group.subtasks.length} className={`px-3 py-2 font-medium break-words align-top ${taskNameCls(group)}`}>
+                              {group.taskName}
+                            </td>
+                          )}
+                          <td className="px-3 py-2">
+                            <span className={`block whitespace-normal break-words ${st.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>{st.text}</span>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {st.done
+                              ? <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-semibold">{locale === 'vi' ? 'Xong' : 'Done'}</span>
+                              : <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-semibold">{locale === 'vi' ? 'Chưa' : 'Pending'}</span>}
+                          </td>
+                          <td className="px-3 py-2 text-gray-600">{st.doneDate ? formatDoneDate(st.doneDate) : '—'}</td>
+                        </tr>
+                      ))
+                    ))}
+                  </tbody>
+                </table>
+                {(!data.weekSubTasks || data.weekSubTasks.length === 0) && (
+                  <div className="p-4 text-center text-gray-400">{locale === 'vi' ? 'Không có task nhỏ nào trong tuần này' : 'No sub-tasks for this week'}</div>
+                )}
               </div>
             </section>
 
@@ -208,28 +356,56 @@ export default function WeeklyReport() {
                 <span className="text-[11px] text-gray-400">{data.nextWeek.length}</span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full table-fixed text-left text-xs">
+                  <colgroup>
+                    <col className="w-[18%]" />
+                    <col className="w-[27%]" />
+                    <col className="w-[30%]" />
+                    <col className="w-[16%]" />
+                    <col className="w-[9%]" />
+                  </colgroup>
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Lịch' : 'Schedule'}</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Hạng mục' : 'Item'}</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Hạn chót' : 'Deadline'}</th>
-                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-right">{locale === 'vi' ? 'Ưu tiên' : 'Priority'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Dự án' : 'Project'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">Task</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Hoạt động' : 'Activity'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Người thực hiện' : 'Assignee'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase text-center">{locale === 'vi' ? 'Tình trạng' : 'Status'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {data.nextWeek.map((item, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 text-gray-500">{item.schedule}</td>
-                        <td className="px-3 py-2 font-medium text-gray-800">{item.item}</td>
-                        <td className="px-3 py-2 text-gray-600">{item.deadline}</td>
-                        <td className="px-3 py-2 text-right">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${item.priority === 'High' ? 'bg-primary-fixed text-primary' : 'bg-surface-container-highest text-on-surface-variant'}`}>{item.priority}</span>
+                      <tr key={item.id || i} {...rowProps(item)}>
+                        <td className="px-3 py-2 text-gray-600 break-words">{item.project}</td>
+                        <td className={`px-3 py-2 font-medium ${taskNameCls(item)}`}>{item.item}</td>
+                        <td className="px-3 py-2">
+                          {item.subtasks && item.subtasks.length > 0 ? (
+                            <div className="space-y-1 min-w-0">
+                              {item.subtasks.map((st, j) => (
+                                <div key={j} className="flex items-center gap-1.5 min-w-0">
+                                  <input type="checkbox" checked={st.done} readOnly disabled className="w-3.5 h-3.5 accent-blue-600 shrink-0" />
+                                  <span className={`text-[11px] flex-1 min-w-0 break-words ${st.done ? 'line-through text-gray-400' : 'text-gray-600'}`}>{st.text}</span>
+                                  {st.doneDate && (
+                                    <span className="text-[10px] text-gray-400 whitespace-nowrap">{formatDoneDate(st.doneDate)}</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-600 break-words">{item.activity || '—'}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-gray-600 break-words">{item.assignee}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${taskStatusMeta(item.status, locale).cls}`}>{taskStatusMeta(item.status, locale).label}</span>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {data.nextWeek.length === 0 && (
+                  <div className="p-4 text-center text-gray-400">{locale === 'vi' ? 'Không có kế hoạch cho tuần này' : 'No plan for this week'}</div>
+                )}
               </div>
             </section>
 
@@ -238,16 +414,31 @@ export default function WeeklyReport() {
                 <h4 className="text-sm font-bold text-gray-900"><CircleAlert className="w-[18px] h-[18px] text-orange-600 align-text-bottom" /> {locale === 'vi' ? '3. Tồn đọng / Vấn đề' : '3. Backlog / Issues'}</h4>
                 <span className="text-[11px] text-gray-400">{data.backlog.length}</span>
               </div>
-              <div className="p-3 space-y-2">
-                {data.backlog.map((item, i) => (
-                  <div key={i} className="p-3 border border-gray-200 rounded-lg bg-error-container/10 border-error/20">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h5 className="text-xs font-bold text-gray-900">{item.title}</h5>
-                      <span className="bg-error text-on-error px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">BLOCKER</span>
-                    </div>
-                    <p className="text-xs text-gray-600">{item.description}</p>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Trình bày với BOD' : 'Present to BOD'}</th>
+                      <th className="px-3 py-2 font-semibold text-gray-500 uppercase">{locale === 'vi' ? 'Mô tả vấn đề' : 'Description'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {data.backlog.map((item, i) => (
+                      <tr key={item.id || i} {...rowProps(item)}>
+                        <td className="px-3 py-2 font-bold text-gray-800">
+                          <div className="flex items-center gap-2">
+                            <span className={item.id ? 'text-primary hover:underline' : ''}>{item.title}</span>
+                            <span className="bg-error text-on-error px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">{item.tag || 'BLOCKER'}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-gray-600">{item.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {data.backlog.length === 0 && (
+                  <div className="p-4 text-center text-gray-400">{locale === 'vi' ? 'Không có vấn đề tồn đọng' : 'No backlog issues'}</div>
+                )}
               </div>
             </section>
 
@@ -273,6 +464,9 @@ export default function WeeklyReport() {
                     ))}
                   </tbody>
                 </table>
+                {data.bod.length === 0 && (
+                  <div className="p-4 text-center text-gray-400">{locale === 'vi' ? 'Không có yêu cầu hỗ trợ' : 'No support requests'}</div>
+                )}
               </div>
             </section>
           </div>

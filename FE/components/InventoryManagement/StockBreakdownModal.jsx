@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { getInventoryItems, getInventoryItem } from '../../services/api';
+import { getAllInventoryItems, getInventoryItem } from '../../services/api';
 
 function formatNumber(val) {
   return Math.round(Number(val) || 0).toLocaleString('vi-VN');
@@ -28,7 +28,7 @@ export default function StockBreakdownModal({ onClose }) {
     setLoading(true);
     setError(false);
     try {
-      const res = await getInventoryItems({ page: 1, limit: 100000 });
+      const res = await getAllInventoryItems();
       setItems(res.data || []);
     } catch (e) {
       console.error('[StockBreakdown] getInventoryItems:', e);

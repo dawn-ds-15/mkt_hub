@@ -27,7 +27,7 @@ export default function KPICard({ label, value, accent, trend, percentage, suffi
         <span className={`inline-block w-1.5 h-1.5 rounded-full ${accentClass} mr-1.5 align-middle`} />
         {label}
       </div>
-      <div className="text-xl font-extrabold text-gray-900 tracking-tight mb-0.5 leading-tight num">{value}</div>
+      <div className="text-xl font-extrabold text-gray-900 tracking-tight mb-0.5 leading-tight">{value}</div>
       <div className={`flex items-center gap-1 text-[10px] ${trend ? trendColors[trend] : 'text-gray-400'}`}>
         {badge ? (
           <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${badge.bgColor} ${badge.textColor}`}>
@@ -41,7 +41,7 @@ export default function KPICard({ label, value, accent, trend, percentage, suffi
         ) : null}
       </div>
       {planValue != null && (
-        <div className="text-[10px] text-gray-400 mt-0.5 truncate">{planLabel}: <span className="num">{planValue}</span></div>
+        <div className="text-[10px] text-gray-400 mt-0.5 truncate">{planLabel}: {planValue}</div>
       )}
       {barWidth && (
         <div className="mt-1.5 h-1 bg-gray-100 rounded-full overflow-hidden">

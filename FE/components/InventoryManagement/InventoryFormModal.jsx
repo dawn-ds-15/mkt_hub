@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { createInventoryItem, updateInventoryItem, updateBatch, getItemBatches, createInventoryEntry } from '../../services/api';
+import { createInventoryItem, updateInventoryItem, updateBatch, getItemBatches, createInventoryEntry, checkBatchCode, uploadBatchAttachments, getCategoryBudgetTree } from '../../services/api';
+import { getBatchExpenseCategory } from '../../utils/inventoryBudgetCategory';
+import { useInventoryCategories } from '../../hooks/useInventoryCategories';
 import NumberInput from '../common/NumberInput';
+import BatchAttachments, { isAttachmentApiUnsupported } from './BatchAttachments';
 
-const CATEGORY_META = {
-  posm: { vi: 'POSM', en: 'POSM' },
-  gift: { vi: 'Quà tặng', en: 'Gift' },
-  print: { vi: 'Ấn phẩm in', en: 'Printed materials' },
-};
+const normalizeBatchCode = (code) => String(code || '').trim().toLowerCase();
 
 function generateCode(name) {
   const base = (name || 'ITEM').trim().replace(/\s+/g, '-').replace(/[^A-Za-z0-9-_]/g, '').slice(0, 20) || 'ITEM';
@@ -17,6 +16,7 @@ function generateCode(name) {
 export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
   const { locale } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
+  const { categories: categoryOptions, categoryValueOf } = useInventoryCategories();
 
   const isCreate = mode === 'create';
 
@@ -33,6 +33,43 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
   const [contractCode, setContractCode] = useState('');
   const [note, setNote] = useState('');
   const [entryId, setEntryId] = useState(null);
+  const [pendingFiles, setPendingFiles] = useState([]);
+
+  // Hạng mục chi phí (ngân sách) ghi trực tiếp cho batch — dành cho chi phí chung không chia được theo dự án.
+  const [expenseCat, setExpenseCat] = useState(null); // { id, name } | null
+  const [initialExpenseCat, setInitialExpenseCat] = useState(null);
+  const [budgetCategories, setBudgetCategories] = useState([]);
+  const budgetYear = Number(String(receivedDate || '').slice(0, 4)) || new Date().getFullYear();
+  useEffect(() => {
+    let alive = true;
+    getCategoryBudgetTree(budgetYear).then((res) => {
+      if (!alive) return;
+      const list = (res.data?.categories || []).filter((c) => c && c.id && String(c.name || '').trim());
+      setBudgetCategories(list.map((c) => ({ id: c.id, name: c.name })));
+    }).catch((e) => {
+      console.error('[Inventory] getCategoryBudgetTree:', e);
+      if (alive) setBudgetCategories([]);
+    });
+    return () => { alive = false; };
+  }, [budgetYear]);
+  const budgetOptions = expenseCat && !budgetCategories.some((c) => c.id === expenseCat.id)
+    ? [...budgetCategories, expenseCat]
+    : budgetCategories;
+
+  // Mã batch duy nhất toàn kho: hỏi BE (check-code) 400ms sau khi ngừng gõ, bỏ qua chính batch đang sửa.
+  // BE vẫn chặn lại bằng 409 khi lưu nếu có người vừa dùng mã này.
+  const [duplicateBatch, setDuplicateBatch] = useState(null);
+  useEffect(() => {
+    const code = batchCode.trim();
+    if (!normalizeBatchCode(code)) { setDuplicateBatch(null); return undefined; }
+    let cancelled = false;
+    const id = setTimeout(() => {
+      checkBatchCode(code, entryId || undefined)
+        .then((r) => { if (!cancelled) setDuplicateBatch(r.exists ? { itemName: r.itemName } : null); })
+        .catch((e) => { if (!cancelled) { console.error('[Inventory] check batch code:', e); setDuplicateBatch(null); } });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(id); };
+  }, [batchCode, entryId]);
 
   useEffect(() => {
     if (!isCreate && item?.id) {
@@ -41,7 +78,7 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
         const latest = batches[batches.length - 1] || batches[0] || null;
         if (latest) {
           setBatchCode(latest.batchCode || '');
-          setReceivedDate(latest.receivedDate || new Date().toISOString().slice(0, 10));
+          setReceivedDate(latest.receivedDate ? String(latest.receivedDate).slice(0, 10) : new Date().toISOString().slice(0, 10));
           setQuantity(latest.quantityIn != null ? String(latest.quantityIn) : '');
           const seededBeforeVat = latest.unitPriceBeforeVat != null
             ? Number(latest.unitPriceBeforeVat)
@@ -54,6 +91,9 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
           setContractCode(latest.contractCode || '');
           setNote(latest.note || '');
           setEntryId(latest.id || null);
+          const cat = getBatchExpenseCategory(latest);
+          setExpenseCat(cat);
+          setInitialExpenseCat(cat);
         }
       }).catch(() => {});
     }
@@ -67,6 +107,41 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
 
   const title = isCreate ? t('Nhập kho mới', 'New inventory item')
     : t(`Sửa vật phẩm — ${item.name}`, `Edit item — ${item.name}`);
+
+  // Upload hồ sơ đã chọn trước khi batch tồn tại. Trả về chuỗi cảnh báo (rỗng nếu OK) để nối vào toast.
+  const uploadPending = async (batchId) => {
+    if (!pendingFiles.length) return '';
+    if (!batchId) return t(' — chưa đính kèm được hồ sơ (không xác định được batch).', ' — attachments not uploaded (batch not found).');
+    try {
+      await uploadBatchAttachments(batchId, pendingFiles);
+      return '';
+    } catch (e) {
+      console.error('[Inventory] upload pending attachments:', e);
+      return isAttachmentApiUnsupported(e)
+        ? t(' — BE chưa hỗ trợ lưu hồ sơ liên quan.', ' — BE does not support attachments yet.')
+        : t(' — tải hồ sơ lên không thành công.', ' — attachment upload failed.');
+    }
+  };
+
+  // Gửi kèm expenseCategoryId/Name khi có chọn (hoặc null khi bỏ chọn một hạng mục đã có ở batch cũ).
+  // BE cộng giá trị nhập (trước VAT) của batch vào thực tế nhóm hạng mục trong cây ngân sách.
+  const sendWithExpenseCategory = async (call, payload) => {
+    let extra = null;
+    if (expenseCat?.id) extra = { expenseCategoryId: expenseCat.id, expenseCategoryName: expenseCat.name || '' };
+    else if (initialExpenseCat?.id) extra = { expenseCategoryId: null, expenseCategoryName: null };
+    return call(extra ? { ...payload, ...extra } : payload);
+  };
+
+  const findBatchId = async (itemId, fromList) => {
+    const code = normalizeBatchCode(batchCode);
+    const hit = (Array.isArray(fromList) ? fromList : []).find((b) => normalizeBatchCode(b.batchCode) === code);
+    if (hit?.id) return hit.id;
+    if (!itemId) return null;
+    const bRes = await getItemBatches(itemId).catch(() => ({ data: [] }));
+    return (bRes.data || []).find((b) => normalizeBatchCode(b.batchCode) === code)?.id || null;
+  };
+
+  const afterBatchSaved = async (batchId) => uploadPending(batchId);
 
   const handleSubmit = async () => {
     setFormError(null);
@@ -87,7 +162,7 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
       const fieldNames = {
         name: t('Tên vật phẩm', 'Item name'),
         unit: t('Đơn vị tính', 'Unit'),
-        batchCode: t('Mã', 'Code'),
+        batchCode: t('Mã batch', 'Batch code'),
         receivedDate: t('Ngày nhập', 'Received date'),
         quantity: t('Số lượng', 'Quantity'),
         unitPriceBeforeVat: t('Đơn giá trước VAT', 'Unit price (pre-VAT)'),
@@ -113,6 +188,14 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
     }
     if (Number(quantity) === 0) {
       setFormError(t('Số lượng phải lớn hơn 0 khi nhập kho.', 'Quantity must be greater than 0 for stock-in.'));
+      return;
+    }
+    if (duplicateBatch) {
+      setMissingFields({ batchCode: true });
+      setFormError(t(
+        `Mã batch "${batchCode.trim()}" đã tồn tại (vật phẩm: ${duplicateBatch.itemName}). Vui lòng dùng mã khác.`,
+        `Batch code "${batchCode.trim()}" already exists (item: ${duplicateBatch.itemName}). Please use another code.`
+      ));
       return;
     }
 
@@ -145,19 +228,31 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
           unitPriceAfterVat: unitPriceAfterVat || 0,
           supplier: supplier.trim(),
           contractCode: contractCode.trim(),
+          note: note.trim(),
         };
-        await createInventoryItem(itemPayload);
-        onSaved(t('Đã tạo vật phẩm mới', 'Item created'));
+        const created = await sendWithExpenseCategory(createInventoryItem, itemPayload);
+        const newItem = created.data || {};
+        const needBatchId = pendingFiles.length > 0;
+        const newBatchId = needBatchId ? await findBatchId(newItem.id, newItem.batches) : null;
+        const warn = await afterBatchSaved(newBatchId);
+        onSaved(t('Đã tạo vật phẩm mới', 'Item created') + warn);
       } else {
         await updateInventoryItem(item.id, {
           name: name.trim(),
-          category,
+          category: category.trim().toLowerCase(),
           unit: unit.trim(),
         });
         if (entryId) {
-          await updateBatch(entryId, entryPayload);
+          // Batch đọc/ghi số lượng bằng `quantityIn`; `quantity` chỉ đúng cho POST /entries.
+          // Trước đây chỉ gửi `quantity` nên BE bỏ qua -> sửa số lượng xong vẫn giữ số cũ.
+          await sendWithExpenseCategory((p) => updateBatch(entryId, p), { ...entryPayload, quantityIn: Number(quantity) || 0 });
         } else {
-          await createInventoryEntry({ itemId: item.id, ...entryPayload });
+          const entry = await sendWithExpenseCategory(createInventoryEntry, { itemId: item.id, ...entryPayload });
+          const needBatchId = pendingFiles.length > 0;
+          const newBatchId = entry.data?.batch?.id || (needBatchId ? await findBatchId(item.id, []) : null);
+          const warn = await afterBatchSaved(newBatchId);
+          onSaved(t('Đã cập nhật vật phẩm', 'Item updated') + warn);
+          return;
         }
         onSaved(t('Đã cập nhật vật phẩm', 'Item updated'));
       }
@@ -194,9 +289,9 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Danh mục', 'Category')}</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
-                  {Object.entries(CATEGORY_META).map(([key, m]) => (
-                    <option key={key} value={key}>{m[locale]}</option>
+                <select value={categoryValueOf(category)} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
+                  {categoryOptions.map(o => (
+                    <option key={o.id} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </div>
@@ -212,8 +307,14 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Mã', 'Code')}</label>
-                  <input value={batchCode} onChange={(e) => setBatchCode(e.target.value)} className={`${inputCls} ${missingFields.batchCode ? errCls : ''}`} placeholder="BATCH-2026-001" />
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Mã batch', 'Batch code')}</label>
+                  <input value={batchCode} onChange={(e) => setBatchCode(e.target.value)} className={`${inputCls} ${missingFields.batchCode || duplicateBatch ? errCls : ''}`} placeholder="BATCH-2026-001" />
+                  {duplicateBatch && (
+                    <p className="mt-1 text-xs text-danger flex items-start gap-1">
+                      <span className="material-symbols-outlined text-[14px]">warning</span>
+                      <span>{t(`Mã batch đã tồn tại (vật phẩm: ${duplicateBatch.itemName})`, `Batch code already exists (item: ${duplicateBatch.itemName})`)}</span>
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ngày nhập', 'Received date')}</label>
@@ -251,8 +352,33 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
                 </div>
               </div>
               <div>
+                <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ghi vào hạng mục chi phí', 'Record to expense category')}</label>
+                <select
+                  value={expenseCat?.id || ''}
+                  onChange={(e) => {
+                    const opt = budgetOptions.find((c) => c.id === e.target.value);
+                    setExpenseCat(opt ? { id: opt.id, name: opt.name } : null);
+                  }}
+                  className={inputCls}
+                >
+                  <option value="">{t('— Không ghi (phân bổ theo dự án) —', '— None (allocate by project) —')}</option>
+                  {budgetOptions.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-on-surface-variant">
+                  {t(`Dùng cho chi phí chung không chia được cho dự án — ghi thẳng vào hạng mục ngân sách năm ${budgetYear}.`, `For shared costs that can't be split by project — recorded directly to the ${budgetYear} budget category.`)}
+                </p>
+              </div>
+              <div>
                 <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ghi chú', 'Note')}</label>
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} className={`${inputCls} h-20 resize-none`} />
+              </div>
+              <div>
+                <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Hồ sơ liên quan', 'Related documents')}</label>
+                <div className="mt-1">
+                  <BatchAttachments batchId={entryId} pendingFiles={pendingFiles} onPendingChange={setPendingFiles} disabled={saving} />
+                </div>
               </div>
             </div>
           </div>
@@ -270,7 +396,7 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={saving}
+              disabled={saving || !!duplicateBatch}
               className="px-6 py-2 bg-secondary text-on-secondary rounded text-body-sm font-semibold hover:bg-secondary/90 transition-colors disabled:opacity-50 cursor-pointer"
             >
               {saving ? t('Đang lưu...', 'Saving...') : t('Lưu', 'Save')}

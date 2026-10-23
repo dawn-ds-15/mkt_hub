@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import DataImportModal from '../common/DataImportModal';
 import { getProjects, getCompareData, getQuarterlyCompareData, deleteCompareData, generateAIReport } from '../../services/api';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { t } from '../../utils/i18n';
@@ -87,6 +88,7 @@ export default function ComparePeriods({ year: currentYear }) {
   const [projectId, setProjectId] = useState('');
   const [loading, setLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiReport, setAiReport] = useState(null);
   const [loadError, setLoadError] = useState('');
@@ -295,6 +297,10 @@ export default function ComparePeriods({ year: currentYear }) {
         </div>
       </section>
 
+      {importOpen && (
+        <DataImportModal type="kpi" onClose={() => setImportOpen(false)} onImported={() => loadData()} />
+      )}
+
       {loadError && (
         <div className="bg-error/5 border border-error/20 rounded-xl p-4 text-error text-sm flex items-center gap-2">
           <span className="material-symbols-outlined text-[18px]">info</span>
@@ -310,6 +316,14 @@ export default function ComparePeriods({ year: currentYear }) {
             {t(locale, { vi: 'So sánh đa chỉ tiêu', en: 'Multi-metric Comparison' })}
           </h3>
           <div className="flex gap-2">
+            <button
+              onClick={() => setImportOpen(true)}
+              className="px-3 py-1.5 flex items-center gap-1.5 text-body-sm font-semibold text-primary hover:bg-primary/10 rounded transition-colors"
+              title={t(locale, { vi: 'Import lịch sử KPI các năm từ file CSV / Excel', en: 'Import KPI history from CSV / Excel' })}
+            >
+              <span className="material-symbols-outlined text-[18px]">upload_file</span>
+              {t(locale, { vi: 'Import lịch sử KPI', en: 'Import KPI history' })}
+            </button>
             <button onClick={handleExportCSV} className="p-2 hover:bg-surface-container rounded transition-colors" title={t(locale, { vi: 'Xuất CSV', en: 'Export CSV' })}>
               <span className="material-symbols-outlined text-on-surface-variant">download</span>
             </button>

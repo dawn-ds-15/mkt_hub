@@ -1,0 +1,238 @@
+{
+  "ranAt": "2026-11-03T13:50:05.513Z",
+  "apiBase": "https://mkt-hub.onrender.com/api",
+  "run": "MW0QVAPN",
+  "t10": {
+    "manager": [
+      {
+        "run": 1,
+        "statuses": [
+          201,
+          201
+        ],
+        "before": 100,
+        "after": 80,
+        "deducted": 20,
+        "lineCount": 2,
+        "lineQty": [
+          10,
+          10
+        ]
+      },
+      {
+        "run": 2,
+        "statuses": [
+          201,
+          201
+        ],
+        "before": 100,
+        "after": 80,
+        "deducted": 20,
+        "lineCount": 2,
+        "lineQty": [
+          10,
+          10
+        ]
+      },
+      {
+        "run": 3,
+        "statuses": [
+          201,
+          201
+        ],
+        "before": 100,
+        "after": 80,
+        "deducted": 20,
+        "lineCount": 2,
+        "lineQty": [
+          10,
+          10
+        ]
+      },
+      {
+        "run": 4,
+        "statuses": [
+          201,
+          201
+        ],
+        "before": 100,
+        "after": 80,
+        "deducted": 20,
+        "lineCount": 2,
+        "lineQty": [
+          10,
+          10
+        ]
+      },
+      {
+        "run": 5,
+        "statuses": [
+          201,
+          201
+        ],
+        "before": 100,
+        "after": 80,
+        "deducted": 20,
+        "lineCount": 2,
+        "lineQty": [
+          10,
+          10
+        ]
+      }
+    ],
+    "specialist": [
+      {
+        "run": 1,
+        "statuses": [
+          201,
+          201
+        ],
+        "before": 100,
+        "after": 80,
+        "deducted": 20,
+        "lineCount": 2,
+        "lineQty": [
+          10,
+          10
+        ]
+      },
+      {
+        "run": 2,
+        "statuses": [
+          201,
+          201
+        ],
+        "before": 100,
+        "after": 80,
+        "deducted": 20,
+        "lineCount": 2,
+        "lineQty": [
+          10,
+          10
+        ]
+      },
+      {
+        "run": 3,
+        "statuses": [
+          201,
+          201
+        ],
+        "before": 100,
+        "after": 80,
+        "deducted": 20,
+        "lineCount": 2,
+        "lineQty": [
+          10,
+          10
+        ]
+      },
+      {
+        "run": 4,
+        "statuses": [
+          201,
+          201
+        ],
+        "before": 100,
+        "after": 80,
+        "deducted": 20,
+        "lineCount": 2,
+        "lineQty": [
+          10,
+          10
+        ]
+      },
+      {
+        "run": 5,
+        "statuses": [
+          201,
+          201
+        ],
+        "before": 100,
+        "after": 80,
+        "deducted": 20,
+        "lineCount": 2,
+        "lineQty": [
+          10,
+          10
+        ]
+      }
+    ]
+  },
+  "deleteDoubleReturn": {
+    "old": {
+      "mode": "old",
+      "itemId": "a87787c5-3170-4e5a-95d2-ef5ab08c092d",
+      "expenseId": "5efb889f-7ef3-40dc-9b3f-6851a12d8520",
+      "legacyNote": "ItemID: a87787c5-3170-4e5a-95d2-ef5ab08c092d | SL Thực: 10 | Ghi chú: legacy",
+      "parsedLines": [
+        {
+          "event": "",
+          "planned": 0,
+          "actual": 0,
+          "qty": 1,
+          "expenseCategory": "",
+          "inventoryItemId": "a87787c5-3170-4e5a-95d2-ef5ab08c092d",
+          "plannedQty": "",
+          "actualQty": "10",
+          "unitPriceAfterVat": 0,
+          "isOther": false,
+          "otherName": "",
+          "note": "Ghi chú: legacy"
+        }
+      ],
+      "lineStatus": 201,
+      "beLineCount": 1,
+      "beLineQty": [
+        10
+      ],
+      "before": 100,
+      "afterLine": 90,
+      "feReverse": [
+        {
+          "status": 201,
+          "qty": 10
+        }
+      ],
+      "afterFeReverse": 100,
+      "deleteStatus": 200,
+      "afterBeDelete": 110,
+      "expected": 100,
+      "doubleReturned": true
+    },
+    "new": {
+      "mode": "new",
+      "itemId": "2dbc2d20-f013-4e65-a84b-8e2298c719f8",
+      "expenseId": "d1a80dd0-c43a-4351-a9eb-e9db4d156045",
+      "legacyNote": "ItemID: 2dbc2d20-f013-4e65-a84b-8e2298c719f8 | SL Thực: 10 | Ghi chú: legacy",
+      "parsedLines": [
+        {
+          "event": "",
+          "planned": 0,
+          "actual": 0,
+          "qty": 1,
+          "expenseCategory": "",
+          "inventoryItemId": "2dbc2d20-f013-4e65-a84b-8e2298c719f8",
+          "plannedQty": "",
+          "actualQty": "10",
+          "unitPriceAfterVat": 0,
+          "isOther": false,
+          "otherName": "",
+          "note": "Ghi chú: legacy"
+        }
+      ],
+      "lineStatus": 201,
+      "beLineCount": 1,
+      "beLineQty": [
+        10
+      ],
+      "before": 100,
+      "afterLine": 90,
+      "feReverse": [],
+      "afterFeReverse": 90,
+      "deleteStatus": 200,
+      "afterBeDelete": 100,
+      "expected": 100,
+      "doubleReturned": false
+    }
+  }
+}

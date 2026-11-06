@@ -4,7 +4,7 @@ node_modules
 .gitattributes
 .gitignore
 database
-specification
+docs
 *.sql
 *.xlsx
 *.csv

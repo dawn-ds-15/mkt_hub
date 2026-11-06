@@ -1,0 +1,582 @@
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { AlertCircle, TriangleAlert, Bell, ChevronRight, RefreshCw, DatabaseX, Filter, BarChart3, FolderKanban, ListTodo, Download, Loader2 } from 'lucide-react';
+import { getDashboardData, isTaskOverdue, exportDashboardExcel } from '@/shared/api/httpClient';
+import { useDashboard } from '@/shared/stores/DashboardContext';
+import KPICard from '@/features/dashboard/components/KPICard';
+
+const periodTabs = [
+  { key: 'week', label: 'Tuần' },
+  { key: 'month', label: 'Tháng' },
+  { key: 'quarter', label: 'Quý' },
+  { key: 'year', label: 'Năm' },
+];
+
+function getPeriodOptions(type) {
+  if (type === 'week') return Array.from({ length: 53 }, (_, i) => String(i + 1));
+  if (type === 'month') return Array.from({ length: 12 }, (_, i) => String(i + 1));
+  if (type === 'quarter') return Array.from({ length: 4 }, (_, i) => String(i + 1));
+  return [];
+}
+
+const CURRENT_YEAR = String(new Date().getFullYear());
+
+function getISOWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+}
+
+function isTaskInPeriod(dueDate, periodType, periodValue, year) {
+  if (!dueDate) return false;
+  const d = new Date(dueDate);
+  if (isNaN(d.getTime())) return false;
+  const y = d.getFullYear();
+  if (String(y) !== year && y !== parseInt(year)) return false;
+  if (periodType === 'year') return true;
+  if (periodType === 'quarter') {
+    const q = Math.ceil((d.getMonth() + 1) / 3);
+    return q === parseInt(periodValue);
+  }
+  if (periodType === 'month') {
+    return d.getMonth() + 1 === parseInt(periodValue);
+  }
+  if (periodType === 'week') {
+    return getISOWeek(d) === parseInt(periodValue);
+  }
+  return true;
+}
+const STATUS_LABELS = {
+  completed: 'Hoàn thành',
+  inProgress: 'Đang làm',
+  in_progress: 'Đang làm',
+  pending: 'Chưa bắt đầu',
+  waiting: 'Đang chờ',
+  canceled: 'Đã hủy',
+  overdue: 'Quá hạn',
+};
+const STATUS_COLORS = {
+  completed: '#10B981',
+  inProgress: '#3B82F6',
+  pending: '#F59E0B',
+  waiting: '#8B5CF6',
+  canceled: '#6B7280',
+  overdue: '#EF4444',
+};
+
+function formatCompactMoney(n) {
+  n = Number(n) || 0;
+  if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'B';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+
+export default function Dashboard() {
+  const { year, periodType, periodValue, setPeriodType, setPeriodValue, locale } = useDashboard();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
+  const [expandedProjectId, setExpandedProjectId] = useState(null);
+  const [projectTasksCache, setProjectTasksCache] = useState({});
+  const [projectErrors, setProjectErrors] = useState({});
+  const [projectLoading, setProjectLoading] = useState({});
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const abortRef = useRef(null);
+
+  const periodKey = `${periodType}-${periodValue}-${year}`;
+
+  const loadData = useCallback(async () => {
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const [result, projectsRes] = await Promise.all([
+        getDashboardData(periodType, periodValue, year),
+        import('@/shared/api/httpClient').then(m => m.getProjects()).catch(() => ({ data: [] })),
+      ]);
+      if (!controller.signal.aborted) {
+        const allProjects = projectsRes.data || [];
+        const activeProjectIds = new Set();
+        const tasksMap = {};
+        for (const p of allProjects) {
+          const periodTasks = (p.tasks || []).filter(t =>
+            isTaskInPeriod(t.dueDate, periodType, periodValue, year)
+          );
+          if (periodTasks.length > 0) {
+            activeProjectIds.add(p.id);
+            tasksMap[`${p.id}_${periodType}-${periodValue}-${year}`] = periodTasks;
+          }
+        }
+        result.projectProgress = (result.projectProgress || []).filter(p => activeProjectIds.has(p.id));
+        const totalTasks = { Planning: 0, Processing: 0, Done: 0, Backlog: 0, Pending: 0, Cancel: 0 };
+        const overdueTasks = [];
+        const upcomingTasks = [];
+        const now = new Date();
+        for (const p of allProjects) {
+          const periodTasks = tasksMap[`${p.id}_${periodType}-${periodValue}-${year}`] || [];
+          for (const t of periodTasks) {
+            if (totalTasks[t.status] !== undefined) totalTasks[t.status]++;
+            const due = t.dueDate ? new Date(t.dueDate) : null;
+            if (due && !isNaN(due) && t.status !== 'Done' && t.status !== 'Cancel') {
+              if (isTaskOverdue(t.dueDate, t.statusKey || t.status)) {
+                overdueTasks.push({
+                  taskName: t.name,
+                  assigneeName: t.assignee || '',
+                  dueDate: t.due,
+                });
+              } else if (due <= new Date(now.getTime() + 7 * 86400000)) {
+                upcomingTasks.push({
+                  taskName: t.name,
+                  assigneeName: t.assignee || '',
+                  dueDate: t.due,
+                });
+              }
+            }
+          }
+        }
+        const hasClientData = activeProjectIds.size > 0;
+        if (hasClientData) {
+          const apiIds = new Set((result.projectProgress || []).map(p => p.id));
+          const missing = allProjects.filter(p => activeProjectIds.has(p.id) && !apiIds.has(p.id));
+          if (missing.length > 0) {
+            const built = missing.map(p => ({
+              id: p.id,
+              name: p.name,
+              progress: p.progress || 0,
+              color: p.progress >= 80 ? 'bg-success' : p.progress >= 40 ? 'bg-warning' : 'bg-primary',
+            }));
+            result.projectProgress = [...(result.projectProgress || []), ...built];
+          }
+          const totalPct = result.projectProgress.reduce((s, p) => s + p.progress, 0);
+          result.totalPct = result.projectProgress.length > 0 ? Math.round(totalPct / result.projectProgress.length) : 0;
+          result.taskStatus = {
+            total: Object.values(totalTasks).reduce((s, v) => s + v, 0),
+            completed: totalTasks.Done || 0,
+            inProgress: totalTasks.Processing || 0,
+            pending: totalTasks.Planning || 0,
+            waiting: (totalTasks.Pending || 0) + (totalTasks.Backlog || 0),
+            canceled: totalTasks.Cancel || 0,
+            overdue: overdueTasks.length,
+          };
+          result.alerts = [
+            ...overdueTasks.map(t => ({ type: 'error', title: `${({ vi: 'Quá hạn', en: 'Overdue' })[locale]}: ${t.taskName || ''}`, assignee: t.assigneeName || '', due: t.dueDate || '', icon: 'error' })),
+            ...upcomingTasks.map(t => ({ type: 'warning', title: `${({ vi: 'Sắp tới', en: 'Upcoming' })[locale]}: ${t.taskName || ''}`, assignee: t.assigneeName || '', due: t.dueDate || '', icon: 'schedule' })),
+          ];
+        }
+        setProjectTasksCache(tasksMap);
+        setData(result);
+      }
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || ({ vi: 'Không thể tải dữ liệu', en: 'Unable to load data' })[locale];
+        setError(Array.isArray(msg) ? msg.join('; ') : msg);
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [periodType, periodValue, year]);
+
+  useEffect(() => {
+    loadData();
+    setExpandedProjectId(null);
+    setProjectTasksCache({});
+    setProjectErrors({});
+    setProjectLoading({});
+    return () => { if (abortRef.current) abortRef.current.abort(); };
+  }, [loadData]);
+
+  const handleToggleProject = async (projectId, projectName) => {
+    if (expandedProjectId === projectId) {
+      setExpandedProjectId(null);
+      return;
+    }
+    setExpandedProjectId(projectId);
+    const cacheKey = `${projectId}_${periodKey}`;
+    if (projectTasksCache[cacheKey] || projectLoading[projectId]) return;
+
+    setProjectLoading(prev => ({ ...prev, [projectId]: true }));
+    setProjectErrors(prev => ({ ...prev, [projectId]: null }));
+
+    try {
+      const { getProjects } = await import('@/shared/api/httpClient');
+      const res = await getProjects();
+      const p = res.data.find(proj => proj.id === projectId);
+      if (p) {
+        const filtered = (p.tasks || []).filter(t =>
+          isTaskInPeriod(t.dueDate, periodType, periodValue, year)
+        );
+        setProjectTasksCache(prev => ({ ...prev, [cacheKey]: filtered }));
+      } else {
+        setProjectTasksCache(prev => ({ ...prev, [cacheKey]: [] }));
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || ({ vi: 'Không thể tải task', en: 'Unable to load tasks' })[locale];
+      setProjectErrors(prev => ({ ...prev, [projectId]: Array.isArray(msg) ? msg.join('; ') : msg }));
+    } finally {
+      setProjectLoading(prev => ({ ...prev, [projectId]: false }));
+    }
+  };
+
+  const handleRetry = () => loadData();
+
+  const hasData = data && (
+    (data.projectProgress && data.projectProgress.length > 0) ||
+    (data.kpis && data.kpis.some(k => {
+      const raw = k.value?.replace(/[$,.BMTNK]/g, '') || '0';
+      return parseInt(raw, 10) > 0;
+    })) ||
+    (data.funnel && data.funnel.some(f => f.value > 0))
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-on-surface-variant">{{ vi: 'Đang tải dữ liệu...', en: 'Loading data...' }[locale]}</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <div className="flex items-center gap-2 text-danger">
+          <AlertCircle className="w-5 h-5" />
+          <p>{error}</p>
+        </div>
+        <button
+          onClick={handleRetry}
+          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded text-body-sm font-semibold hover:opacity-90 transition-opacity"
+        >
+          <RefreshCw className="w-4 h-4" />
+          {{ vi: 'Thử lại', en: 'Retry' }[locale]}
+        </button>
+      </div>
+    );
+  }
+
+  if (!hasData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center space-y-2">
+          <DatabaseX className="w-8 h-8 text-outline mx-auto" />
+          <p className="text-on-surface-variant">{{ vi: 'Chưa có dữ liệu kỳ này', en: 'No data for this period' }[locale]}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const ts = data.taskStatus;
+  const statusKeys = ['completed', 'inProgress', 'pending', 'waiting', 'canceled', 'overdue'].filter(k => (ts[k] || 0) > 0);
+  const tsTotal = statusKeys.reduce((s, k) => s + (ts[k] || 0), 0);
+
+  const channelMax = data.marketingActivities.length > 0
+    ? Math.max(...data.marketingActivities.map((a) => Math.max(Number(a.plan) || 0, Number(a.actual) || 0)))
+    : 1;
+
+  const periodOptions = getPeriodOptions(periodType);
+
+  const handleExportExcel = async () => {
+    setExportingExcel(true);
+    try {
+      await exportDashboardExcel({ period: periodType, periodValue, year });
+    } catch (err) {
+      window.alert(`${locale === 'vi' ? 'Xuất Excel thất bại' : 'Excel export failed'}${err?.response?.status ? ` (HTTP ${err.response.status})` : ''}`);
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  return (
+    <>
+    <div>
+      <div className="flex items-center gap-2 mb-6 bg-white rounded-lg border border-border-light p-1 w-fit">
+        {periodTabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setPeriodType(tab.key)}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${
+              periodType === tab.key
+                ? 'bg-primary text-on-primary'
+                : 'text-on-surface-variant hover:text-primary'
+            }`}
+          >
+            {({ week: { vi: 'Tuần', en: 'Week' }, month: { vi: 'Tháng', en: 'Month' }, quarter: { vi: 'Quý', en: 'Quarter' }, year: { vi: 'Năm', en: 'Year' } })[tab.key][locale]}
+          </button>
+        ))}
+        {periodOptions.length > 0 && (
+          <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border-light">
+            <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">
+              {periodType === 'week' ? ({ vi: 'Tuần', en: 'Week' })[locale] : periodType === 'month' ? ({ vi: 'Tháng', en: 'Month' })[locale] : ({ vi: 'Quý', en: 'Quarter' })[locale]}:
+            </span>
+            <select
+              value={periodValue}
+              onChange={(e) => setPeriodValue(e.target.value)}
+              className="border border-border-light rounded text-xs px-2 py-1 bg-white focus:ring-1 focus:ring-primary outline-none"
+            >
+              {periodOptions.map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+            <span className="text-[11px] text-on-surface-variant font-medium ml-1">/ {year}</span>
+          </div>
+        )}
+        <button
+          onClick={handleRetry}
+          className="ml-2 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 rounded transition-colors flex items-center gap-1"
+          title={({ vi: 'Làm mới', en: 'Refresh' })[locale]}
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+        <button
+          onClick={handleExportExcel}
+          disabled={exportingExcel}
+          className="px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 rounded transition-colors flex items-center gap-1 disabled:opacity-50"
+          title={({ vi: 'Xuất báo cáo Dashboard (Excel) theo kỳ đang xem', en: 'Export dashboard report (Excel) for this period' })[locale]}
+        >
+          {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {({ vi: 'Xuất Excel', en: 'Export Excel' })[locale]}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-6">
+        {data.kpis.map((kpi) => (
+          <KPICard key={kpi.id || kpi.label} {...kpi} />
+        ))}
+        
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        <div className="bg-white rounded-xl border border-border-light overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2"><Filter className="w-4 h-4 text-brand-600" /> {{ vi: 'Funnel Chuyển đổi', en: 'Conversion Funnel' }[locale]}</h3>
+          </div>
+          <div className="px-5 py-4 space-y-2">
+            {data.funnel.map((item, idx) => (
+              <div key={item.stage} className="flex items-center gap-3">
+                <span className="text-xs text-gray-500 w-[90px] text-right font-medium">{item.stage}</span>
+                <div className="flex-1 h-8 bg-gray-50 rounded-md overflow-hidden relative">
+                  <div
+                    className={`h-full rounded-md flex items-center px-3 text-xs font-bold text-white whitespace-nowrap transition-all ${item.color}`}
+                    style={{ width: idx === 0 ? '100%' : `${(item.value / data.funnel[0].value) * 97}%` }}
+                  >
+                    {item.value.toLocaleString()}
+                  </div>
+                </div>
+                <span className="text-sm font-bold text-gray-900 w-[50px] text-right">{item.value.toLocaleString()}</span>
+                <span className={`text-[10px] w-[42px] text-center ${item.cvColor || 'text-gray-400'}`}>
+                  {item.cv || '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-border-light overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-brand-600" /> {{ vi: 'Hiệu suất theo kênh', en: 'Channel Performance' }[locale]}</h3>
+          </div>
+          <div className="px-5 py-4">
+            <div className="flex items-end gap-3" style={{ height: 180 }}>
+              {data.marketingActivities.map((act) => {
+                const planH = channelMax > 0 ? (Number(act.plan) || 0) / channelMax * 120 : 0;
+                const actualH = channelMax > 0 ? (Number(act.actual) || 0) / channelMax * 120 : 0;
+                return (
+                  <div key={act.label} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
+                    <div className="flex gap-2 text-[9px] font-medium">
+                      <span className="text-blue-500">{Number(act.plan) || 0}</span>
+                      <span className="text-green-600">{Number(act.actual) || 0}</span>
+                    </div>
+                    <div className="w-full flex justify-center gap-[3px] items-end">
+                      <div className="w-[28%] bg-blue-300 rounded-t-sm" style={{ height: Math.max(planH, 2) }} />
+                      <div className="w-[28%] bg-green-500 rounded-t-sm" style={{ height: Math.max(actualH, 2) }} />
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-medium truncate w-full text-center mt-1">{act.label}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-center gap-5 mt-3 text-[10px] text-gray-500">
+              <span><span className="inline-block w-2.5 h-2.5 bg-blue-300 rounded-sm mr-1.5 align-middle" />{{ vi: 'Kế hoạch', en: 'Plan' }[locale]}</span>
+              <span><span className="inline-block w-2.5 h-2.5 bg-green-500 rounded-sm mr-1.5 align-middle" />{{ vi: 'Thực tế', en: 'Actual' }[locale]}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-border-light overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2"><FolderKanban className="w-4 h-4 text-brand-600" /> {{ vi: 'Tiến độ dự án', en: 'Project Progress' }[locale]}</h3>
+          </div>
+          <div className="px-5 py-4">
+            <div className="text-xs text-gray-500 mb-3">
+              {{ vi: 'Tổng tiến độ', en: 'Total progress' }[locale]}: <strong className="text-blue-600">{data.totalPct}%</strong>
+            </div>
+            <div className="space-y-1">
+              {data.projectProgress.map((project) => (
+                <div key={project.id || project.name}>
+                  <div
+                    className="flex items-center gap-2.5 py-1.5 px-1 rounded cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => handleToggleProject(project.id, project.name)}
+                  >
+                    <ChevronRight className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${expandedProjectId === project.id ? 'rotate-90' : ''}`} />
+                    <span className="text-xs text-gray-700 w-[130px] truncate">{project.name}</span>
+                    <div className="flex-1 h-[7px] bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${project.color}`} style={{ width: `${project.progress}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-gray-900 w-[36px] text-right">{project.progress}%</span>
+                  </div>
+                  {expandedProjectId === project.id && (
+                    <div className="ml-7 mb-2 space-y-1">
+                      {projectLoading[project.id] ? (
+                        <p className="text-[11px] text-gray-400 italic">{{ vi: 'Đang tải...', en: 'Loading...' }[locale]}</p>
+                      ) : projectErrors[project.id] ? (
+                        <div className="flex items-center gap-2 text-[11px] text-danger">
+                          <span>{projectErrors[project.id]}</span>
+                          <button
+                            onClick={() => handleToggleProject(project.id, project.name)}
+                            className="underline hover:no-underline"
+                          >
+                            {{ vi: 'Thử lại', en: 'Retry' }[locale]}
+                          </button>
+                        </div>
+                      ) : (() => {
+                        const cacheKey = `${project.id}_${periodKey}`;
+                        const tasks = projectTasksCache[cacheKey] || [];
+                        if (tasks.length === 0) {
+                          return <p className="text-[11px] text-gray-400 italic">{{ vi: 'Không có task trong kỳ này', en: 'No tasks in this period' }[locale]}</p>;
+                        }
+                        return tasks.map((task) => {
+                          const st = task.status;
+                          const stLabel = STATUS_LABELS[st] || ({ vi: 'Chưa bắt đầu', en: 'Not Started' })[locale];
+                          const dotColor = st === 'done' ? 'bg-green-500' : st === 'overdue' ? 'bg-red-500' : 'bg-blue-400';
+                          return (
+                            <div key={task.name + task.due} className="flex items-center gap-2 py-1 px-2 rounded bg-gray-50 text-[11px]">
+                              <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                              <span className="flex-1 text-gray-700 truncate">{task.name}</span>
+                              <span className="text-gray-400 w-[80px] text-right truncate">{task.assignee}</span>
+                              <span className="text-gray-500 text-[10px] font-medium">{stLabel}</span>
+                              <span className="text-gray-400 w-[60px] text-right">{task.due}</span>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="bg-white rounded-xl border border-border-light overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2"><ListTodo className="w-4 h-4 text-brand-600" /> {{ vi: 'Trạng thái task', en: 'Task Status' }[locale]}</h3>
+            </div>
+            <div className="px-5 py-4">
+              <div className="flex items-center gap-5">
+                <svg width="80" height="80" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="#F1F5F9" strokeWidth="5" />
+                  {tsTotal > 0 && statusKeys.map((k, i) => {
+                    const offset = statusKeys.slice(0, i).reduce((s, kk) => s + (ts[kk] || 0), 0);
+                    return (
+                      <circle
+                        key={k}
+                        cx="18" cy="18" r="14" fill="none"
+                        stroke={STATUS_COLORS[k]}
+                        strokeWidth="5"
+                        pathLength={tsTotal}
+                        strokeDasharray={`${ts[k] || 0} ${tsTotal - (ts[k] || 0)}`}
+                        strokeDashoffset={-offset}
+                        transform="rotate(-90 18 18)"
+                      />
+                    );
+                  })}
+                  <text x="18" y="21" textAnchor="middle" fontSize="6" fontWeight="700" className="fill-slate-900" fill="currentColor">{tsTotal}t</text>
+                </svg>
+                <div className="space-y-1.5">
+                  {statusKeys.map(k => (
+                    <div key={k} className="flex items-center gap-2 text-xs text-gray-700">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_COLORS[k] }} />
+                      <span>{({ completed: { vi: 'Hoàn thành', en: 'Completed' }, inProgress: { vi: 'Đang làm', en: 'In Progress' }, pending: { vi: 'Chưa bắt đầu', en: 'Not Started' }, waiting: { vi: 'Đang chờ', en: 'Waiting' }, canceled: { vi: 'Đã hủy', en: 'Canceled' }, overdue: { vi: 'Quá hạn', en: 'Overdue' } })[k][locale]}: {ts[k]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-border-light overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2"><Bell className="w-4 h-4 text-brand-600" /> {{ vi: 'Cảnh báo', en: 'Alerts' }[locale]}</h3>
+            </div>
+            <div className="px-4 py-3 space-y-2">
+              {(data.alerts.length <= 3 ? data.alerts : data.alerts.slice(0, 3)).map((alert, idx) => (
+                <div
+                  key={alert.title + alert.due + idx}
+                  className={`flex gap-2.5 p-2.5 rounded-lg text-xs ${
+                    alert.type === 'error' ? 'bg-red-50 border-l-[3px] border-red-500' : 'bg-amber-50 border-l-[3px] border-amber-400'
+                  }`}
+                >
+                  <span className="mt-0.5 shrink-0">{alert.type === 'error' ? <TriangleAlert className="w-4 h-4 text-red-500" /> : <TriangleAlert className="w-4 h-4 text-amber-500" />}</span>
+                  <div>
+                    <strong className="block text-gray-800">{alert.title}</strong>
+                    <div className="text-gray-500 mt-0.5">
+                      {alert.assignee} · {alert.due}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {data.alerts.length > 3 && (
+                <button
+                  onClick={() => setShowAllAlerts(true)}
+                  className="w-full mt-1 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                >
+                  {{ vi: 'Xem tất cả', en: 'View all' }[locale]} ({data.alerts.length})
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      {showAllAlerts && (
+        <>
+          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowAllAlerts(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md bg-white rounded-xl shadow-2xl z-50 p-5 max-h-[70vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold flex items-center gap-2"><Bell className="w-4 h-4 text-brand-600" /> {{ vi: 'Tất cả cảnh báo', en: 'All Alerts' }[locale]}</h3>
+              <button onClick={() => setShowAllAlerts(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+            <div className="overflow-y-auto space-y-2 flex-1">
+              {data.alerts.map((alert, idx) => (
+                <div
+                  key={alert.title + alert.due + idx}
+                  className={`flex gap-2.5 p-2.5 rounded-lg text-xs ${
+                    alert.type === 'error' ? 'bg-red-50 border-l-[3px] border-red-500' : 'bg-amber-50 border-l-[3px] border-amber-400'
+                  }`}
+                >
+                  <span className="mt-0.5 shrink-0">{alert.type === 'error' ? <TriangleAlert className="w-4 h-4 text-red-500" /> : <TriangleAlert className="w-4 h-4 text-amber-500" />}</span>
+                  <div>
+                    <strong className="block text-gray-800">{alert.title}</strong>
+                    <div className="text-gray-500 mt-0.5">{alert.assignee} · {alert.due}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}

@@ -1,0 +1,1930 @@
+{
+  "ranAt": "2026-11-03T13:49:14.556Z",
+  "apiBase": "https://mkt-hub.onrender.com/api",
+  "run": "MW0QTIQL",
+  "summary": {
+    "summary": {
+      "manager": {
+        "PASS": 17,
+        "FAIL": 0,
+        "BLOCKED": 0
+      },
+      "specialist": {
+        "PASS": 18,
+        "FAIL": 0,
+        "BLOCKED": 0
+      },
+      "system": {
+        "PASS": 1,
+        "FAIL": 0,
+        "BLOCKED": 0
+      }
+    },
+    "total": {
+      "PASS": 36,
+      "FAIL": 0,
+      "BLOCKED": 0
+    }
+  },
+  "originalMatrix": {},
+  "finalMatrixCheck": {
+    "restore": {
+      "attempts": [
+        {
+          "who": "manager(original)",
+          "status": 200,
+          "body": {
+            "data": {
+              "matrix": {},
+              "updatedAt": "2026-11-03T13:49:14.756Z"
+            }
+          }
+        }
+      ],
+      "check": {
+        "who": "manager(original)",
+        "status": 200,
+        "matrix": {}
+      },
+      "restored": true
+    },
+    "check": {
+      "who": "manager",
+      "status": 200,
+      "matrix": {}
+    },
+    "original": {}
+  },
+  "results": [
+    {
+      "caseId": "T1",
+      "role": "manager",
+      "title": "Tạo dòng chi phí trừ tồn kho",
+      "stockBefore": 100,
+      "stockAfter": 90,
+      "result": "PASS",
+      "note": "line 201; after delete expense stock=100",
+      "detail": {
+        "itemId": "e471ac14-0def-4787-8634-8d549b74534c",
+        "expenseId": "bad18cdf-3693-4be6-b71a-1572b9b8b42d",
+        "lineStatus": 201,
+        "lineBody": {
+          "id": "a192bcac-8aa5-46a1-a024-f11c23915719",
+          "expenseId": "bad18cdf-3693-4be6-b71a-1572b9b8b42d",
+          "name": "TEST_QA_T1_manager_MW0QTIQL",
+          "categoryId": null,
+          "inventoryItemId": "e471ac14-0def-4787-8634-8d549b74534c",
+          "itemId": "e471ac14-0def-4787-8634-8d549b74534c",
+          "inventoryItem": null,
+          "item": null,
+          "isCustom": false,
+          "status": "draft",
+          "recognizedDate": "2026-11-03",
+          "expenseDate": "2026-11-03",
+          "hangMucLon": "Vật phẩm",
+          "categoryName": "Vật phẩm",
+          "isUnplanned": false,
+          "unplannedItemName": null,
+          "supplier": null,
+          "projectExpenseItemId": null,
+          "annualExpenseItemId": null,
+          "cancelledAt": null,
+          "cancelledBy": null,
+          "cancelledReason": null,
+          "confirmedAt": null,
+          "confirmedBy": null,
+          "plannedQuantity": 0,
+          "actualQuantity": 10,
+          "deductedQuantity": 10,
+          "stockTransactionId": "c0181b0a-5f19-48e7-beb7-1bf0ee6cce62",
+          "unitPriceBeforeVat": 10000,
+          "unitPriceBeforeVatSnapshot": 10000,
+          "vatRate": 8,
+          "vatRateSnapshot": 8,
+          "unitPriceAfterVat": 10800,
+          "unitPriceAfterVatSnapshot": 10800,
+          "plannedAmount": 0,
+          "plannedCost": 0,
+          "actualUnitPrice": 10800,
+          "quantity": 10,
+          "totalAmount": 108000,
+          "actualAmount": 108000,
+          "note": "TEST_QA_automated test line",
+          "sortOrder": 0,
+          "attachmentName": null,
+          "attachmentUrl": null,
+          "attachments": [],
+          "receiptUrl": null,
+          "supplierName": null,
+          "url": null,
+          "createdAt": "2026-11-03T13:48:17.346Z",
+          "updatedAt": "2026-11-03T13:48:17.346Z",
+          "archivedAt": null
+        },
+        "afterDelete": 100
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T2",
+      "role": "manager",
+      "title": "SL kế hoạch không trừ tồn kho",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "line HTTP 201; stock 100->100 (planned=25, actual=0)",
+      "detail": {
+        "request": {
+          "name": "TEST_QA_T2_manager_MW0QTIQL",
+          "hangMucLon": "Vật phẩm",
+          "categoryId": null,
+          "expenseDate": "2026-11-03",
+          "inventoryItemId": "5646dcec-4c71-4907-a559-080d4cffa770",
+          "isCustom": false,
+          "plannedQuantity": 25,
+          "actualQuantity": 0,
+          "vatRate": 8,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceAfterVat": 10800,
+          "actualUnitPrice": 10000,
+          "note": "TEST_QA_automated test line"
+        },
+        "lineStatus": 201,
+        "lineBody": {
+          "id": "fb2d7ade-8675-4870-a961-04bf70dcb6ff",
+          "expenseId": "66225f6c-5937-40a7-82c6-ae350cc44c38",
+          "name": "TEST_QA_T2_manager_MW0QTIQL",
+          "categoryId": null,
+          "inventoryItemId": "5646dcec-4c71-4907-a559-080d4cffa770",
+          "itemId": "5646dcec-4c71-4907-a559-080d4cffa770",
+          "inventoryItem": null,
+          "item": null,
+          "isCustom": false,
+          "status": "draft",
+          "recognizedDate": "2026-11-03",
+          "expenseDate": "2026-11-03",
+          "hangMucLon": "Vật phẩm",
+          "categoryName": "Vật phẩm",
+          "isUnplanned": false,
+          "unplannedItemName": null,
+          "supplier": null,
+          "projectExpenseItemId": null,
+          "annualExpenseItemId": null,
+          "cancelledAt": null,
+          "cancelledBy": null,
+          "cancelledReason": null,
+          "confirmedAt": null,
+          "confirmedBy": null,
+          "plannedQuantity": 25,
+          "actualQuantity": 0,
+          "deductedQuantity": 0,
+          "stockTransactionId": null,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceBeforeVatSnapshot": 10000,
+          "vatRate": 8,
+          "vatRateSnapshot": 8,
+          "unitPriceAfterVat": 10800,
+          "unitPriceAfterVatSnapshot": 10800,
+          "plannedAmount": 270000,
+          "plannedCost": 270000,
+          "actualUnitPrice": 10800,
+          "quantity": 0,
+          "totalAmount": 0,
+          "actualAmount": 0,
+          "note": "TEST_QA_automated test line",
+          "sortOrder": 0,
+          "attachmentName": null,
+          "attachmentUrl": null,
+          "attachments": [],
+          "receiptUrl": null,
+          "supplierName": null,
+          "url": null,
+          "createdAt": "2026-11-03T13:48:18.969Z",
+          "updatedAt": "2026-11-03T13:48:18.969Z",
+          "archivedAt": null
+        },
+        "transactions": [
+          {
+            "type": "in",
+            "quantity": 100,
+            "note": "Tạo lô hàng ban đầu khi tạo vật phẩm"
+          }
+        ]
+      },
+      "owner": "BE — BUG-1"
+    },
+    {
+      "caseId": "T3",
+      "role": "manager",
+      "title": "Nhiều dòng cùng vật phẩm trừ cộng dồn",
+      "stockBefore": 100,
+      "stockAfter": 85,
+      "result": "PASS",
+      "note": "line1 HTTP 201 (stock 100->90); line2 HTTP 201 (stock 90->85); expected 85",
+      "detail": {
+        "requests": [
+          {
+            "name": "TEST_QA_T3_manager_MW0QTIQL",
+            "hangMucLon": "Vật phẩm",
+            "categoryId": null,
+            "expenseDate": "2026-11-03",
+            "inventoryItemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
+            "isCustom": false,
+            "plannedQuantity": 0,
+            "actualQuantity": 10,
+            "vatRate": 8,
+            "unitPriceBeforeVat": 10000,
+            "unitPriceAfterVat": 10800,
+            "actualUnitPrice": 10000,
+            "note": "TEST_QA_automated test line"
+          },
+          {
+            "name": "TEST_QA_T3_manager_MW0QTIQL",
+            "hangMucLon": "Vật phẩm",
+            "categoryId": null,
+            "expenseDate": "2026-11-03",
+            "inventoryItemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
+            "isCustom": false,
+            "plannedQuantity": 0,
+            "actualQuantity": 5,
+            "vatRate": 8,
+            "unitPriceBeforeVat": 10000,
+            "unitPriceAfterVat": 10800,
+            "actualUnitPrice": 10000,
+            "note": "TEST_QA_automated test line"
+          }
+        ],
+        "line1": {
+          "status": 201,
+          "body": {
+            "id": "1746321d-c7ef-4fa6-8194-151d48117fb0",
+            "expenseId": "4b3fe9f3-03b0-45d7-b3b1-e7cf2f965b4e",
+            "name": "TEST_QA_T3_manager_MW0QTIQL",
+            "categoryId": null,
+            "inventoryItemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
+            "itemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
+            "inventoryItem": null,
+            "item": null,
+            "isCustom": false,
+            "status": "draft",
+            "recognizedDate": "2026-11-03",
+            "expenseDate": "2026-11-03",
+            "hangMucLon": "Vật phẩm",
+            "categoryName": "Vật phẩm",
+            "isUnplanned": false,
+            "unplannedItemName": null,
+            "supplier": null,
+            "projectExpenseItemId": null,
+            "annualExpenseItemId": null,
+            "cancelledAt": null,
+            "cancelledBy": null,
+            "cancelledReason": null,
+            "confirmedAt": null,
+            "confirmedBy": null,
+            "plannedQuantity": 0,
+            "actualQuantity": 10,
+            "deductedQuantity": 10,
+            "stockTransactionId": "0ea47f9a-5f35-44f1-9865-73d2516af6cb",
+            "unitPriceBeforeVat": 10000,
+            "unitPriceBeforeVatSnapshot": 10000,
+            "vatRate": 8,
+            "vatRateSnapshot": 8,
+            "unitPriceAfterVat": 10800,
+            "unitPriceAfterVatSnapshot": 10800,
+            "plannedAmount": 0,
+            "plannedCost": 0,
+            "actualUnitPrice": 10800,
+            "quantity": 10,
+            "totalAmount": 108000,
+            "actualAmount": 108000,
+            "note": "TEST_QA_automated test line",
+            "sortOrder": 0,
+            "attachmentName": null,
+            "attachmentUrl": null,
+            "attachments": [],
+            "receiptUrl": null,
+            "supplierName": null,
+            "url": null,
+            "createdAt": "2026-11-03T13:48:20.380Z",
+            "updatedAt": "2026-11-03T13:48:20.380Z",
+            "archivedAt": null
+          }
+        },
+        "line2": {
+          "status": 201,
+          "body": {
+            "id": "0ddb4630-487a-457d-98fd-e227f01263ed",
+            "expenseId": "4b3fe9f3-03b0-45d7-b3b1-e7cf2f965b4e",
+            "name": "TEST_QA_T3_manager_MW0QTIQL",
+            "categoryId": null,
+            "inventoryItemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
+            "itemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
+            "inventoryItem": null,
+            "item": null,
+            "isCustom": false,
+            "status": "draft",
+            "recognizedDate": "2026-11-03",
+            "expenseDate": "2026-11-03",
+            "hangMucLon": "Vật phẩm",
+            "categoryName": "Vật phẩm",
+            "isUnplanned": false,
+            "unplannedItemName": null,
+            "supplier": null,
+            "projectExpenseItemId": null,
+            "annualExpenseItemId": null,
+            "cancelledAt": null,
+            "cancelledBy": null,
+            "cancelledReason": null,
+            "confirmedAt": null,
+            "confirmedBy": null,
+            "plannedQuantity": 0,
+            "actualQuantity": 5,
+            "deductedQuantity": 5,
+            "stockTransactionId": "b32bad19-8ca1-4241-ad22-1286f4724bb8",
+            "unitPriceBeforeVat": 10000,
+            "unitPriceBeforeVatSnapshot": 10000,
+            "vatRate": 8,
+            "vatRateSnapshot": 8,
+            "unitPriceAfterVat": 10800,
+            "unitPriceAfterVatSnapshot": 10800,
+            "plannedAmount": 0,
+            "plannedCost": 0,
+            "actualUnitPrice": 10800,
+            "quantity": 5,
+            "totalAmount": 54000,
+            "actualAmount": 54000,
+            "note": "TEST_QA_automated test line",
+            "sortOrder": 0,
+            "attachmentName": null,
+            "attachmentUrl": null,
+            "attachments": [],
+            "receiptUrl": null,
+            "supplierName": null,
+            "url": null,
+            "createdAt": "2026-11-03T13:48:21.047Z",
+            "updatedAt": "2026-11-03T13:48:21.047Z",
+            "archivedAt": null
+          }
+        },
+        "mid": 90,
+        "lines": [
+          {
+            "id": "1746321d-c7ef-4fa6-8194-151d48117fb0",
+            "plannedQuantity": 0,
+            "actualQuantity": 10
+          },
+          {
+            "id": "0ddb4630-487a-457d-98fd-e227f01263ed",
+            "plannedQuantity": 0,
+            "actualQuantity": 5
+          }
+        ],
+        "transactions": [
+          {
+            "type": "out",
+            "quantity": 5,
+            "note": "Xuất kho cho dòng chi phí"
+          },
+          {
+            "type": "out",
+            "quantity": 10,
+            "note": "Xuất kho cho dòng chi phí"
+          },
+          {
+            "type": "in",
+            "quantity": 100,
+            "note": "Tạo lô hàng ban đầu khi tạo vật phẩm"
+          }
+        ]
+      },
+      "owner": "BE — BUG-2"
+    },
+    {
+      "caseId": "T4",
+      "role": "manager",
+      "title": "Sửa SL thực tế trên dòng chi phí",
+      "stockBefore": 100,
+      "stockAfter": 96,
+      "result": "PASS",
+      "note": "line 201; after create=90; patch=200",
+      "detail": {
+        "lineId": "c8a3d3d1-c6a8-408b-8cff-3543075e3bbb",
+        "mid": 90,
+        "patchStatus": 200,
+        "patchBody": {
+          "id": "c8a3d3d1-c6a8-408b-8cff-3543075e3bbb",
+          "expenseId": "073b0f8c-e0cc-4e98-8bbc-1ba7d02d9e5d",
+          "name": "TEST_QA_T4_manager_MW0QTIQL",
+          "categoryId": null,
+          "inventoryItemId": "613db77f-738e-4599-b72b-e7be27b74a58",
+          "itemId": "613db77f-738e-4599-b72b-e7be27b74a58",
+          "inventoryItem": null,
+          "item": null,
+          "isCustom": false,
+          "status": "draft",
+          "recognizedDate": "2026-11-03",
+          "expenseDate": "2026-11-03",
+          "hangMucLon": "Vật phẩm",
+          "categoryName": "Vật phẩm",
+          "isUnplanned": false,
+          "unplannedItemName": null,
+          "supplier": null,
+          "projectExpenseItemId": null,
+          "annualExpenseItemId": null,
+          "cancelledAt": null,
+          "cancelledBy": null,
+          "cancelledReason": null,
+          "confirmedAt": null,
+          "confirmedBy": null,
+          "plannedQuantity": 0,
+          "actualQuantity": 4,
+          "deductedQuantity": 4,
+          "stockTransactionId": "b8d1f441-fb8f-4db9-8637-b7974f97879c",
+          "unitPriceBeforeVat": 10000,
+          "unitPriceBeforeVatSnapshot": 10000,
+          "vatRate": 8,
+          "vatRateSnapshot": 8,
+          "unitPriceAfterVat": 10800,
+          "unitPriceAfterVatSnapshot": 10800,
+          "plannedAmount": 0,
+          "plannedCost": 0,
+          "actualUnitPrice": 10800,
+          "quantity": 4,
+          "totalAmount": 43200,
+          "actualAmount": 43200,
+          "note": "TEST_QA_automated test line",
+          "sortOrder": 0,
+          "attachmentName": null,
+          "attachmentUrl": null,
+          "attachments": [],
+          "receiptUrl": null,
+          "supplierName": null,
+          "url": null,
+          "createdAt": "2026-11-03T13:48:23.068Z",
+          "updatedAt": "2026-11-03T13:48:23.649Z",
+          "archivedAt": null
+        }
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T5",
+      "role": "manager",
+      "title": "Sửa SL thực tế về 0 hoàn tồn",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "line 201; after create=90; patch0=200",
+      "detail": {
+        "lineId": "87ed7209-b9ba-476e-8654-2f83f40d19da",
+        "mid": 90,
+        "patchStatus": 200,
+        "patchBody": {
+          "id": "87ed7209-b9ba-476e-8654-2f83f40d19da",
+          "expenseId": "babdadd7-8712-41ca-bf7d-6df773eeaf77",
+          "name": "TEST_QA_T5_manager_MW0QTIQL",
+          "categoryId": null,
+          "inventoryItemId": "424d498c-e478-4328-b78c-1f160664f0bb",
+          "itemId": "424d498c-e478-4328-b78c-1f160664f0bb",
+          "inventoryItem": null,
+          "item": null,
+          "isCustom": false,
+          "status": "draft",
+          "recognizedDate": "2026-11-03",
+          "expenseDate": "2026-11-03",
+          "hangMucLon": "Vật phẩm",
+          "categoryName": "Vật phẩm",
+          "isUnplanned": false,
+          "unplannedItemName": null,
+          "supplier": null,
+          "projectExpenseItemId": null,
+          "annualExpenseItemId": null,
+          "cancelledAt": null,
+          "cancelledBy": null,
+          "cancelledReason": null,
+          "confirmedAt": null,
+          "confirmedBy": null,
+          "plannedQuantity": 0,
+          "actualQuantity": 0,
+          "deductedQuantity": 0,
+          "stockTransactionId": "d6f3b6fe-1b3e-4f84-ad5b-fcdb4c2569bd",
+          "unitPriceBeforeVat": 10000,
+          "unitPriceBeforeVatSnapshot": 10000,
+          "vatRate": 8,
+          "vatRateSnapshot": 8,
+          "unitPriceAfterVat": 10800,
+          "unitPriceAfterVatSnapshot": 10800,
+          "plannedAmount": 0,
+          "plannedCost": 0,
+          "actualUnitPrice": 10800,
+          "quantity": 0,
+          "totalAmount": 0,
+          "actualAmount": 0,
+          "note": "TEST_QA_automated test line",
+          "sortOrder": 0,
+          "attachmentName": null,
+          "attachmentUrl": null,
+          "attachments": [],
+          "receiptUrl": null,
+          "supplierName": null,
+          "url": null,
+          "createdAt": "2026-11-03T13:48:25.682Z",
+          "updatedAt": "2026-11-03T13:48:26.258Z",
+          "archivedAt": null
+        }
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T6",
+      "role": "manager",
+      "title": "Xóa dòng chi phí hoàn tồn",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "line 201; after create=90; delete line=200",
+      "detail": {
+        "lineId": "bc588cf0-e815-4e28-942e-c239c164ae88",
+        "mid": 90,
+        "deleteStatus": 200
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T7",
+      "role": "manager",
+      "title": "Xóa bản ghi chi phí hoàn tồn",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "after create=90; delete expense=200",
+      "detail": {
+        "mid": 90,
+        "deleteStatus": 200
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T8",
+      "role": "manager",
+      "title": "Chặn vượt tồn kho (API)",
+      "stockBefore": 10,
+      "stockAfter": 10,
+      "result": "PASS",
+      "note": "HTTP 409; message=Số lượng thực tế (250) vượt tồn kho hiện tại (10)",
+      "detail": {
+        "lineStatus": 409,
+        "lineBody": {
+          "message": "Số lượng thực tế (250) vượt tồn kho hiện tại (10)",
+          "error": "Conflict",
+          "statusCode": 409
+        }
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T9a",
+      "role": "manager",
+      "title": "SL âm bị từ chối",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "negative HTTP 400; stock=100; lineCount=0",
+      "detail": {
+        "request": {
+          "name": "TEST_QA_T9a_manager_MW0QTIQL",
+          "hangMucLon": "Vật phẩm",
+          "categoryId": null,
+          "expenseDate": "2026-11-03",
+          "inventoryItemId": "36a37749-bbab-44d9-8b41-4249e0da16c5",
+          "isCustom": false,
+          "plannedQuantity": 0,
+          "actualQuantity": -5,
+          "vatRate": 8,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceAfterVat": 10800,
+          "actualUnitPrice": 10000,
+          "note": "TEST_QA_automated test line"
+        },
+        "lineStatus": 400,
+        "lineBody": {
+          "message": [
+            "actualQuantity must not be less than 0"
+          ],
+          "error": "Bad Request",
+          "statusCode": 400
+        },
+        "lineCount": 0
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T9b",
+      "role": "manager",
+      "title": "SL thực tế = 0 không trừ tồn",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "actual=0/planned=10 HTTP 201; stock 100->100; lineCount=1",
+      "detail": {
+        "request": {
+          "name": "TEST_QA_T9b_manager_MW0QTIQL",
+          "hangMucLon": "Vật phẩm",
+          "categoryId": null,
+          "expenseDate": "2026-11-03",
+          "inventoryItemId": "a1464bca-347d-417c-a76d-ee5a0be39106",
+          "isCustom": false,
+          "plannedQuantity": 10,
+          "actualQuantity": 0,
+          "vatRate": 8,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceAfterVat": 10800,
+          "actualUnitPrice": 10000,
+          "note": "TEST_QA_automated test line"
+        },
+        "lineStatus": 201,
+        "lineBody": {
+          "id": "1fd0cd61-a2b8-470c-9a0b-804a4d04ef98",
+          "expenseId": "1ce6755e-957c-4485-9bfd-6321a756061e",
+          "name": "TEST_QA_T9b_manager_MW0QTIQL",
+          "categoryId": null,
+          "inventoryItemId": "a1464bca-347d-417c-a76d-ee5a0be39106",
+          "itemId": "a1464bca-347d-417c-a76d-ee5a0be39106",
+          "inventoryItem": null,
+          "item": null,
+          "isCustom": false,
+          "status": "draft",
+          "recognizedDate": "2026-11-03",
+          "expenseDate": "2026-11-03",
+          "hangMucLon": "Vật phẩm",
+          "categoryName": "Vật phẩm",
+          "isUnplanned": false,
+          "unplannedItemName": null,
+          "supplier": null,
+          "projectExpenseItemId": null,
+          "annualExpenseItemId": null,
+          "cancelledAt": null,
+          "cancelledBy": null,
+          "cancelledReason": null,
+          "confirmedAt": null,
+          "confirmedBy": null,
+          "plannedQuantity": 10,
+          "actualQuantity": 0,
+          "deductedQuantity": 0,
+          "stockTransactionId": null,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceBeforeVatSnapshot": 10000,
+          "vatRate": 8,
+          "vatRateSnapshot": 8,
+          "unitPriceAfterVat": 10800,
+          "unitPriceAfterVatSnapshot": 10800,
+          "plannedAmount": 108000,
+          "plannedCost": 108000,
+          "actualUnitPrice": 10800,
+          "quantity": 0,
+          "totalAmount": 0,
+          "actualAmount": 0,
+          "note": "TEST_QA_automated test line",
+          "sortOrder": 0,
+          "attachmentName": null,
+          "attachmentUrl": null,
+          "attachments": [],
+          "receiptUrl": null,
+          "supplierName": null,
+          "url": null,
+          "createdAt": "2026-11-03T13:48:33.809Z",
+          "updatedAt": "2026-11-03T13:48:33.809Z",
+          "archivedAt": null
+        },
+        "lineCount": 1
+      },
+      "owner": "BE — BUG-1"
+    },
+    {
+      "caseId": "T10",
+      "role": "manager",
+      "title": "Hai lần gửi trùng (idempotency)",
+      "stockBefore": 100,
+      "stockAfter": 80,
+      "result": "PASS",
+      "note": "two identical POSTs HTTP 201/201; lines=2; stock=80",
+      "detail": {
+        "aStatus": 201,
+        "bStatus": 201,
+        "lineCount": 2
+      },
+      "owner": "BE — BUG-2 (idempotency; current assertion passes)"
+    },
+    {
+      "caseId": "T11",
+      "role": "manager",
+      "title": "Thông báo lỗi khi thiếu tồn",
+      "stockBefore": 5,
+      "stockAfter": 5,
+      "result": "PASS",
+      "note": "HTTP 409; message=Số lượng thực tế (10) vượt tồn kho hiện tại (5); stock 5->5; lineCount=0",
+      "detail": {
+        "request": {
+          "name": "TEST_QA_T11_manager_MW0QTIQL",
+          "hangMucLon": "Vật phẩm",
+          "categoryId": null,
+          "expenseDate": "2026-11-03",
+          "inventoryItemId": "f0229f59-8ce9-4a3e-846e-1b8b9068fe5d",
+          "isCustom": false,
+          "plannedQuantity": 0,
+          "actualQuantity": 10,
+          "vatRate": 8,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceAfterVat": 10800,
+          "actualUnitPrice": 10000,
+          "note": "TEST_QA_automated test line"
+        },
+        "lineStatus": 409,
+        "lineBody": {
+          "message": "Số lượng thực tế (10) vượt tồn kho hiện tại (5)",
+          "error": "Conflict",
+          "statusCode": 409
+        },
+        "lineCount": 0
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T14",
+      "role": "manager",
+      "title": "Hai bản ghi chi phí trừ cộng dồn",
+      "stockBefore": 100,
+      "stockAfter": 70,
+      "result": "PASS",
+      "note": "after first=90",
+      "detail": {
+        "mid": 90
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T15",
+      "role": "manager",
+      "title": "Xuất kho thủ công trừ tồn",
+      "stockBefore": 100,
+      "stockAfter": 95,
+      "result": "PASS",
+      "note": "manual out HTTP 201; transactions=2",
+      "detail": {
+        "txStatus": 201,
+        "txBody": {
+          "data": {
+            "id": "0c536405-96e4-4699-9b56-2faa17c3ae4c",
+            "itemId": "16edcda9-a273-47a7-8856-fb5e82c2b214",
+            "projectId": "e73d7aee-6a03-4fd8-9f6d-33e25c3e63ca",
+            "type": "out",
+            "quantity": 5,
+            "date": "2026-11-03",
+            "note": "TEST_QA_manual stock out",
+            "createdAt": "2026-11-03T00:00:00.000Z"
+          }
+        },
+        "txCount": 2
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T1",
+      "role": "specialist",
+      "title": "Tạo dòng chi phí trừ tồn kho",
+      "stockBefore": 100,
+      "stockAfter": 90,
+      "result": "PASS",
+      "note": "line 201; after delete expense stock=100",
+      "detail": {
+        "itemId": "8512a268-7527-461f-bd82-09b9a86f481e",
+        "expenseId": "78a074e7-4d3e-42cc-951f-1a82096860ff",
+        "lineStatus": 201,
+        "lineBody": {
+          "id": "8096631d-5653-4ef5-8ac8-56f86e300be6",
+          "expenseId": "78a074e7-4d3e-42cc-951f-1a82096860ff",
+          "name": "TEST_QA_T1_specialist_MW0QTIQL",
+          "categoryId": null,
+          "inventoryItemId": "8512a268-7527-461f-bd82-09b9a86f481e",
+          "itemId": "8512a268-7527-461f-bd82-09b9a86f481e",
+          "inventoryItem": null,
+          "item": null,
+          "isCustom": false,
+          "status": "draft",
+          "recognizedDate": "2026-11-03",
+          "expenseDate": "2026-11-03",
+          "hangMucLon": "Vật phẩm",
+          "categoryName": "Vật phẩm",
+          "isUnplanned": false,
+          "unplannedItemName": null,
+          "supplier": null,
+          "projectExpenseItemId": null,
+          "annualExpenseItemId": null,
+          "cancelledAt": null,
+          "cancelledBy": null,
+          "cancelledReason": null,
+          "confirmedAt": null,
+          "confirmedBy": null,
+          "plannedQuantity": 0,
+          "actualQuantity": 10,
+          "deductedQuantity": 10,
+          "stockTransactionId": "045fc74c-7e31-4965-8b68-cd3348de634e",
+          "unitPriceBeforeVat": 10000,
+          "unitPriceBeforeVatSnapshot": 10000,
+          "vatRate": 8,
+          "vatRateSnapshot": 8,
+          "unitPriceAfterVat": 10800,
+          "unitPriceAfterVatSnapshot": 10800,
+          "plannedAmount": 0,
+          "plannedCost": 0,
+          "actualUnitPrice": 10800,
+          "quantity": 10,
+          "totalAmount": 108000,
+          "actualAmount": 108000,
+          "note": "TEST_QA_automated test line",
+          "sortOrder": 0,
+          "attachmentName": null,
+          "attachmentUrl": null,
+          "attachments": [],
+          "receiptUrl": null,
+          "supplierName": null,
+          "url": null,
+          "createdAt": "2026-11-03T13:48:42.161Z",
+          "updatedAt": "2026-11-03T13:48:42.161Z",
+          "archivedAt": null
+        },
+        "afterDelete": 100
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T2",
+      "role": "specialist",
+      "title": "SL kế hoạch không trừ tồn kho",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "line HTTP 201; stock 100->100 (planned=25, actual=0)",
+      "detail": {
+        "request": {
+          "name": "TEST_QA_T2_specialist_MW0QTIQL",
+          "hangMucLon": "Vật phẩm",
+          "categoryId": null,
+          "expenseDate": "2026-11-03",
+          "inventoryItemId": "2d6d3a20-409b-4fe7-ae5e-d1b5cc7c3973",
+          "isCustom": false,
+          "plannedQuantity": 25,
+          "actualQuantity": 0,
+          "vatRate": 8,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceAfterVat": 10800,
+          "actualUnitPrice": 10000,
+          "note": "TEST_QA_automated test line"
+        },
+        "lineStatus": 201,
+        "lineBody": {
+          "id": "a0a46887-2461-4eeb-94e3-60728ec7f87a",
+          "expenseId": "184083d9-e616-43b7-a3b5-27a121cd779b",
+          "name": "TEST_QA_T2_specialist_MW0QTIQL",
+          "categoryId": null,
+          "inventoryItemId": "2d6d3a20-409b-4fe7-ae5e-d1b5cc7c3973",
+          "itemId": "2d6d3a20-409b-4fe7-ae5e-d1b5cc7c3973",
+          "inventoryItem": null,
+          "item": null,
+          "isCustom": false,
+          "status": "draft",
+          "recognizedDate": "2026-11-03",
+          "expenseDate": "2026-11-03",
+          "hangMucLon": "Vật phẩm",
+          "categoryName": "Vật phẩm",
+          "isUnplanned": false,
+          "unplannedItemName": null,
+          "supplier": null,
+          "projectExpenseItemId": null,
+          "annualExpenseItemId": null,
+          "cancelledAt": null,
+          "cancelledBy": null,
+          "cancelledReason": null,
+          "confirmedAt": null,
+          "confirmedBy": null,
+          "plannedQuantity": 25,
+          "actualQuantity": 0,
+          "deductedQuantity": 0,
+          "stockTransactionId": null,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceBeforeVatSnapshot": 10000,
+          "vatRate": 8,
+          "vatRateSnapshot": 8,
+          "unitPriceAfterVat": 10800,
+          "unitPriceAfterVatSnapshot": 10800,
+          "plannedAmount": 270000,
+          "plannedCost": 270000,
+          "actualUnitPrice": 10800,
+          "quantity": 0,
+          "totalAmount": 0,
+          "actualAmount": 0,
+          "note": "TEST_QA_automated test line",
+          "sortOrder": 0,
+          "attachmentName": null,
+          "attachmentUrl": null,
+          "attachments": [],
+          "receiptUrl": null,
+          "supplierName": null,
+          "url": null,
+          "createdAt": "2026-11-03T13:48:43.688Z",
+          "updatedAt": "2026-11-03T13:48:43.688Z",
+          "archivedAt": null
+        },
+        "transactions": [
+          {
+            "type": "in",
+            "quantity": 100,
+            "note": "Tạo lô hàng ban đầu khi tạo vật phẩm"
+          }
+        ]
+      },
+      "owner": "BE — BUG-1"
+    },
+    {
+      "caseId": "T3",
+      "role": "specialist",
+      "title": "Nhiều dòng cùng vật phẩm trừ cộng dồn",
+      "stockBefore": 100,
+      "stockAfter": 85,
+      "result": "PASS",
+      "note": "line1 HTTP 201 (stock 100->90); line2 HTTP 201 (stock 90->85); expected 85",
+      "detail": {
+        "requests": [
+          {
+            "name": "TEST_QA_T3_specialist_MW0QTIQL",
+            "hangMucLon": "Vật phẩm",
+            "categoryId": null,
+            "expenseDate": "2026-11-03",
+            "inventoryItemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
+            "isCustom": false,
+            "plannedQuantity": 0,
+            "actualQuantity": 10,
+            "vatRate": 8,
+            "unitPriceBeforeVat": 10000,
+            "unitPriceAfterVat": 10800,
+            "actualUnitPrice": 10000,
+            "note": "TEST_QA_automated test line"
+          },
+          {
+            "name": "TEST_QA_T3_specialist_MW0QTIQL",
+            "hangMucLon": "Vật phẩm",
+            "categoryId": null,
+            "expenseDate": "2026-11-03",
+            "inventoryItemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
+            "isCustom": false,
+            "plannedQuantity": 0,
+            "actualQuantity": 5,
+            "vatRate": 8,
+            "unitPriceBeforeVat": 10000,
+            "unitPriceAfterVat": 10800,
+            "actualUnitPrice": 10000,
+            "note": "TEST_QA_automated test line"
+          }
+        ],
+        "line1": {
+          "status": 201,
+          "body": {
+            "id": "62ae2377-8381-42ee-8fbd-d0f0391a2889",
+            "expenseId": "7832e3c0-670d-4145-8321-dfd1c981bed5",
+            "name": "TEST_QA_T3_specialist_MW0QTIQL",
+            "categoryId": null,
+            "inventoryItemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
+            "itemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
+            "inventoryItem": null,
+            "item": null,
+            "isCustom": false,
+            "status": "draft",
+            "recognizedDate": "2026-11-03",
+            "expenseDate": "2026-11-03",
+            "hangMucLon": "Vật phẩm",
+            "categoryName": "Vật phẩm",
+            "isUnplanned": false,
+            "unplannedItemName": null,
+            "supplier": null,
+            "projectExpenseItemId": null,
+            "annualExpenseItemId": null,
+            "cancelledAt": null,
+            "cancelledBy": null,
+            "cancelledReason": null,
+            "confirmedAt": null,
+            "confirmedBy": null,
+            "plannedQuantity": 0,
+            "actualQuantity": 10,
+            "deductedQuantity": 10,
+            "stockTransactionId": "d660b8b5-656f-4d1f-9da1-981357f687d9",
+            "unitPriceBeforeVat": 10000,
+            "unitPriceBeforeVatSnapshot": 10000,
+            "vatRate": 8,
+            "vatRateSnapshot": 8,
+            "unitPriceAfterVat": 10800,
+            "unitPriceAfterVatSnapshot": 10800,
+            "plannedAmount": 0,
+            "plannedCost": 0,
+            "actualUnitPrice": 10800,
+            "quantity": 10,
+            "totalAmount": 108000,
+            "actualAmount": 108000,
+            "note": "TEST_QA_automated test line",
+            "sortOrder": 0,
+            "attachmentName": null,
+            "attachmentUrl": null,
+            "attachments": [],
+            "receiptUrl": null,
+            "supplierName": null,
+            "url": null,
+            "createdAt": "2026-11-03T13:48:45.150Z",
+            "updatedAt": "2026-11-03T13:48:45.150Z",
+            "archivedAt": null
+          }
+        },
+        "line2": {
+          "status": 201,
+          "body": {
+            "id": "ff21fe49-6384-4b61-aea5-0e0fc8c519c2",
+            "expenseId": "7832e3c0-670d-4145-8321-dfd1c981bed5",
+            "name": "TEST_QA_T3_specialist_MW0QTIQL",
+            "categoryId": null,
+            "inventoryItemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
+            "itemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
+            "inventoryItem": null,
+            "item": null,
+            "isCustom": false,
+            "status": "draft",
+            "recognizedDate": "2026-11-03",
+            "expenseDate": "2026-11-03",
+            "hangMucLon": "Vật phẩm",
+            "categoryName": "Vật phẩm",
+            "isUnplanned": false,
+            "unplannedItemName": null,
+            "supplier": null,
+            "projectExpenseItemId": null,
+            "annualExpenseItemId": null,
+            "cancelledAt": null,
+            "cancelledBy": null,
+            "cancelledReason": null,
+            "confirmedAt": null,
+            "confirmedBy": null,
+            "plannedQuantity": 0,
+            "actualQuantity": 5,
+            "deductedQuantity": 5,
+            "stockTransactionId": "f7ae31e9-abd9-4dc3-aac9-09cea0317fba",
+            "unitPriceBeforeVat": 10000,
+            "unitPriceBeforeVatSnapshot": 10000,
+            "vatRate": 8,
+            "vatRateSnapshot": 8,
+            "unitPriceAfterVat": 10800,
+            "unitPriceAfterVatSnapshot": 10800,
+            "plannedAmount": 0,
+            "plannedCost": 0,
+            "actualUnitPrice": 10800,
+            "quantity": 5,
+            "totalAmount": 54000,
+            "actualAmount": 54000,
+            "note": "TEST_QA_automated test line",
+            "sortOrder": 0,
+            "attachmentName": null,
+            "attachmentUrl": null,
+            "attachments": [],
+            "receiptUrl": null,
+            "supplierName": null,
+            "url": null,
+            "createdAt": "2026-11-03T13:48:45.570Z",
+            "updatedAt": "2026-11-03T13:48:45.570Z",
+            "archivedAt": null
+          }
+        },
+        "mid": 90,
+        "lines": [
+          {
+            "id": "62ae2377-8381-42ee-8fbd-d0f0391a2889",
+            "plannedQuantity": 0,
+            "actualQuantity": 10
+          },
+          {
+            "id": "ff21fe49-6384-4b61-aea5-0e0fc8c519c2",
+            "plannedQuantity": 0,
+            "actualQuantity": 5
+          }
+        ],
+        "transactions": [
+          {
+            "type": "out",
+            "quantity": 5,
+            "note": "Xuất kho cho dòng chi phí"
+          },
+          {
+            "type": "out",
+            "quantity": 10,
+            "note": "Xuất kho cho dòng chi phí"
+          },
+          {
+            "type": "in",
+            "quantity": 100,
+            "note": "Tạo lô hàng ban đầu khi tạo vật phẩm"
+          }
+        ]
+      },
+      "owner": "BE — BUG-2"
+    },
+    {
+      "caseId": "T4",
+      "role": "specialist",
+      "title": "Sửa SL thực tế trên dòng chi phí",
+      "stockBefore": 100,
+      "stockAfter": 96,
+      "result": "PASS",
+      "note": "line 201; after create=90; patch=200",
+      "detail": {
+        "lineId": "4949a62b-f89c-4813-9a78-9b3aac3988ca",
+        "mid": 90,
+        "patchStatus": 200,
+        "patchBody": {
+          "id": "4949a62b-f89c-4813-9a78-9b3aac3988ca",
+          "expenseId": "8ff706e8-90ad-46e5-be6d-d6ed9afaf89c",
+          "name": "TEST_QA_T4_specialist_MW0QTIQL",
+          "categoryId": null,
+          "inventoryItemId": "6ed81dac-136d-4cb9-bb4c-55fa69e98d63",
+          "itemId": "6ed81dac-136d-4cb9-bb4c-55fa69e98d63",
+          "inventoryItem": null,
+          "item": null,
+          "isCustom": false,
+          "status": "draft",
+          "recognizedDate": "2026-11-03",
+          "expenseDate": "2026-11-03",
+          "hangMucLon": "Vật phẩm",
+          "categoryName": "Vật phẩm",
+          "isUnplanned": false,
+          "unplannedItemName": null,
+          "supplier": null,
+          "projectExpenseItemId": null,
+          "annualExpenseItemId": null,
+          "cancelledAt": null,
+          "cancelledBy": null,
+          "cancelledReason": null,
+          "confirmedAt": null,
+          "confirmedBy": null,
+          "plannedQuantity": 0,
+          "actualQuantity": 4,
+          "deductedQuantity": 4,
+          "stockTransactionId": "9e29b5d7-6f4c-4126-8149-0420ea5ab301",
+          "unitPriceBeforeVat": 10000,
+          "unitPriceBeforeVatSnapshot": 10000,
+          "vatRate": 8,
+          "vatRateSnapshot": 8,
+          "unitPriceAfterVat": 10800,
+          "unitPriceAfterVatSnapshot": 10800,
+          "plannedAmount": 0,
+          "plannedCost": 0,
+          "actualUnitPrice": 10800,
+          "quantity": 4,
+          "totalAmount": 43200,
+          "actualAmount": 43200,
+          "note": "TEST_QA_automated test line",
+          "sortOrder": 0,
+          "attachmentName": null,
+          "attachmentUrl": null,
+          "attachments": [],
+          "receiptUrl": null,
+          "supplierName": null,
+          "url": null,
+          "createdAt": "2026-11-03T13:48:48.159Z",
+          "updatedAt": "2026-11-03T13:48:48.667Z",
+          "archivedAt": null
+        }
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T5",
+      "role": "specialist",
+      "title": "Sửa SL thực tế về 0 hoàn tồn",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "line 201; after create=90; patch0=200",
+      "detail": {
+        "lineId": "d98fc4e2-63af-44e6-b009-2d171e7c53a5",
+        "mid": 90,
+        "patchStatus": 200,
+        "patchBody": {
+          "id": "d98fc4e2-63af-44e6-b009-2d171e7c53a5",
+          "expenseId": "67fe7941-28ba-409c-b418-1cb1420a0d9a",
+          "name": "TEST_QA_T5_specialist_MW0QTIQL",
+          "categoryId": null,
+          "inventoryItemId": "07e09d7b-93de-4779-bdbf-6e2e6a15ccbe",
+          "itemId": "07e09d7b-93de-4779-bdbf-6e2e6a15ccbe",
+          "inventoryItem": null,
+          "item": null,
+          "isCustom": false,
+          "status": "draft",
+          "recognizedDate": "2026-11-03",
+          "expenseDate": "2026-11-03",
+          "hangMucLon": "Vật phẩm",
+          "categoryName": "Vật phẩm",
+          "isUnplanned": false,
+          "unplannedItemName": null,
+          "supplier": null,
+          "projectExpenseItemId": null,
+          "annualExpenseItemId": null,
+          "cancelledAt": null,
+          "cancelledBy": null,
+          "cancelledReason": null,
+          "confirmedAt": null,
+          "confirmedBy": null,
+          "plannedQuantity": 0,
+          "actualQuantity": 0,
+          "deductedQuantity": 0,
+          "stockTransactionId": "8050aef1-4e11-4314-810e-3808f924de35",
+          "unitPriceBeforeVat": 10000,
+          "unitPriceBeforeVatSnapshot": 10000,
+          "vatRate": 8,
+          "vatRateSnapshot": 8,
+          "unitPriceAfterVat": 10800,
+          "unitPriceAfterVatSnapshot": 10800,
+          "plannedAmount": 0,
+          "plannedCost": 0,
+          "actualUnitPrice": 10800,
+          "quantity": 0,
+          "totalAmount": 0,
+          "actualAmount": 0,
+          "note": "TEST_QA_automated test line",
+          "sortOrder": 0,
+          "attachmentName": null,
+          "attachmentUrl": null,
+          "attachments": [],
+          "receiptUrl": null,
+          "supplierName": null,
+          "url": null,
+          "createdAt": "2026-11-03T13:48:50.255Z",
+          "updatedAt": "2026-11-03T13:48:50.772Z",
+          "archivedAt": null
+        }
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T6",
+      "role": "specialist",
+      "title": "Xóa dòng chi phí hoàn tồn",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "line 201; after create=90; delete line=200",
+      "detail": {
+        "lineId": "ada54b5c-bb45-49c0-8b22-2059481d675d",
+        "mid": 90,
+        "deleteStatus": 200
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T7",
+      "role": "specialist",
+      "title": "Xóa bản ghi chi phí hoàn tồn",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "after create=90; delete expense=200",
+      "detail": {
+        "mid": 90,
+        "deleteStatus": 200
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T8",
+      "role": "specialist",
+      "title": "Chặn vượt tồn kho (API)",
+      "stockBefore": 10,
+      "stockAfter": 10,
+      "result": "PASS",
+      "note": "HTTP 409; message=Số lượng thực tế (250) vượt tồn kho hiện tại (10)",
+      "detail": {
+        "lineStatus": 409,
+        "lineBody": {
+          "message": "Số lượng thực tế (250) vượt tồn kho hiện tại (10)",
+          "error": "Conflict",
+          "statusCode": 409
+        }
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T9a",
+      "role": "specialist",
+      "title": "SL âm bị từ chối",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "negative HTTP 400; stock=100; lineCount=0",
+      "detail": {
+        "request": {
+          "name": "TEST_QA_T9a_specialist_MW0QTIQL",
+          "hangMucLon": "Vật phẩm",
+          "categoryId": null,
+          "expenseDate": "2026-11-03",
+          "inventoryItemId": "a272c7a3-870b-4aa5-a640-276b304a8eef",
+          "isCustom": false,
+          "plannedQuantity": 0,
+          "actualQuantity": -5,
+          "vatRate": 8,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceAfterVat": 10800,
+          "actualUnitPrice": 10000,
+          "note": "TEST_QA_automated test line"
+        },
+        "lineStatus": 400,
+        "lineBody": {
+          "message": [
+            "actualQuantity must not be less than 0"
+          ],
+          "error": "Bad Request",
+          "statusCode": 400
+        },
+        "lineCount": 0
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T9b",
+      "role": "specialist",
+      "title": "SL thực tế = 0 không trừ tồn",
+      "stockBefore": 100,
+      "stockAfter": 100,
+      "result": "PASS",
+      "note": "actual=0/planned=10 HTTP 201; stock 100->100; lineCount=1",
+      "detail": {
+        "request": {
+          "name": "TEST_QA_T9b_specialist_MW0QTIQL",
+          "hangMucLon": "Vật phẩm",
+          "categoryId": null,
+          "expenseDate": "2026-11-03",
+          "inventoryItemId": "dd6c0904-121e-4980-b743-c2a095e7087b",
+          "isCustom": false,
+          "plannedQuantity": 10,
+          "actualQuantity": 0,
+          "vatRate": 8,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceAfterVat": 10800,
+          "actualUnitPrice": 10000,
+          "note": "TEST_QA_automated test line"
+        },
+        "lineStatus": 201,
+        "lineBody": {
+          "id": "476389fa-18c6-4ccf-a9fc-30a1cbefcb6e",
+          "expenseId": "7ec1941e-ca96-4fd6-8bec-b5bde18220b0",
+          "name": "TEST_QA_T9b_specialist_MW0QTIQL",
+          "categoryId": null,
+          "inventoryItemId": "dd6c0904-121e-4980-b743-c2a095e7087b",
+          "itemId": "dd6c0904-121e-4980-b743-c2a095e7087b",
+          "inventoryItem": null,
+          "item": null,
+          "isCustom": false,
+          "status": "draft",
+          "recognizedDate": "2026-11-03",
+          "expenseDate": "2026-11-03",
+          "hangMucLon": "Vật phẩm",
+          "categoryName": "Vật phẩm",
+          "isUnplanned": false,
+          "unplannedItemName": null,
+          "supplier": null,
+          "projectExpenseItemId": null,
+          "annualExpenseItemId": null,
+          "cancelledAt": null,
+          "cancelledBy": null,
+          "cancelledReason": null,
+          "confirmedAt": null,
+          "confirmedBy": null,
+          "plannedQuantity": 10,
+          "actualQuantity": 0,
+          "deductedQuantity": 0,
+          "stockTransactionId": null,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceBeforeVatSnapshot": 10000,
+          "vatRate": 8,
+          "vatRateSnapshot": 8,
+          "unitPriceAfterVat": 10800,
+          "unitPriceAfterVatSnapshot": 10800,
+          "plannedAmount": 108000,
+          "plannedCost": 108000,
+          "actualUnitPrice": 10800,
+          "quantity": 0,
+          "totalAmount": 0,
+          "actualAmount": 0,
+          "note": "TEST_QA_automated test line",
+          "sortOrder": 0,
+          "attachmentName": null,
+          "attachmentUrl": null,
+          "attachments": [],
+          "receiptUrl": null,
+          "supplierName": null,
+          "url": null,
+          "createdAt": "2026-11-03T13:48:57.379Z",
+          "updatedAt": "2026-11-03T13:48:57.379Z",
+          "archivedAt": null
+        },
+        "lineCount": 1
+      },
+      "owner": "BE — BUG-1"
+    },
+    {
+      "caseId": "T10",
+      "role": "specialist",
+      "title": "Hai lần gửi trùng (idempotency)",
+      "stockBefore": 100,
+      "stockAfter": 80,
+      "result": "PASS",
+      "note": "two identical POSTs HTTP 201/201; lines=2; stock=80",
+      "detail": {
+        "aStatus": 201,
+        "bStatus": 201,
+        "lineCount": 2
+      },
+      "owner": "BE — BUG-2 (idempotency; current assertion passes)"
+    },
+    {
+      "caseId": "T11",
+      "role": "specialist",
+      "title": "Thông báo lỗi khi thiếu tồn",
+      "stockBefore": 5,
+      "stockAfter": 5,
+      "result": "PASS",
+      "note": "HTTP 409; message=Số lượng thực tế (10) vượt tồn kho hiện tại (5); stock 5->5; lineCount=0",
+      "detail": {
+        "request": {
+          "name": "TEST_QA_T11_specialist_MW0QTIQL",
+          "hangMucLon": "Vật phẩm",
+          "categoryId": null,
+          "expenseDate": "2026-11-03",
+          "inventoryItemId": "cd27b956-91e5-460a-84b8-ae3b41d24e34",
+          "isCustom": false,
+          "plannedQuantity": 0,
+          "actualQuantity": 10,
+          "vatRate": 8,
+          "unitPriceBeforeVat": 10000,
+          "unitPriceAfterVat": 10800,
+          "actualUnitPrice": 10000,
+          "note": "TEST_QA_automated test line"
+        },
+        "lineStatus": 409,
+        "lineBody": {
+          "message": "Số lượng thực tế (10) vượt tồn kho hiện tại (5)",
+          "error": "Conflict",
+          "statusCode": 409
+        },
+        "lineCount": 0
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T14",
+      "role": "specialist",
+      "title": "Hai bản ghi chi phí trừ cộng dồn",
+      "stockBefore": 100,
+      "stockAfter": 70,
+      "result": "PASS",
+      "note": "after first=90",
+      "detail": {
+        "mid": 90
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "T15",
+      "role": "specialist",
+      "title": "Xuất kho thủ công trừ tồn",
+      "stockBefore": 100,
+      "stockAfter": 95,
+      "result": "PASS",
+      "note": "manual out HTTP 201; transactions=2",
+      "detail": {
+        "txStatus": 201,
+        "txBody": {
+          "data": {
+            "id": "93d0e80a-c13a-4342-a5f3-5f4d7d1b21a3",
+            "itemId": "cfdeaa45-9d3f-4676-a195-8dd56e1b8cfe",
+            "projectId": "e73d7aee-6a03-4fd8-9f6d-33e25c3e63ca",
+            "type": "out",
+            "quantity": 5,
+            "date": "2026-11-03",
+            "note": "TEST_QA_manual stock out",
+            "createdAt": "2026-11-03T00:00:00.000Z"
+          }
+        },
+        "txCount": 2
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "R1",
+      "role": "manager",
+      "title": "Role sees expense + inventory modules",
+      "stockBefore": null,
+      "stockAfter": null,
+      "result": "PASS",
+      "note": "GET expenses=200, GET inventory=200; perms=\"edit\"/\"edit\"",
+      "detail": {
+        "expStatus": 200,
+        "invStatus": 200,
+        "exp": {
+          "status": 200,
+          "message": null,
+          "error": null,
+          "errorCode": null,
+          "module": null,
+          "level": null,
+          "count": 4
+        },
+        "inv": {
+          "status": 200,
+          "message": null,
+          "error": null,
+          "errorCode": null,
+          "module": null,
+          "level": null,
+          "count": null
+        }
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "R2",
+      "role": "specialist",
+      "title": "Role sees expense + inventory modules",
+      "stockBefore": null,
+      "stockAfter": null,
+      "result": "PASS",
+      "note": "GET expenses=200, GET inventory=200; perms=\"edit\"/\"edit\"",
+      "detail": {
+        "expStatus": 200,
+        "invStatus": 200,
+        "exp": {
+          "status": 200,
+          "message": null,
+          "error": null,
+          "errorCode": null,
+          "module": null,
+          "level": null,
+          "count": 4
+        },
+        "inv": {
+          "status": 200,
+          "message": null,
+          "error": null,
+          "errorCode": null,
+          "module": null,
+          "level": null,
+          "count": null
+        }
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "R3",
+      "role": "manager",
+      "title": "Role can write expense line and deduct stock",
+      "stockBefore": 20,
+      "stockAfter": 15,
+      "result": "PASS",
+      "note": "create line=201, stock=20->15",
+      "owner": ""
+    },
+    {
+      "caseId": "R4",
+      "role": "specialist",
+      "title": "Role can write expense line and deduct stock",
+      "stockBefore": 20,
+      "stockAfter": 15,
+      "result": "PASS",
+      "note": "create line=201, stock=20->15",
+      "owner": ""
+    },
+    {
+      "caseId": "R5",
+      "role": "specialist",
+      "title": "No-access is blocked on expense/inventory",
+      "stockBefore": null,
+      "stockAfter": null,
+      "result": "PASS",
+      "note": "matrix expense=none/inventory=none, re-login as specialist: GET expenses=403, GET inventory=403",
+      "detail": {
+        "put": {
+          "status": 200,
+          "body": {
+            "data": {
+              "matrix": {
+                "85f74908-8657-4f5c-a156-8190fd988e55": {
+                  "expense": "none",
+                  "inventory": "none"
+                }
+              },
+              "updatedAt": "2026-11-03T13:49:10.542Z"
+            }
+          }
+        },
+        "relogin": {
+          "userId": "85f74908-8657-4f5c-a156-8190fd988e55",
+          "role": "specialist",
+          "permissions": {
+            "dashboard": "edit",
+            "projects": "edit",
+            "tasks": "edit",
+            "leads": "edit",
+            "expense": "none",
+            "inventory": "none",
+            "anonymous_profiles": {
+              "level": "edit",
+              "view": true,
+              "edit": true,
+              "export": true,
+              "convert": true,
+              "resolve_conflict": true,
+              "handover": true,
+              "merge_lead": true,
+              "merge_company": true,
+              "claim": true,
+              "resolve": true
+            },
+            "identified_profiles": {
+              "level": "edit",
+              "view": true,
+              "edit": true,
+              "export": true,
+              "convert": true,
+              "resolve_conflict": true,
+              "handover": true,
+              "merge_lead": true,
+              "merge_company": true,
+              "claim": true,
+              "resolve": true
+            },
+            "company_master": {
+              "level": "edit",
+              "view": true,
+              "edit": true,
+              "export": true,
+              "convert": true,
+              "resolve_conflict": true,
+              "handover": true,
+              "merge_lead": true,
+              "merge_company": true,
+              "claim": true,
+              "resolve": true
+            },
+            "sla_queue": {
+              "level": "edit",
+              "view": true,
+              "edit": true,
+              "export": true,
+              "convert": true,
+              "resolve_conflict": true,
+              "handover": true,
+              "merge_lead": true,
+              "merge_company": true,
+              "claim": true,
+              "resolve": true
+            },
+            "view": true,
+            "edit": true,
+            "export": true,
+            "convert": true,
+            "resolve_conflict": true,
+            "handover": true,
+            "merge_lead": true,
+            "merge_company": true,
+            "claim": true,
+            "resolve": true
+          }
+        },
+        "exp": {
+          "status": 403,
+          "message": "Tài khoản không có quyền truy cập module Chi phí.",
+          "error": "Forbidden",
+          "errorCode": "ERR_MODULE_NO_ACCESS",
+          "module": "expense",
+          "level": "none",
+          "count": null
+        },
+        "inv": {
+          "status": 403,
+          "message": "Tài khoản không có quyền truy cập module Kho.",
+          "error": "Forbidden",
+          "errorCode": "ERR_MODULE_NO_ACCESS",
+          "module": "inventory",
+          "level": "none",
+          "count": null
+        },
+        "restore": {
+          "attempts": [
+            {
+              "who": "manager(original)",
+              "status": 200,
+              "body": {
+                "data": {
+                  "matrix": {},
+                  "updatedAt": "2026-11-03T13:49:11.233Z"
+                }
+              }
+            }
+          ],
+          "check": {
+            "who": "manager(original)",
+            "status": 200,
+            "matrix": {}
+          },
+          "restored": true
+        }
+      },
+      "owner": "BE decision — BUG-3"
+    },
+    {
+      "caseId": "R6",
+      "role": "specialist",
+      "title": "View-only blocks writes",
+      "stockBefore": 20,
+      "stockAfter": 20,
+      "result": "PASS",
+      "note": "POST line=403, POST transaction=403, stock 20->20",
+      "detail": {
+        "line": {
+          "status": 403,
+          "message": "Tài khoản chỉ có quyền xem module Chi phí, không được tạo / sửa / xoá.",
+          "error": "Forbidden",
+          "errorCode": "ERR_MODULE_VIEW_ONLY",
+          "module": "expense",
+          "level": "view",
+          "count": null
+        },
+        "tx": {
+          "status": 403,
+          "message": "Tài khoản chỉ có quyền xem module Kho, không được tạo / sửa / xoá.",
+          "error": "Forbidden",
+          "errorCode": "ERR_MODULE_VIEW_ONLY",
+          "module": "inventory",
+          "level": "view",
+          "count": null
+        }
+      },
+      "owner": ""
+    },
+    {
+      "caseId": "R5",
+      "role": "manager",
+      "title": "No-access is blocked on expense/inventory",
+      "stockBefore": null,
+      "stockAfter": null,
+      "result": "PASS",
+      "note": "matrix expense=none/inventory=none, re-login as manager: GET expenses=403, GET inventory=403",
+      "detail": {
+        "put": {
+          "status": 200,
+          "body": {
+            "data": {
+              "matrix": {
+                "00000000-0000-4000-8000-000000000001": {
+                  "expense": "none",
+                  "inventory": "none"
+                }
+              },
+              "updatedAt": "2026-11-03T13:49:13.814Z"
+            }
+          }
+        },
+        "relogin": {
+          "userId": "00000000-0000-4000-8000-000000000001",
+          "role": "manager",
+          "permissions": {
+            "dashboard": "edit",
+            "projects": "edit",
+            "tasks": "edit",
+            "leads": "edit",
+            "expense": "none",
+            "inventory": "none",
+            "anonymous_profiles": {
+              "level": "edit",
+              "view": true,
+              "edit": true,
+              "export": true,
+              "convert": true,
+              "resolve_conflict": true,
+              "handover": true,
+              "merge_lead": true,
+              "merge_company": true,
+              "claim": true,
+              "resolve": true
+            },
+            "identified_profiles": {
+              "level": "edit",
+              "view": true,
+              "edit": true,
+              "export": true,
+              "convert": true,
+              "resolve_conflict": true,
+              "handover": true,
+              "merge_lead": true,
+              "merge_company": true,
+              "claim": true,
+              "resolve": true
+            },
+            "company_master": {
+              "level": "edit",
+              "view": true,
+              "edit": true,
+              "export": true,
+              "convert": true,
+              "resolve_conflict": true,
+              "handover": true,
+              "merge_lead": true,
+              "merge_company": true,
+              "claim": true,
+              "resolve": true
+            },
+            "sla_queue": {
+              "level": "edit",
+              "view": true,
+              "edit": true,
+              "export": true,
+              "convert": true,
+              "resolve_conflict": true,
+              "handover": true,
+              "merge_lead": true,
+              "merge_company": true,
+              "claim": true,
+              "resolve": true
+            },
+            "view": true,
+            "edit": true,
+            "export": true,
+            "convert": true,
+            "resolve_conflict": true,
+            "handover": true,
+            "merge_lead": true,
+            "merge_company": true,
+            "claim": true,
+            "resolve": true
+          }
+        },
+        "exp": {
+          "status": 403,
+          "message": "Tài khoản không có quyền truy cập module Chi phí.",
+          "error": "Forbidden",
+          "errorCode": "ERR_MODULE_NO_ACCESS",
+          "module": "expense",
+          "level": "none",
+          "count": null
+        },
+        "inv": {
+          "status": 403,
+          "message": "Tài khoản không có quyền truy cập module Kho.",
+          "error": "Forbidden",
+          "errorCode": "ERR_MODULE_NO_ACCESS",
+          "module": "inventory",
+          "level": "none",
+          "count": null
+        },
+        "restore": {
+          "attempts": [
+            {
+              "who": "manager(original)",
+              "status": 200,
+              "body": {
+                "data": {
+                  "matrix": {},
+                  "updatedAt": "2026-11-03T13:49:14.536Z"
+                }
+              }
+            }
+          ],
+          "check": {
+            "who": "manager(original)",
+            "status": 200,
+            "matrix": {}
+          },
+          "restored": true
+        }
+      },
+      "owner": "BE decision — BUG-3"
+    },
+    {
+      "caseId": "CLEANUP",
+      "role": "system",
+      "title": "Dọn dữ liệu TEST_QA_",
+      "stockBefore": null,
+      "stockAfter": null,
+      "result": "PASS",
+      "note": "leftover items=0, leftover expenses=0, untracked expenses=0, untracked items=0",
+      "detail": {
+        "leftoverItemIds": [],
+        "leftoverExpenseIds": [],
+        "untrackedExpenses": [],
+        "untrackedItems": []
+      },
+      "owner": ""
+    }
+  ]
+}

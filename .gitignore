@@ -4,6 +4,8 @@ dist/
 *.local
 BE/
 *.tar
+*.tar.gz
+.Rhistory
 out/
 .vercel
 .env*

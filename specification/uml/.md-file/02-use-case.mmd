@@ -1,0 +1,28 @@
+flowchart LR
+    M["Manager"]
+    S["Specialist"]
+
+    subgraph System["MKT Hub"]
+      UC1(["Đăng nhập / đăng xuất"])
+      UC2(["Xem Dashboard & cảnh báo"])
+      UC3(["Quản lý Project"])
+      UC4(["Quản lý Task / Kanban"])
+      UC5(["Tạo Weekly Report"])
+      UC6(["Nhập Plan & Actual KPI"])
+      UC7(["Quản lý OPP / Closed Deal"])
+      UC8(["Xem chi phí, CAC, LTV"])
+      UC9(["Quản lý Expense & tham số tài chính"])
+      UC10(["Import / Export dữ liệu"])
+      UC11(["Quản lý Member / Dropdown"])
+      UC12(["Cấu hình Slack"])
+      UC13(["Backup / Restore / Reset"])
+      UC14(["Xem Audit Log"])
+    end
+
+    M --> UC1 & UC2 & UC3 & UC4 & UC5 & UC6 & UC7 & UC8 & UC9 & UC10 & UC11 & UC12 & UC13 & UC14
+    S --> UC1 & UC2 & UC3 & UC4 & UC5 & UC6 & UC7 & UC8 & UC10
+
+    UC4 -. "bao gồm" .-> UC5
+    UC7 -. "cấp dữ liệu" .-> UC8
+    UC9 -. "tính toán" .-> UC8
+

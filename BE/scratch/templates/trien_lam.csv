@@ -1,0 +1,73 @@
+,,,,,,,,,,,
+✦  SMARTLOG — CHECKLIST SỰ KIỆN: TRIỂN LÃM NGÀNH LỚN (VWAS/VILOG/…),,,,,,,,,,,
+Tên sự kiện:,,,Ngày diễn ra:,,,,Địa điểm:,,,,
+Owner:,,,Ngân sách dự kiến (VNĐ):,,,,Link dự án:,,,,
+STT,Hạng Mục / Task,Mô Tả / Chi Tiết,PIC,Stakeholders,Bắt Đầu,Hạn Chót,Trạng Thái,Ưu Tiên,Tài Liệu / Material,Link (Drive/Tool),Ghi Chú
+"  ▶  1. KẾ HOẠCH, CHI PHÍ & KPIs",,,,,,,,,,,
+1,Lên kế hoạch tổng thể,,Trúc Nguyễn Thanh,,T-75 ngày,T-60 ngày,Planning,Cao,,,
+2,Lên chi phí dự kiến,,Trúc Nguyễn Thanh,,T-70 ngày,T-60 ngày,Planning,Cao,,,
+3,Trình duyệt BOD,,Trúc Nguyễn Thanh,BOD,T-60 ngày,T-50 ngày,Planning,Cao,,,
+4,Trình bày kế hoạch với CBD,"Họp team: kế hoạch, thông báo sự kiện, cách thu thập lead, timeline follow-up, kế hoạch chuẩn bị",Trúc Nguyễn Thanh,CBD,T-50 ngày,T-40 ngày,Planning,Cao,,,
+5,"Follow up task toàn team, cập nhật Manager tiến độ",,Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-50 ngày,T-5 ngày,Planning,Cao,,,"Cập nhật hàng tuần, 10 ngày cận triển lãm update mỗi ngày"
+  ▶  2. ĐĂNG KÝ & HỢP ĐỒNG TRIỂN LÃM,,,,,,,,,,,
+1,"Lấy báo giá, báo cáo triển lãm","Báo giá tất cả các hạng mục: gian hàng, talkshow, panel discussion, quảng cáo,.... Báo năm trước đó",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-120 ngày,T-110 ngày,Planning,Cao,Plan từ BTC,,
+2,Xác nhận vị trí & diện tích booth,"Nhận sơ đồ mặt bằng, confirm vị trí, số lượng m²",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-110 ngày,T-90 ngày,Planning,Cao,Plan từ BTC,,
+3,Ký hợp đồng & thanh toán phí booth,"Xem xét hợp đồng, chuyển khoản đặt cọc",Tính Nguyễn Lương Trần Công Chánh_Smartlog,FIN,T-110 ngày,T-90 ngày,Planning,Cao,"Hợp đồng BTC, PO nội bộ",,Lưu bản scan hợp đồng lên Drive
+4,Đăng ký thông tin triển lãm,"Liên hệ BTC, nộp form thông tin",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-110 ngày,T-90 ngày,Planning,Cao,Form đăng ký BTC,,
+5,Đăng ký talkshow/ panel triển lãm,"Liên hệ BTC, nộp form đăng ký",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-90 ngày,T-60 ngày,Planning,Trung bình,Form đăng ký BTC,,
+6,Cung cấp tư liệu truyền thông BTC yêu cầu (nếu có),Liên hệ BTC,Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-110 ngày,T-90 ngày,Planning,Trung bình,Form đăng ký BTC,,
+7,Thu thập quy định BTC về booth,"Quy định chiều cao, vật liệu, điện, Wi-Fi, thời gian set-up/dỡ hàng",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-90 ngày,T-70 ngày,Planning,Trung bình,Regulation doc BTC,,Lưu bản file lên Drive
+  ▶  3. THIẾT KẾ & THI CÔNG BOOTH,,,,,,,,,,,
+1,"Brief ý tưởng layout booth 
+(Gen AI layout sơ bộ)","Xác định concept, brand guideline, thông điệp chính, layout demo",Tính Nguyễn Lương Trúc Nguyễn Thanh Tuan Quang,,T-90 ngày,T- 70 ngày,Planning,Cao,"Brand guideline, Mood board",,1 concept/ năm
+2,Chọn đơn vị thi công booth,"Lấy 3 báo giá, đánh giá portfolio",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-80 ngày,T-65 ngày,Planning,Cao,báo giá,,Ưu tiên đơn vị từng làm VWAS/Vilog
+3,Ký hợp đồng & thanh toán phí vendor,"Xem xét hợp đồng, chuyển khoản đặt cọc",Tính Nguyễn Lương Trần Công Chánh_Smartlog,FIN,T-50 ngày,T-40 ngày,Planning,Cao,"Hợp đồng BTC, PO nội bộ",,Lưu bản scan hợp đồng lên Drive
+4,"Duyệt bản vẽ 3D booth 
+(trường hợp booth thi công phức tạp)","Review bản vẽ với team và BOD, góp ý chỉnh sửa, phê duyệt final",Tính Nguyễn Lương Trần Công Chánh_Smartlog,BOD,T-40 ngày,T-30 ngày,Planning,Thấp,File 3D render vendor thực hiện,,1 concept/ năm
+5,Định hướng nội dung và thiết kế hệ thống POSM Booth,"Lên nội dung, layout thiết kế backdrop, standee",Khánh Nguyên Tăng Tuan Quang,,T-50 ngày,T-40 ngày,Planning,Cao,"File thiết kế PDF/AI, spec kích thước",,1 concept/ năm
+6,Sản xuất vật liệu booth,"In ấn backdrop, standee, signage, banners theo thiết kế đã duyệt",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-30 ngày,T-20 ngày,Planning,Cao,"File thiết kế PDF/AI, spec kích thước",,Kiểm tra màu sắc in thử trước
+9,Vật dụng trưng bày booth ,"Tranh, hộp mica, cờ",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-80 ngày,T-70 ngày,Planning,Cao,,,Mua mới khi thiếu hoặc hư hỏng
+10,Thiết bị tại booth ,"Tivi, màn hình cảm ứng, phát wifi",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-80 ngày,T-65 ngày,Planning,Cao,báo giá,,
+7,Vận chuyển & lắp đặt booth,"Điều phối xe tải, nhân công lắp đặt đúng slot thời gian BTC cho phép",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-2 ngày,T-1 ngày,Planning,Cao,"Danh sách vật tư, sơ đồ lắp đặt",,Có mặt tại sự kiện để giám sát
+8,Kiểm tra & nghiệm thu booth,"Check tổng thể: hình ảnh, điện, ánh sáng, màn hình, Wi-Fi",Tính Nguyễn Lương Trần Công Chánh_Smartlog Trúc Nguyễn Thanh,,T-1 ngày,T-1 ngày,Planning,Cao,Checklist nghiệm thu,,Có mặt tại sự kiện để giám sát
+  ▶  4. NỘI DUNG & MARKETING,,,,,,,,,,,
+1,Xây dựng thông điệp & key messages,"Xác định USP, tagline, pain points sẽ address tại sự kiện",Khánh Nguyên Tăng Trúc Nguyễn Thanh,,T-60 ngày,T-50 ngày,Planning,Cao,,,
+2,Hoạt động tại booth,Xác định chủ đề chia sẻ và hoạt động tại booth,Khánh Nguyên Tăng Trúc Nguyễn Thanh,CBD,T-50 ngày,T-45 ngày,Planning,Cao,,,
+3,Brief và thiết kế tài liệu marketing,"Thiết kế brochure, leaflet dịch vụ",Khánh Nguyên Tăng Tuan Quang,,T-45 ngày,T-35 ngày,Planning,Cao,"File mẫu, nội dung (canva)",,
+4,In ấn tài liệu,"In brochure, leaflet đủ số lượng (dự phòng 20%)",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-20 ngày,T-10 ngày,Planning,Trung bình,"File in PDF, đơn hàng in",,Đặt in sớm để không rush
+5,Chuẩn bị quà tặng/gift (nếu có),"Chọn quà tặng branded, số lượng, đặt hàng sản xuất/mua",Tính Nguyễn Lương Trần Công Chánh_Smartlog,BOD,T-75 ngày,T-65 ngày,Planning,Trung bình,,,
+6,Chọn đơn vị cung cấp quà,"Lấy 3 báo giá, đánh giá portfolio",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-70 ngày,T-60 ngày,Planning,Cao,báo giá,,Ưu tiên đơn từng làm 
+7,Email list,Lên danh sách email khách hàng tiếp cận pre-event,Khánh Nguyên Tăng,CBD,T-35 ngày,T-25 ngày,Planning,Cao,,,
+8,"Truyền thông pre-event (LinkedIn,Facebook,Email)","Post announcement, teaser trên LinkedIn; gửi email invite danh sách khách hàng",Khánh Nguyên Tăng,,T-35 ngày,T-25 ngày,Planning,Cao,"Content calendar, email template",,
+9,Quảng cáo (nếu có),Tập trung branding,Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-20 ngày,T+3 ngày,Planning,,,,Outsource
+  ▶  5. SALE KIT,,,,,,,,,,,
+1,Demo hệ thống/ File Deck,"Set up số liệu hệ thống phù hợp, file, kịch bản",,CBD,T-35 ngày,T-15 ngày,Planning,Cao,,,
+2,Rehearsal,Rehearsal nội dung chia sẻ và thực hiện demo,,CBD,T-15 ngày,T-3 ngày,Planning,Cao,,,
+3,Video trình chiếu,"Video công ty, sản phẩm, VOC,...",Trần Công Chánh_Smartlog,CBD,T-30 ngày,T-10 ngày,Planning,Cao,,,
+4,Ưu đãi ,Xác định các chương trình ưu đãi áp dụng tại booth,Trúc Nguyễn Thanh Khánh Nguyên Tăng,CBD,T-50 ngày,T-45 ngày,Planning,,,,
+  ▶  6. ĐĂNG KÝ NHÂN SỰ,,,,,,,,,,,
+1,Nhân sự trực gian hàng + tiếp cận khách,"Danh sách staff tham gia, phân công ca trực booth (sáng/chiều)",Tính Nguyễn Lương Trần Công Chánh_Smartlog,CBD,T-30 ngày,T-21 ngày,Planning,Trung bình,Form BTC,,Tối thiểu 3 người/ ngày
+2,Nhân sự hỗ trợ từ phòng ban khác ,"Điều chuyển thêm nhân sự tư vấn, hỗ trợ phát leaflet tại triển lãm: Solution, SID",Tính Nguyễn Lương Trần Công Chánh_Smartlog,CBD,T-30 ngày,T-21 ngày,Planning,Trung bình,,,CBD đề xuất và làm việc với phòng ban liên quan
+3,Speaker talkshow/ panel (nếu có),"Các anh chị Head, tùy chủ đề và triển lãm",Trúc Nguyễn Thanh,BOM,T-45 ngày,T-30 ngày,Planning,Thấp,,,
+4,Presentation File (nếu có),Follow up speaker chọn tên chủ đề + lên nội dung file thuyết trình,Tính Nguyễn Lương Trần Công Chánh_Smartlog,BOM,T-30 ngày,T-14 ngày,Planning,Thấp,,,
+5,Thông tin Speakers,"thu thập bio, hình ảnh",Tính Nguyễn Lương Trần Công Chánh_Smartlog,BOM,T-30 ngày,T-14 ngày,Chưa bắt đầu,Thấp,Speaker bio template,,
+6,Đăng ký thẻ vào cửa cho nhân sự,Nộp danh sách CMND/passport lên BTC để cấp badge,Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-21 ngày,T-14 ngày,Planning,Trung bình,Form đăng ký BTC,,
+7,Chuẩn bị trang phục đồng phục staff,"Áo polo/sơ mi branded, đặt may/mua, kiểm tra size",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-30 ngày,T-14 ngày,Planning,Trung bình,"Đơn đặt may, size chart",,
+8,Đặt khách sạn & di chuyển (nếu cần),"Book phòng gần venue, sắp xếp xe đưa đón staff",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-30 ngày,T-21 ngày,Planning,Thấp,Booking confirmation,,
+  ▶  7. THU THẬP LEAD & FOLLOW-UP,,,,,,,,,,,
+1,Chuẩn bị form thu thập thông tin khách (digital/paper),"Google Form hoặc tablet form, QR code",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-14 ngày,T-5 ngày,Planning,Cao,Google Form,,Liên kết chiến dịch CRM
+2,Thiết lập CRM tracking leads,Tạo chiến dịch trong CRM,Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T-14 ngày,T-3 ngày,Planning,Cao,"CRM access, SOP nhập liệu",,
+3,Tổng hợp leads sau sự kiện,"Export toàn bộ leads, làm sạch dữ liệu, phân loại hot/warm/cold",Tính Nguyễn Lương Trần Công Chánh_Smartlog,CBD,T+1 ngày,T+3 ngày,Planning,Cao,"Excel leads sheet, CRM",,
+4,Chiến lược Demand Gen & Brand Recall sau sự kiện,Brainstorm và xây dựng kế hoạch bám đuôi hướng đến tạo nhiều điểm chạm và educate về nhu cầu chuyển đổi số,"Khánh Nguyên Tăng
+Trúc Nguyễn Thanh",,T+1 ngày,T+7 ngày,Planning,Cao,Excel kế hoạch triển khai,,
+5,Thực thi chiến lược tiếp cận sau sự kiện (Email),Triển khai thực thi chiến dịch theo chiến lược đã đề xuất,Khánh Nguyên Tăng,CBD,T+7 ngày,T+37 ngày,Planning,Cao,Nội dung Email theo chiến lược,,
+6,Báo cáo định kỳ kết quả tiếp cận,"Báo cáo tín hiệu khách hàng theo giai đoạn, trên từng email và trên tổng chiến dịch tiếp cận để thu thập insight",Khánh Nguyên Tăng Tính Nguyễn Lương Trần Công Chánh_Smartlog,CBD,T+7 ngày,T+37 ngày,Planning,Cao,"Sheet Tracking, Report 48h-72h-Weekly",,
+7,"Truyền thông Mass post-event (LinkedIn,Facebook,Email)","Truyền thông sau sự kiện đến cộng đồng người theo dõi trên MXH, góp phần củng cố Brand Authority trên Digital Multichannel. Kết hợp gửi email cảm ơn sau sự kiện để mở đầu cho chuỗi tiếp cận 30 ngày",Khánh Nguyên Tăng,CBD,T+3 ngày,T+7 ngày,Planning,Trung bình,Content Calendar,,
+8,Báo cáo kết quả sau sự kiện,"Tổng hợp: số leads, chi phí/lead, feedback, bài học kinh nghiệm",Trúc Nguyễn Thanh,CBD,T+8 ngày,T+10 ngày,Planning,Cao,Report template,,Lấy báo cáo traffic từ BTC hoặc thông tin lead (nếu có)
+  ▶  6. CHECKLIST NGÀY DIỄN RA,,,,,,,,,,,
+1,Đến sớm kiểm tra booth (ít nhất 30 - 60 phút trước),"Kiểm tra thiết bị, màn hình demo, Wi-Fi, tài liệu đã đủ chưa",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T ngày,T ngày,Planning,Cao,,,
+2,Vận hành booth & tiếp khách,"Thực hiện theo kịch bản, ghi nhận thông tin khách vào form",Toàn bộ staff booth,CBD,T ngày,T ngày,Planning,Cao,,,
+3,Chụp ảnh / quay video tại booth,"Ghi lại hình ảnh booth, hoạt động networking để dùng cho truyền thông",Trần Công Chánh_Smartlog,,T ngày,T ngày,Planning,Trung bình,Máy ảnh / điện thoại chất lượng cao,,
+4,"Truyền thông during-event (LinkedIn,Facebook,Email)",Đăng bài và hình ảnh tại booth,Khánh Nguyên Tăng,,T ngày,T ngày,Planning,Trung bình,,,
+5,Ghi hình phỏng vấn (nếu có),Follow up kế hoạch của BTC hoặc phát sinh đài truyền hình,Trần Công Chánh_Smartlog,CBD,T ngày,T ngày,Planning,Thấp,,,
+6,Dỡ booth & hoàn trả mặt bằng,"Dỡ toàn bộ vật tư, vận chuyển về kho, trả mặt bằng đúng deadline BTC",Tính Nguyễn Lương Trần Công Chánh_Smartlog,,T ngày,T ngày,Planning,Thấp,Vendor,,Có mặt tại sự kiện để giám sát

@@ -1,0 +1,16 @@
+flowchart LR
+    Manager["Manager"]
+    Specialist["Marketing Specialist"]
+    Slack["Slack Workspace"]
+    Files["CSV / Excel / PDF / Backup"]
+    Scheduler["Job Scheduler"]
+
+    Hub["MKT Hub\nMarketing Operations Platform"]
+
+    Manager -->|"Quản trị, CRUD, cấu hình, báo cáo"| Hub
+    Specialist -->|"Nhập KPI, quản lý project/task, xem báo cáo"| Hub
+    Hub -->|"Deadline notifications"| Slack
+    Scheduler -->|"Kích hoạt cảnh báo định kỳ"| Hub
+    Files -->|"Import"| Hub
+    Hub -->|"Export / backup"| Files
+

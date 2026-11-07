@@ -1,0 +1,35 @@
+flowchart TB
+    subgraph Client["Client Device"]
+      Browser["Modern Web Browser"]
+    end
+
+    subgraph Edge["HTTPS Edge"]
+      Proxy["Reverse Proxy / TLS"]
+    end
+
+    subgraph AppHost["Application Host"]
+      SPA["Static SPA"]
+      API["API Application"]
+      Worker["Background Worker"]
+      Scheduler["Scheduler"]
+    end
+
+    subgraph DataHost["Data Layer"]
+      DB[("SQLite — MVP\nPostgreSQL — Scale")]
+      Storage[("Backup / Export Files")]
+      Queue[("Job Queue")]
+    end
+
+    Slack["Slack Incoming Webhook"]
+
+    Browser -->|HTTPS| Proxy
+    Proxy --> SPA
+    Proxy --> API
+    API --> DB
+    API --> Queue
+    Worker --> Queue
+    Worker --> DB
+    Worker --> Storage
+    Scheduler --> Queue
+    Worker -->|HTTPS| Slack
+

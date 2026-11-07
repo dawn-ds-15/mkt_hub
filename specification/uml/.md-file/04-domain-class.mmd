@@ -1,0 +1,184 @@
+classDiagram
+    class Member {
+      +uuid id PK
+      +string name
+      +string email UNIQUE
+      +Role role
+      +string passwordHash
+      +string avatarUrl
+      +boolean isActive
+      +datetime createdAt
+    }
+    class Project {
+      +uuid id PK
+      +string name
+      +string typeKey
+      +string statusKey
+      +uuid ownerId FK
+      +date deadline
+      +decimal budgetDirect
+      +decimal budgetOverhead
+      +datetime createdAt
+      +progressPercent()
+    }
+    class Task {
+      +uuid id PK
+      +uuid projectId FK
+      +uuid assigneeId FK
+      +string name
+      +string description
+      +string statusKey
+      +string priorityKey
+      +date startDate
+      +date dueDate
+      +date completedDate
+      +int executionWeek
+      +string reason
+      +string bodSupport
+      +string link
+      +string remark
+      +isOverdue()
+    }
+    class TaskStakeholder {
+      +uuid taskId PK,FK
+      +string stakeholderKey PK
+    }
+    class WeeklyLog {
+      +uuid id PK
+      +int year
+      +int week
+      +uuid projectId FK
+      +uuid memberId FK
+      +string note
+    }
+    class AnnualKpiPlan {
+      +uuid id PK
+      +int year UNIQUE
+      +int rawLeads
+      +int mql
+      +int sql
+      +int opp
+      +int closedDeals
+      +decimal pipelineValue
+      +decimal wonValue
+    }
+    class WeeklyKpiActual {
+      +uuid id PK
+      +int year
+      +int week
+      +int rawLeads
+      +int mql
+      +int sql
+      +int oppCount
+      +int closedDealCount
+      +uuid recordedBy FK
+    }
+    class KpiPeriodAdjustment {
+      +uuid id PK
+      +string periodType
+      +string periodKey
+      +string metric
+      +decimal basePlan
+      +decimal rollover
+      +decimal manualAdjustment
+      +effectivePlan()
+    }
+    class Opportunity {
+      +uuid id PK
+      +uuid projectId FK
+      +uuid weeklyKpiId FK
+      +string companyName
+      +string sizeKey
+      +decimal setupFee
+      +decimal monthlyFee
+      +date expectedCloseDate
+      +string status
+      +dealValue()
+    }
+    class ClosedDeal {
+      +uuid id PK
+      +uuid sourceOpportunityId FK
+      +uuid projectId FK
+      +uuid weeklyKpiId FK
+      +string companyName
+      +string sizeKey
+      +decimal setupFee
+      +decimal monthlyFee
+      +date closedDate
+      +arrValue()
+    }
+    class ProjectExpense {
+      +uuid id PK
+      +uuid projectId FK
+      +int year
+      +int month
+      +decimal directCost
+      +decimal overheadCost
+      +string directNote
+      +string overheadNote
+      +totalCost()
+    }
+    class FinancialParameter {
+      +uuid id PK
+      +string periodType
+      +date effectiveFrom
+      +decimal churnRate
+      +decimal grossMargin
+      +string changeNote
+    }
+    class DropdownOption {
+      +uuid id PK
+      +string dropdownKey
+      +string value
+      +string label
+      +int sortOrder
+      +boolean isActive
+    }
+    class SlackSetting {
+      +uuid id PK
+      +string webhookUrlEncrypted
+      +string channel
+      +boolean enabled
+      +time sendAt
+      +int upcomingDays
+    }
+    class NotificationLog {
+      +uuid id PK
+      +datetime sentAt
+      +int overdueCount
+      +int upcomingCount
+      +string status
+      +string errorMessage
+    }
+    class AuditLog {
+      +uuid id PK
+      +uuid userId FK
+      +string action
+      +string entityType
+      +uuid entityId
+      +string fieldChanged
+      +json oldValue
+      +json newValue
+      +datetime createdAt
+    }
+
+    Member "1" --> "0..*" Project : owns
+    Member "1" --> "0..*" Task : assigned
+    Project "1" *-- "0..*" Task
+    Task "1" *-- "0..*" TaskStakeholder
+    Project "1" --> "0..*" WeeklyLog
+    Member "1" --> "0..*" WeeklyLog
+    AnnualKpiPlan "1" --> "0..*" KpiPeriodAdjustment
+    WeeklyKpiActual "1" *-- "0..*" Opportunity
+    WeeklyKpiActual "1" *-- "0..*" ClosedDeal
+    Project "0..1" --> "0..*" Opportunity
+    Project "0..1" --> "0..*" ClosedDeal
+    Opportunity "0..1" --> "0..1" ClosedDeal : convertedTo
+    Project "1" *-- "0..*" ProjectExpense
+    FinancialParameter "1" ..> ClosedDeal : calculates LTV
+    ProjectExpense "0..*" ..> ClosedDeal : calculates CAC
+    SlackSetting "1" --> "0..*" NotificationLog
+    Member "1" --> "0..*" AuditLog : performs
+    DropdownOption ..> Project : configures
+    DropdownOption ..> Task : configures
+

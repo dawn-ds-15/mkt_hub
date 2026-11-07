@@ -1,0 +1,47 @@
+,,,,,,,,,,,
+✦  SMARTLOG — CHECKLIST SỰ KIỆN: WEBINAR ONLINE,,,,,,,,,,,
+Tên webinar:,,,Ngày & giờ:,,,,,Nền tảng,,,
+Owner:,,,Target registrants:,,,,,Link dự án:,,,
+STT,Hạng Mục / Task,Mô Tả / Chi Tiết,PIC,,Bắt Đầu,Hạn Chót,Trạng Thái,Ưu Tiên,Tài Liệu / Material,Link (Drive/Tool),Ghi Chú
+  ▶  1. CHIẾN LƯỢC & LẬP KẾ HOẠCH,,,,,,,,,,,
+1,Xác định mục tiêu webinar,"Mục tiêu, số registrants, attendees, leads, brand awareness. Xác định chủ đề, pain point của target audience",,,T-45 ngày,T-35 ngày,Chưa bắt đầu,Cao,Kế hoạch tổng thể,,"Chủ đề nên giải quyết 1 pain point cụ thể, tránh quá chung"
+2,Xác định format & cấu trúc webinar,Chọn format: Presentation / Panel discussion / Q&A / Demo / Fireside chat. Phân bổ thời lượng từng phần (VD: 45 phút content + 15 phút Q&A),,,T-40 ngày,T-30 ngày,Chưa bắt đầu,Cao,Agenda template,,Thời lượng lý tưởng: 45-60 phút
+3,Xây dựng & duyệt ngân sách,"Ước tính chi phí: platform, speaker fee (nếu có), quảng cáo, design, production",,,T-40 ngày,T-30 ngày,Chưa bắt đầu,Cao,Budget sheet,,
+4,Chọn ngày giờ tổ chức tối ưu,"Khảo sát hoặc dựa theo dữ liệu: tránh thứ 2 sáng, thứ 6 chiều. Khung giờ lý tưởng B2B: 10h hoặc 14h-15h ngày giữa tuần",,,T-40 ngày,T-30 ngày,Chưa bắt đầu,Cao,,,Check lịch không trùng sự kiện ngành lớn
+  ▶  2. NỀN TẢNG & KỸ THUẬT,,,,,,,,,,,
+1,Chọn & setup nền tảng webinar,"Lựa chọn platform phù hợp (Zoom Webinar, Google Meet, Airmeet, StreamYard…). Tạo event, cài đặt đăng ký, tích hợp reminder tự động",,,T-35 ngày,T-25 ngày,Chưa bắt đầu,Cao,"Tài khoản platform, SOP setup",,Kiểm tra giới hạn số người tham dự của gói hiện tại
+2,Cấu hình trang đăng ký (Registration Page),"Tạo landing page đăng ký: tên, email, công ty, chức danh, câu hỏi pre-event. Kết nối với CRM/email tool tự động",,,T-30 ngày,T-21 ngày,Chưa bắt đầu,Cao,"Form design, CRM integration",,Thu thập đủ thông tin để qualify lead
+3,Setup email automation (confirm + reminder),"Email xác nhận đăng ký ngay lập tức. Reminder T-7, T-1, T-1h trước webinar. Email kèm link join + agenda",,,T-25 ngày,T-14 ngày,Chưa bắt đầu,Cao,"Email sequence, platform setting",,Test toàn bộ flow trước khi go-live
+4,Chuẩn bị virtual background & branding assets,"Thiết kế virtual background có logo Smartlog, lower-third (tên/chức danh speaker), intro/outro slide, waiting room slide",,,T-21 ngày,T-10 ngày,Chưa bắt đầu,Cao,File thiết kế PNG/PPT,,
+5,Kiểm tra thiết bị & kết nối internet,"Test webcam (HD 1080p), micro (tai nghe có dây tốt hơn built-in), ánh sáng, tốc độ internet (tối thiểu 10Mbps upload)",,,T-5 ngày,T-2 ngày,Chưa bắt đầu,Cao,Checklist thiết bị,,"Dùng mạng dây (LAN), không dùng Wi-Fi khi livestream"
+6,Dry run / Technical rehearsal,"Chạy thử toàn bộ: vào platform, test screen share, slide, Q&A feature, poll, recording, xử lý tình huống sự cố",,,T-2 ngày,T-1 ngày,Chưa bắt đầu,Cao,,,Bắt buộc — không skip bước này
+  ▶  3. NỘI DUNG & SPEAKER,,,,,,,,,,,
+1,Xác nhận & brief speaker,"Confirm speaker (nội bộ hoặc khách mời), gửi brief: topic, thời lượng, format slide, key messages cần truyền đạt",,,T-35 ngày,T-25 ngày,Chưa bắt đầu,Cao,Speaker brief document,,
+2,Xây dựng slide deck,Slide theo template Smartlog branded. Cấu trúc: Hook → Problem → Solution → Case Study → Demo → CTA → Q&A,,,T-21 ngày,T-7 ngày,Chưa bắt đầu,Cao,"PPT template, nội dung sản phẩm",,Tối đa 1-2 điểm chính/slide
+3,Review & duyệt slide final,"Marketing Manager review nội dung, thông điệp, tính chính xác. Sign-off trước khi gửi cho attendees",,,T-7 ngày,T-3 ngày,Chưa bắt đầu,Cao,,,
+4,Chuẩn bị script / talking points cho host,"Script dẫn chương trình: mở đầu, giới thiệu speaker, transition, Q&A, closing + CTA",,,T-14 ngày,T-5 ngày,Chưa bắt đầu,Cao,Script document,,
+5,Chuẩn bị poll & câu hỏi tương tác,Soạn 2-3 poll questions để tăng engagement trong webinar. Chuẩn bị seed questions cho Q&A phòng khi ít câu hỏi từ audience,,,T-10 ngày,T-3 ngày,Chưa bắt đầu,Trung bình,,,Poll giúp tăng tỷ lệ giữ chân người xem
+6,Chuẩn bị demo sản phẩm live (nếu có),"Setup môi trường demo riêng, data mẫu đẹp, kịch bản demo rõ ràng, bản backup slide screenshot phòng sự cố",,,T-14 ngày,T-1 ngày,Chưa bắt đầu,Cao,"Demo env, kịch bản, backup slides",,Luôn chuẩn bị Plan B nếu demo lỗi
+  ▶  4. MARKETING & ĐĂNG KÝ,,,,,,,,,,,
+1,Thiết kế creatives quảng bá webinar,"Banner LinkedIn/Facebook, email header, story IG. Thông tin rõ: chủ đề, speaker, ngày giờ, link đăng ký",,,T-28 ngày,T-21 ngày,Chưa bắt đầu,Cao,"Design brief, brand guideline",,
+2,Chiến dịch email marketing tới database,Gửi email invite tới toàn bộ database phù hợp (segment theo ngành/chức danh). Sequence: Announce → Follow-up → Last chance,,,T-21 ngày,T-3 ngày,Chưa bắt đầu,Cao,"Email sequence, segmented list",,A/B test subject line để tối ưu open rate
+3,Post LinkedIn organic + Sales network,"Post từ LinkedIn page Smartlog, khuyến khích Sales/team share cá nhân, tag speaker, dùng hashtag liên quan ngành",,,T-21 ngày,T-1 ngày,Chưa bắt đầu,Cao,"Content calendar, copy LinkedIn",,
+4,Quảng cáo trả phí (LinkedIn Ads / Facebook Ads),"Chạy ads nhắm target audience: logistics manager, supply chain director, C-level. Budget, bid strategy, landing page",,,T-21 ngày,T-2 ngày,Chưa bắt đầu,Trung bình,"Ad creative, budget, target audience",,"Tùy ngân sách, có thể bỏ qua"
+5,Sales outreach trực tiếp tới prospect list,Sales gửi invite cá nhân hóa tới danh sách hot prospects qua LinkedIn message hoặc email cá nhân,,,T-14 ngày,T-3 ngày,Chưa bắt đầu,Cao,"Prospect list, message template",,
+6,Theo dõi số đăng ký hàng ngày & optimize,"Daily tracking số registrants, nếu thấp hơn target thì boost thêm: tăng budget ads, thêm email, nhờ partner share",,,T-14 ngày,T-1 ngày,Chưa bắt đầu,Cao,,,Target: ít nhất 3x số attendees mục tiêu (show-up rate ~30-40%)
+  ▶  5. NGÀY WEBINAR (LIVE),,,,,,,,,,,
+1,Vào phòng sớm 30 phút để setup,"Host và speakers vào phòng trước 30 phút: test âm thanh, slide share, waiting room, confirm recording đang bật",,,H-30 phút,H-5 phút,Chưa bắt đầu,Cao,,,BẮT ĐẦU RECORD từ đầu
+2,Mở cửa waiting room & welcome music/slide,"Attendees vào waiting room thấy slide countdown/agenda, nhạc nền nhẹ. Host chat chào hỏi trực tiếp trong chat",,,H-10 phút,H giờ,Chưa bắt đầu,Cao,,,
+3,Vận hành chương trình theo script,Host dẫn dắt theo script: intro → content → demo → Q&A → CTA → closing. Một người theo dõi chat & Q&A song song,,,H giờ,Kết thúc,Chưa bắt đầu,Cao,,,"Chat monitor: 1 người riêng theo dõi câu hỏi, upvote, rep câu hỏi hay cho speaker"
+4,Kích hoạt poll trong webinar,"Launch poll đúng thời điểm đã chuẩn bị, chia sẻ kết quả với audience để tạo engagement",,,Trong webinar,Trong webinar,Chưa bắt đầu,Trung bình,,,
+5,Q&A session,"Host filter câu hỏi từ Q&A box, đọc cho speaker trả lời. Dùng seed questions nếu ít câu hỏi. Ghi lại câu hỏi không kịp trả lời",,,Trong webinar,Kết thúc,Chưa bắt đầu,Cao,,,
+6,CTA & closing rõ ràng,"Trước khi kết thúc: đưa ra CTA cụ thể (book demo / download tài liệu / liên hệ Sales), hiển thị QR/link, thông báo sẽ gửi recording",,,5 phút cuối,Kết thúc,Chưa bắt đầu,Cao,,,"CTA phải rõ ràng, 1 hành động duy nhất"
+7,Gửi exit survey ngay khi kết thúc,Gửi link survey qua chat/email ngay khi webinar vừa kết thúc (khi impression còn cao),,,Kết thúc,H+5 phút,Chưa bắt đầu,Cao,"Google Form survey, QR code",,Target: >40% response rate
+  ▶  6. POST-WEBINAR & LEAD NURTURE,,,,,,,,,,,
+1,Edit & upload recording,"Chỉnh sửa video: cắt phần chờ đầu/cuối, thêm intro/outro branded, upload lên YouTube (unlisted) hoặc Drive",,,T+1 ngày,T+3 ngày,Chưa bắt đầu,Cao,"Raw recording, intro/outro file",,
+2,Gửi email follow-up cho toàn bộ registrants,Email riêng cho: (1) Attended — cảm ơn + recording + slide + CTA. (2) Registered but missed — 'Sorry bạn không tham dự được' + recording,,,T+1 ngày,T+2 ngày,Chưa bắt đầu,Cao,"Email template x2, recording link, slide",,Segment riêng attended vs no-show
+3,Tổng hợp & phân loại leads,"Export attendee list + registration data. Phân loại: Hot (đặt câu hỏi/click CTA), Warm (attend đủ >75%), Cold (no-show). Tag trong CRM",,,T+1 ngày,T+3 ngày,Chưa bắt đầu,Cao,"Export từ platform, CRM",,
+4,Sales follow-up hot leads trong 24-48h,"Sales liên hệ ngay hot leads: gọi điện hoặc LinkedIn message cá nhân hóa, đề xuất demo/meeting",,,T+1 ngày,T+2 ngày,Chưa bắt đầu,Cao,"Danh sách hot leads, message template",,24h đầu = golden window
+5,Đăng content recap lên LinkedIn & website,"Post recap highlights, key takeaways, ảnh màn hình webinar, link recording. Tái sử dụng content: quote, infographic từ nội dung webinar",,,T+2 ngày,T+5 ngày,Chưa bắt đầu,Trung bình,"Ảnh/video clip, key quotes",,
+6,Setup email nurture sequence cho warm/cold leads,"3-5 email sequence trong 2-3 tuần: thêm giá trị (case study, blog, insight) → dẫn về CTA demo/liên hệ",,,T+3 ngày,T+7 ngày,Chưa bắt đầu,Cao,"Email nurture sequence, CRM",,
+7,Báo cáo tổng kết & tối ưu,"Report đầy đủ: registrants, show-up rate, engagement score, leads phân loại, pipeline generated, chi phí, ROI, bài học cho lần sau",,,T+7 ngày,T+14 ngày,Chưa bắt đầu,Cao,"Report template, data platform",,"Benchmark: show-up rate >35%, satisfaction >4/5"

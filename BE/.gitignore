@@ -1,0 +1,68 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Prisma migrations are ignored historically; keep the Events migration with this feature.
+prisma/migrations/*
+!prisma/migrations/20260807190000_add_events/
+!prisma/migrations/20260807190000_add_events/migration.sql
+!prisma/migrations/20260904160000_add_project_daily_actual/
+!prisma/migrations/20260904160000_add_project_daily_actual/migration.sql
+!prisma/migrations/20260906000000_add_expense_plans_and_line_status/
+!prisma/migrations/20260906000000_add_expense_plans_and_line_status/migration.sql
+!prisma/migrations/20260907000000_allow_multiple_expenses_per_period/
+!prisma/migrations/20260907000000_allow_multiple_expenses_per_period/migration.sql
+!prisma/migrations/20260908000000_add_category_id_to_budget_value/
+!prisma/migrations/20260908000000_add_category_id_to_budget_value/migration.sql
+!prisma/migrations/20260908120000_add_project_document_and_sync/
+!prisma/migrations/20260908120000_add_project_document_and_sync/migration.sql
+!prisma/migrations/20260908180000_add_hang_muc_lon_to_expense_line/
+!prisma/migrations/20260908180000_add_hang_muc_lon_to_expense_line/migration.sql
+!prisma/migrations/20260915160000_add_task_subtasks/
+!prisma/migrations/20260915160000_add_task_subtasks/migration.sql
+
+# SQLite / databases
+*.db
+dev.db
+
+# Docker
+docker-compose.override.yml
+
+# Test coverage
+coverage/
+cov/
+*.info
+
+# Uploads
+uploads/
+
+# Scratch & Local temporary / bug report files
+scratch/
+yeu-cau-*.md
+*yeu-cau*.md
+*loi*.md
+*bug*.md
+*REQUIREMENT*.md
+*requirement*.md
+

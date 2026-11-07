@@ -1,0 +1,1332 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Member {
+  id                     String            @id @default(uuid())
+  memberId               Int               @unique @default(0)
+  name                   String
+  email                  String            @unique
+  passwordHash           String
+  role                   String            @default("specialist")
+  avatarUrl              String?
+  isActive               Boolean           @default(true)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  auditLogs              AuditLog[]
+  createdBackups         BackupLog[]
+  createdDeals           ClosedDeal[]
+  createdExpenses        ExpenseRecord[]
+  createdImports         ImportLog[]
+  createdKpiActuals      KpiActual[]
+  createdKpiPlans        KpiPlan[]
+  createdMonthlyKpiPlans KpiMonthlyPlan[]
+  createdOpps            Opportunity[]
+  createdProjectsCreator Project[]         @relation("ProjectCreator")
+  createdProjects        Project[]
+  createdSystemConfigs   SystemConfig[]
+  ownedTasks             Task[]
+  archivedProjects       Project[]         @relation("ProjectArchiver")
+  archivedTasks          Task[]            @relation("TaskArchiver")
+  archivedOpps           Opportunity[]     @relation("OppArchiver")
+  archivedDeals          ClosedDeal[]      @relation("DealArchiver")
+  archivedExpenses       ExpenseRecord[]   @relation("ExpenseArchiver")
+  createdWeeklyLogs      WeeklyReportLog[]
+  createdDailyActuals    ProjectDailyActual[]
+  uploadedDocuments      ProjectDocument[] @relation("DocumentUploader")
+  archivedDocuments      ProjectDocument[] @relation("DocumentArchiver")
+  createdAnnualExpensePlans AnnualExpensePlan[]
+  expenseAuditLogs       ExpenseAuditLog[]
+  taskStakeholders       TaskStakeholder[]
+  receivedNotifications  Notification[]    @relation("RecipientNotifications")
+  actedNotifications     Notification[]    @relation("ActorNotifications")
+}
+
+model DropdownConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  label     String
+  values    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DropdownOption {
+  id              String   @id @default(uuid())
+  dropdownKey     String
+  label           String
+  normalizedLabel String
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([dropdownKey, normalizedLabel])
+  @@index([dropdownKey, isActive])
+}
+
+model Project {
+  id                     String            @id @default(uuid())
+  name                   String
+  type                   String
+  status                 String            @default("Planning")
+  ownerId                String
+  event                  String?
+  deadline               DateTime?
+  budgetPlanDirect       Decimal?
+  budgetPlanOverhead     Decimal?
+  actualCostDirect       Decimal?
+  actualCostOverhead     Decimal?
+  kpiRawLeadsPlan        Decimal?
+  kpiMqlPlan             Decimal?
+  kpiSqlPlan             Decimal?
+  kpiOppPlan             Decimal?
+  kpiClosedDealPlan      Decimal?
+  kpiPipelineValuePlan   Decimal?
+  kpiRawLeadsActual      Decimal?
+  kpiMqlActual           Decimal?
+  kpiSqlActual           Decimal?
+  kpiOppActual           Decimal?
+  kpiClosedDealActual    Decimal?
+  kpiPipelineValueActual Decimal?
+  budgetDirectNotes      String?
+  budgetOverheadNotes    String?
+  actualDirectNotes      String?
+  actualOverheadNotes    String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  createdBy              String?
+  archivedAt             DateTime?
+  archivedBy             String?
+  cancelledAt            DateTime?
+  isLeadSource           Boolean           @default(false)
+  closedDeals            ClosedDeal[]
+  expenseRecords         ExpenseRecord[]
+  events                 Event[]
+  kpiDistributions       KpiDistribution[]
+  opportunities          Opportunity[]
+  documents              ProjectDocument[]
+  dailyActuals           ProjectDailyActual[]
+  inventoryTransactions  InventoryTransaction[]
+  createdByMember        Member?           @relation("ProjectCreator", fields: [createdBy], references: [id])
+  archivedByMember       Member?           @relation("ProjectArchiver", fields: [archivedBy], references: [id])
+  owner                  Member            @relation(fields: [ownerId], references: [id])
+  budgetValues           BudgetValue[]
+  tasks                  Task[]
+  expensePlan            ProjectExpensePlan?
+  notifications          Notification[]
+
+  @@index([status])
+  @@index([ownerId])
+}
+
+model ProjectDocument {
+  id          String    @id @default(uuid())
+  projectId   String
+  name        String
+  size        Int
+  mimeType    String?
+  category    String    @default("hoso")
+  filePath    String
+  url         String?
+  uploadedBy  String?
+  uploadedAt  DateTime  @default(now())
+  archivedAt  DateTime?
+  archivedBy  String?
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploader    Member?   @relation("DocumentUploader", fields: [uploadedBy], references: [id])
+  archiver    Member?   @relation("DocumentArchiver", fields: [archivedBy], references: [id])
+
+  @@index([projectId, archivedAt])
+}
+
+model Event {
+  id          String    @id @default(uuid())
+  projectId   String
+  week        Int
+  year        Int
+  name        String
+  date        DateTime  @db.Date
+  description String?
+  rawLeads    Int       @default(0)
+  mql         Int       @default(0)
+  sql         Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  archivedAt  DateTime?
+  project     Project   @relation(fields: [projectId], references: [id])
+
+  @@index([projectId, year, week, archivedAt])
+}
+
+model Task {
+  id               String    @id @default(uuid())
+  name             String
+  description      String?
+  projectId        String
+  assigneeId       String
+  stakeholders     String?
+  subtasks         String?
+  status           String    @default("Planning")
+  priority         String    @default("Medium")
+  startDate        DateTime?
+  dueDate          DateTime
+  completedDate    DateTime?
+  execWeek         Int
+  execYear         Int
+  reason           String?
+  neededSupportBod String?
+  link             String?
+  remark           String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
+  archivedBy       String?
+  assignee         Member    @relation(fields: [assigneeId], references: [id])
+  archivedByMember Member?   @relation("TaskArchiver", fields: [archivedBy], references: [id])
+  project          Project   @relation(fields: [projectId], references: [id])
+  stakeholderMembers TaskStakeholder[]
+  notifications      Notification[]
+
+  @@index([projectId, status])
+  @@index([assigneeId])
+  @@index([execYear, execWeek])
+  @@index([dueDate])
+}
+
+model KpiPlan {
+  id                   String   @id @default(uuid())
+  year                 Int      @unique
+  totalRawLeads        Int
+  targetMql            Int
+  targetSql            Int
+  targetOpp            Int
+  targetClosedDeal     Int
+  targetPipelineVal    Decimal
+  targetWonVal         Decimal
+  targetBudgetDirect   Decimal?
+  targetBudgetOverhead Decimal?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  createdById          String
+  createdBy            Member   @relation(fields: [createdById], references: [id])
+}
+
+model KpiMonthlyPlan {
+  id            String   @id @default(uuid())
+  year          Int
+  month         Int
+  rawLeads      Int      @default(0)
+  mql           Int      @default(0)
+  sql           Int      @default(0)
+  oppCount      Int      @default(0)
+  closedCount   Int      @default(0)
+  pipelineValue Decimal  @default(0)
+  wonValue      Decimal  @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String?
+  createdBy     Member?  @relation(fields: [createdById], references: [id])
+
+  @@unique([year, month])
+  @@index([year])
+}
+
+model KpiActual {
+  id             String   @id @default(uuid())
+  year           Int
+  week           Int
+  rawLeads       Int      @default(0)
+  mql            Int      @default(0)
+  sql            Int      @default(0)
+  oppCount       Int      @default(0)
+  closedCount    Int      @default(0)
+  planRawLeads   Int
+  planMql        Int
+  planSql        Int
+  planOpp        Int
+  planClosedDeal Int
+  rolloverLeads  Int      @default(0)
+  rolloverMql    Int      @default(0)
+  rolloverSql    Int      @default(0)
+  rolloverOpp    Int      @default(0)
+  rolloverClosed Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String
+  createdBy      Member   @relation(fields: [createdById], references: [id])
+
+  @@unique([year, week])
+}
+
+model KpiDistribution {
+  id            String   @id @default(uuid())
+  year          Int
+  week          Int
+  projectId     String
+  type          String
+  rawLeads      Int      @default(0)
+  mql           Int      @default(0)
+  sql           Int      @default(0)
+  oppCount      Int      @default(0)
+  closedCount   Int      @default(0)
+  pipelineValue Decimal  @default(0)
+  wonValue      Decimal  @default(0)
+  createdAt     DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id])
+
+  @@unique([year, week, projectId, type])
+}
+
+model ProjectDailyActual {
+  id          String    @id @default(uuid())
+  projectId   String
+  actualDate  DateTime  @db.Date
+  rawLeads    Int       @default(0)
+  mql         Int       @default(0)
+  sql         Int       @default(0)
+  opp         Int       @default(0)
+  closedDeal  Int       @default(0)
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  archivedAt  DateTime?
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy   Member?   @relation(fields: [createdById], references: [id])
+
+  @@unique([projectId, actualDate])
+  @@index([projectId, actualDate, archivedAt])
+  @@index([actualDate])
+}
+
+model Opportunity {
+  id                String      @id @default(uuid())
+  companyName       String
+  size              String
+  projectId         String?
+  contractName      String?
+  setupFee          Decimal
+  monthlyFee        Decimal
+  expectedCloseDate DateTime?
+  initiationDate    DateTime?   @db.Date
+  status            String      @default("active")
+  wonDate           DateTime?
+  year              Int
+  week              Int
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  archivedAt        DateTime?
+  archivedBy        String?
+  createdById       String
+  closedDeal        ClosedDeal?
+  createdBy         Member      @relation(fields: [createdById], references: [id])
+  archivedByMember  Member?     @relation("OppArchiver", fields: [archivedBy], references: [id])
+  project           Project?    @relation(fields: [projectId], references: [id])
+
+  @@index([projectId, year, week, archivedAt])
+  @@index([status, archivedAt])
+}
+
+model ClosedDeal {
+  id               String       @id @default(uuid())
+  companyName      String
+  size             String
+  projectId        String?
+  contractName     String?
+  setupFee         Decimal
+  monthlyFee       Decimal
+  closedDate       DateTime
+  initiationDate   DateTime?    @db.Date
+  year             Int
+  week             Int
+  opportunityId    String?      @unique
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  archivedAt       DateTime?
+  archivedBy       String?
+  createdById      String
+  createdBy        Member       @relation(fields: [createdById], references: [id])
+  archivedByMember Member?      @relation("DealArchiver", fields: [archivedBy], references: [id])
+  opportunity      Opportunity? @relation(fields: [opportunityId], references: [id])
+  project          Project?     @relation(fields: [projectId], references: [id])
+}
+
+model ExpenseRecord {
+  id               String        @id @default(uuid())
+  projectId        String
+  month            Int
+  year             Int
+  recognizedDate   DateTime?     @db.Date
+  status           String        @default("draft")
+  directCost       Decimal       @default(0)
+  directNotes      String?
+  overheadCost     Decimal       @default(0)
+  overheadNotes    String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  archivedAt       DateTime?
+  archivedBy       String?
+  createdById      String
+  createdBy        Member        @relation(fields: [createdById], references: [id])
+  archivedByMember Member?       @relation("ExpenseArchiver", fields: [archivedBy], references: [id])
+  project          Project       @relation(fields: [projectId], references: [id])
+  lines            ExpenseLine[]
+  auditLogs        ExpenseAuditLog[]
+
+  @@index([projectId, month, year, archivedAt])
+  @@index([projectId, recognizedDate, archivedAt])
+  @@index([recognizedDate])
+}
+
+model ExpenseLine {
+  id                         String         @id @default(uuid())
+  expenseId                  String
+  name                       String
+  hangMucLon                 String?
+  plannedAmount              Decimal?       @default(0)
+  actualUnitPrice            Decimal        @default(0)
+  quantity                   Int            @default(1)
+  note                       String?
+  sortOrder                  Int            @default(0)
+  attachmentPath             String?
+  attachmentName             String?
+  attachmentMime             String?
+  attachmentUrl              String?
+  categoryId                 String?
+  inventoryItemId            String?
+  plannedQuantity            Int            @default(0)
+  actualQuantity             Int            @default(0)
+  deductedQuantity           Int            @default(0)
+  stockTransactionId         String?
+  unitPriceBeforeVatSnapshot Decimal?
+  vatRateSnapshot            Decimal?
+  unitPriceAfterVatSnapshot  Decimal?
+  isCustom                   Boolean        @default(false)
+  status                     String         @default("draft")
+  recognizedDate             DateTime?      @db.Date
+  isUnplanned                Boolean        @default(false)
+  unplannedItemName          String?
+  supplier                   String?
+  projectExpenseItemId       String?
+  annualExpenseItemId        String?
+  cancelledAt                DateTime?
+  cancelledBy                String?
+  cancelledReason            String?
+  confirmedAt                DateTime?
+  confirmedBy                String?
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
+  archivedAt                 DateTime?
+  archivedBy                 String?
+  expense                    ExpenseRecord  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  inventoryItem              InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  attachments                ExpenseLineAttachment[]
+
+  @@index([expenseId, archivedAt])
+  @@index([inventoryItemId])
+}
+
+/// Files of an expense line (BE_requirement_29_09_26 §1). Re-attaching a file to the line of a newer
+/// snapshot creates a new row pointing to the same stored file (the file itself is never copied).
+model ExpenseLineAttachment {
+  id               String      @id @default(uuid())
+  lineId           String
+  name             String
+  size             Int         @default(0)
+  mimeType         String?
+  filePath         String
+  /// set when the file comes from a project document (FE workaround `attachmentName = "docs:<id>,..."`)
+  sourceDocumentId String?
+  uploadedBy       String?
+  uploadedAt       DateTime    @default(now())
+  archivedAt       DateTime?
+  line             ExpenseLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+
+  @@index([lineId, archivedAt])
+}
+
+model ExpenseAuditLog {
+  id          String        @id @default(uuid())
+  expenseId   String        @map("expense_id")
+  action      String        // 'created' | 'updated'
+  changedBy   String?       @map("changed_by")
+  at          DateTime      @default(now())
+  expenseDate DateTime?     @map("expense_date") @db.Date
+  snapshot    Json          @db.JsonB
+
+  expense     ExpenseRecord @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user        Member?       @relation(fields: [changedBy], references: [id])
+
+  @@map("expense_audit_logs")
+  @@index([expenseId, at])
+}
+
+model ExpenseIdempotencyRecord {
+  id             String   @id @default(uuid())
+  scopeKey       String   @unique
+  userId         String?
+  expenseId      String?
+  idempotencyKey String
+  statusCode     Int      @default(201)
+  responseBody   Json?    @db.JsonB
+  lineId         String?
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  @@index([expiresAt])
+}
+
+model SystemConfig {
+  id            String   @id @default(uuid())
+  key           String
+  periodType    String
+  year          Int
+  periodValue   Int?
+  value         Decimal
+  effectiveFrom DateTime
+  notes         String?
+  createdAt     DateTime @default(now())
+  createdById   String
+  createdBy     Member   @relation(fields: [createdById], references: [id])
+
+  @@index([key, year, periodType, periodValue, effectiveFrom])
+}
+
+model WeeklyReportLog {
+  id           String   @id @default(uuid())
+  year         Int
+  week         Int
+  projectId    String?
+  memberId     String?
+  doneNotes    String?
+  planNotes    String?
+  backlogNotes String?
+  bodNotes     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+  createdBy    Member   @relation(fields: [createdById], references: [id])
+
+  @@index([year, week, projectId, memberId])
+}
+
+model SlackConfig {
+  id                   String   @id @default(uuid())
+  webhookUrl           String
+  channel              String
+  notificationsEnabled Boolean  @default(true)
+  sendTime             String   @default("08:00")
+  sendDays             String
+  alertDaysBefore      Int      @default(5)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model NotificationLog {
+  id            String   @id @default(uuid())
+  sentAt        DateTime
+  overdueCount  Int      @default(0)
+  upcomingCount Int      @default(0)
+  status        String
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+}
+
+model ImportLog {
+  id           String   @id @default(uuid())
+  importType   String
+  fileName     String
+  totalRows    Int
+  validRows    Int
+  errorRows    Int
+  errorDetails String?
+  createdAt    DateTime @default(now())
+  createdById  String
+  createdBy    Member   @relation(fields: [createdById], references: [id])
+}
+
+model BackupLog {
+  id          String   @id @default(uuid())
+  fileName    String
+  filePath    String
+  fileSize    BigInt
+  createdAt   DateTime @default(now())
+  createdById String
+  createdBy   Member   @relation(fields: [createdById], references: [id])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String
+  action       String
+  entityType   String
+  entityId     String
+  fieldChanged String?
+  oldValue     String?
+  newValue     String?
+  createdAt    DateTime @default(now())
+  user         Member   @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model InventoryItem {
+  id           String                 @id @default(uuid())
+  /// Unique among non-deleted items only: partial index "InventoryItem_active_code_key"
+  /// created in ensureTables / migration, so codes of deleted items can be reused
+  code         String
+  name         String
+  category     String
+  unit         String
+  image        String?
+  totalStock   Int                    @default(0)
+  avgUnitPrice Decimal                @default(0)
+  status       String                 @default("instock")
+  minThreshold Int?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  archivedAt   DateTime?
+  batches      InventoryBatch[]
+  transactions InventoryTransaction[]
+  expenseLines ExpenseLine[]
+
+  @@index([category, status])
+  @@index([archivedAt])
+  @@index([code])
+}
+
+model InventoryBatch {
+  id                 String                 @id @default(uuid())
+  /// Unique among non-deleted batches only (trim + case-insensitive): partial index
+  /// "InventoryBatch_active_batchCode_key" created in ensureTables / migration
+  batchCode          String
+  itemId             String
+  receivedDate       DateTime               @db.Date
+  quantityIn         Int
+  unitPrice          Decimal
+  unitPriceBeforeVat Decimal                @default(0)
+  vatRate            Decimal                @default(0)
+  unitPriceAfterVat  Decimal                @default(0)
+  supplier           String?
+  contractCode       String?
+  currentStock       Int
+  note               String?
+  // Optional direct link to a level-1 budget category (costs not attributable to a project)
+  expenseCategoryId   String?
+  expenseCategoryName String?
+  status             String                 @default("active")
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  archivedAt         DateTime?
+  item               InventoryItem          @relation(fields: [itemId], references: [id])
+  transactions       InventoryTransaction[]
+  attachments        InventoryBatchAttachment[]
+
+  @@index([itemId, status])
+  @@index([archivedAt])
+  @@index([expenseCategoryId])
+  @@index([batchCode])
+}
+
+model InventoryBatchAttachment {
+  id         String         @id @default(uuid())
+  batchId    String
+  name       String
+  size       Int
+  mimeType   String?
+  filePath   String
+  uploadedBy String?
+  uploadedAt DateTime       @default(now())
+  archivedAt DateTime?
+  batch      InventoryBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId, archivedAt])
+}
+
+model InventoryTransaction {
+  id                 String          @id @default(uuid())
+  itemId             String
+  batchId            String?
+  expenseLineId      String?
+  projectId          String?
+  type               String
+  quantity           Int
+  unitPrice          Decimal?
+  unitPriceBeforeVat Decimal?
+  vatRate            Decimal?
+  unitPriceAfterVat  Decimal?
+  note               String?
+  createdAt          DateTime        @default(now())
+  item               InventoryItem   @relation(fields: [itemId], references: [id])
+  batch              InventoryBatch? @relation(fields: [batchId], references: [id])
+  project            Project?        @relation(fields: [projectId], references: [id])
+
+  @@index([itemId, type])
+  @@index([expenseLineId])
+  @@index([batchId])
+  @@index([projectId])
+}
+
+enum member_role {
+  admin
+  manager
+  specialist
+}
+
+model BudgetCategory {
+  id            String              @id @default(uuid())
+  name          String
+  percent       Decimal             @default(0) @db.Decimal(5, 2)
+  sortOrder     Int                 @default(0)
+  year          Int
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  archivedAt    DateTime?
+  subcategories BudgetSubcategory[]
+  values        BudgetValue[]
+
+  @@index([year, archivedAt])
+}
+
+model BudgetSubcategory {
+  id            String          @id @default(uuid())
+  categoryId    String
+  name          String
+  totalName     String?
+  backupPercent Decimal?        @default(0) @db.Decimal(5, 2)
+  sortOrder     Int             @default(0)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  archivedAt    DateTime?
+  category      BudgetCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  items         BudgetItem[]
+  values        BudgetValue[]
+
+  @@index([categoryId, archivedAt])
+}
+
+model BudgetItem {
+  id            String            @id @default(uuid())
+  subcategoryId String
+  name          String
+  subCount      Int?
+  sortOrder     Int               @default(0)
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  archivedAt    DateTime?
+  subcategory   BudgetSubcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  values        BudgetValue[]
+
+  @@index([subcategoryId, archivedAt])
+}
+
+model BudgetValue {
+  id            String             @id @default(uuid())
+  categoryId    String?
+  itemId        String?
+  subcategoryId String?
+  projectId     String?
+  isBackup      Boolean            @default(false)
+  year          Int
+  month         Int
+  amount        Decimal            @default(0) @db.Decimal(15, 2)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  category      BudgetCategory?    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  item          BudgetItem?        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  subcategory   BudgetSubcategory? @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  project       Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId, year, month])
+  @@index([itemId, year, month])
+  @@index([subcategoryId, isBackup, year, month])
+  @@index([year, month])
+  @@index([projectId])
+}
+
+model AnnualExpensePlan {
+  id                String                  @id @default(uuid())
+  year              Int
+  version           Int
+  name              String
+  status            String                  @default("draft") // draft, active, archived
+  totalPlan         Decimal                 @default(0) @db.Decimal(15, 2)
+  activatedAt       DateTime?
+  replacedByVersion Int?
+  createdById       String
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  items             AnnualExpensePlanItem[]
+  createdBy         Member                  @relation(fields: [createdById], references: [id])
+
+  @@unique([year, version])
+  @@index([year, status])
+}
+
+model AnnualExpensePlanItem {
+  id        String                  @id @default(uuid())
+  planId    String
+  level     Int                     // 1 = L1, 2 = L2, 3 = detail
+  parentId  String?
+  name      String
+  sortOrder Int                     @default(0)
+  amount    Decimal?                @default(0) @db.Decimal(15, 2)
+  isActive  Boolean                 @default(true)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  plan      AnnualExpensePlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  parent    AnnualExpensePlanItem?  @relation("AnnualPlanItemHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  AnnualExpensePlanItem[] @relation("AnnualPlanItemHierarchy")
+
+  @@index([planId, level])
+  @@index([parentId])
+}
+
+model ProjectExpensePlan {
+  id        String                   @id @default(uuid())
+  projectId String                   @unique
+  year      Int
+  totalPlan Decimal                  @default(0) @db.Decimal(15, 2)
+  note      String?
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+  project   Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items     ProjectExpensePlanItem[]
+
+  @@index([projectId, year])
+}
+
+model ProjectExpensePlanItem {
+  id         String             @id @default(uuid())
+  planId     String
+  source     String             @default("custom") // template, custom
+  templateId String?
+  name       String
+  planAmount Decimal            @default(0) @db.Decimal(15, 2)
+  note       String?
+  sortOrder  Int                @default(0)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  plan       ProjectExpensePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+}
+
+model ChecklistTemplate {
+  id             String   @id @default(uuid())
+  key            String   @unique
+  name           String
+  appliesToTypes String[]
+  leadTimeDays   Int      @default(30)
+  tasks          Json     @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ChecklistStakeholderOption {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  label     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskStakeholder {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      Member   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+  @@map("task_stakeholders")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  actorId   String?
+  type      String
+  taskId    String?
+  projectId String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      Member   @relation("RecipientNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  actor     Member?  @relation("ActorNotifications", fields: [actorId], references: [id], onDelete: SetNull)
+  task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@index([taskId])
+  @@map("notifications")
+}
+
+/// Per-account module permission matrix (BE_requirement_29_09_26 §2), a single row "default".
+/// matrix = { [userId]: { [module]: 'none' | 'view' | 'edit' } }, only cells set explicitly.
+model PermissionMatrix {
+  id        String   @id
+  matrix    Json     @default("{}")
+  updatedAt DateTime @default(now())
+  updatedBy String?
+}
+
+/// One-time data fixes applied at boot (see PrismaService.applyOneTimeDataFixes).
+/// details = { ids, undoSql } to review / revert a fix.
+model DataFixLog {
+  id           String   @id
+  appliedAt    DateTime @default(now())
+  affectedRows Int      @default(0)
+  details      Json?
+}
+
+
+/// BE_requirement_24_10_26 §1 & 05-backend-anonymous-tracking §4.2: Tracking sites for Anonymous Profiles (BDD-02)
+model TrackingSite {
+  id             String    @id @default(uuid())
+  siteId         String    @unique
+  name           String
+  domain         String
+  trackingKey    String    @unique
+  serverKey      String?
+  serverKeyHash  String?
+  allowedOrigins Json      @default("[]")
+  retentionDays  Int       @default(365)
+  internalCidrs  Json      @default("[]")
+  timezone       String    @default("Asia/Ho_Chi_Minh")
+  isActive       Boolean   @default(true)
+  eventsCount    Int       @default(0)
+  profilesCount  Int       @default(0)
+  lastPingAt     DateTime?
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([domain])
+  @@index([isActive])
+}
+
+/// BE_requirement_24_10_26 §1 & 05-backend-anonymous-tracking §4: Anonymous Profiles (BDD-02)
+model AnonymousProfile {
+  id                String    @id @default(uuid())
+  anonymousId       String    @unique
+  cookieId          String
+  deviceId          String
+  externalUserId    String?
+  ip                String
+  trackingKey       String?
+  siteId            String?
+  siteName          String?
+  domain            String?
+  status            String    @default("active")
+  userType          String    @default("new")
+  engaged           Boolean   @default(false)
+  score             Int       @default(0)
+  tier              String    @default("Cold")
+  firstSeenAt       DateTime  @default(now())
+  lastSeenAt        DateTime  @default(now())
+  visitCount        Int       @default(1)
+  pageViews         Int       @default(1)
+  totalDurationSec  Int       @default(0)
+  device            String    @default("Desktop")
+  os                String?
+  browser           String?
+  city              String?
+  isp               String?
+  utmSource         String?
+  utmMedium         String?
+  utmCampaign       String?
+  firstTouch        Json?
+  lastTouch         Json?
+  topPages          Json      @default("[]")
+  events            Json      @default("[]")
+  suspectedCompany  String?
+  companyConfidence Int?
+  ipClusterId       String?
+  hasConflict       Boolean   @default(false)
+  conflictId        String?
+  convertedLeadId   String?
+  convertedAt       DateTime?
+  identifiedPhone   String?
+  identifiedName    String?
+  identifiedCompany String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status, tier])
+  @@index([siteId])
+  @@index([ipClusterId])
+  @@index([hasConflict])
+}
+
+/// BE_requirement_24_10_26 §1 & 05-backend-anonymous-tracking §4.10: Identity Conflicts
+model AnonymousConflict {
+  id               String    @id @default(uuid())
+  code             String    @unique
+  keyType          String
+  keyValue         String
+  status           String    @default("pending")
+  severity         String    @default("high")
+  reason           String
+  phones           Json      @default("[]")
+  profiles         Json      @default("[]")
+  primaryProfileId String?
+  moveKey          String?
+  resolutionAction String?
+  resolutionNote   String?
+  undoPayload      Json?
+  lastReviewedAt   DateTime?
+  resolvedBy       String?
+  resolvedByName   String?
+  detectedAt       DateTime  @default(now())
+  slaDueAt         DateTime
+  resolvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status])
+  @@index([keyType])
+}
+
+/// BE_requirement_24_10_26 §1: IP Clusters
+model IpCluster {
+  id               String    @id @default(uuid())
+  code             String    @unique
+  ipRange          String
+  isp              String?
+  orgName          String?
+  suspectedCompany String
+  companyCode      String?
+  city             String?
+  profileCount     Int       @default(0)
+  totalVisits      Int       @default(0)
+  confidence       Int       @default(80)
+  status           String    @default("pending")
+  profiles         Json      @default("[]")
+  note             String?
+  updatedBy        String?
+  updatedByName    String?
+  detectedAt       DateTime  @default(now())
+  confirmedAt      DateTime?
+  rejectedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status])
+  @@index([companyCode])
+}
+
+/// BE_requirement_24_10_26 §3: Company Master
+model CompanyMaster {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  name           String
+  aliases        Json     @default("[]")
+  taxCode        String?
+  domain         String?
+  website        String?
+  industry       String?
+  city           String?
+  address        String?
+  size           String   @default("SME")
+  leadCount      Int      @default(0)
+  mqlCount       Int      @default(0)
+  sqlCount       Int      @default(0)
+  oppCount       Int      @default(0)
+  pipelineValue  Decimal  @default(0) @db.Decimal(15, 2)
+  wonCount       Int      @default(0)
+  wonValue       Decimal  @default(0) @db.Decimal(15, 2)
+  status         String   @default("active")
+  mergedIntoCode String?
+  note           String?
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+  @@index([domain])
+  @@index([taxCode])
+  @@index([industry, city])
+}
+
+/// BE_requirement_24_10_26 §2: Identified Profiles 360 / Leads (BDD-03)
+model IdentifiedLead {
+  id               String    @id @default(uuid())
+  code             String    @unique
+  anonymousId      String?
+  name             String
+  phone            String
+  email            String?
+  title            String?
+  companyName      String?
+  companyCode      String?
+  taxCode          String?
+  domain           String?
+  industry         String?
+  companySize      String?
+  city             String?
+  funnelStage      String    @default("Raw Lead")
+  score            Int       @default(0)
+  demographicScore Int       @default(0)
+  behaviorScore    Int       @default(0)
+  tier             String    @default("Cold")
+  ownerId          String?
+  ownerName        String?
+  salesId          String?
+  salesName        String?
+  projectId        String?
+  projectName      String?
+  source           String?
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  isReturn         Boolean   @default(false)
+  silentDays       Int       @default(0)
+  returnedAt       DateTime?
+  returnTrigger    String?
+  lastActivityAt   DateTime  @default(now())
+  hasMissingData   Boolean   @default(false)
+  missingFields    Json      @default("[]")
+  handoverScore    Int?
+  handoverTier     String?
+  handoverAt       DateTime?
+  handoverBy       String?
+  handoverNote     String?
+  handoverSnapshot Json?
+  journey          Json      @default("[]")
+  scoreHistory     Json      @default("[]")
+  ip               String?
+  cookieId         String?
+  deviceId         String?
+  trackingKey      String?
+  tags             Json      @default("[]")
+  note             String?
+  mergedIntoId     String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([funnelStage, tier])
+  @@index([companyCode])
+  @@index([ownerId])
+  @@index([salesId])
+  @@index([projectId])
+  @@index([isReturn])
+  @@index([hasMissingData])
+}
+
+/// BE_requirement_24_10_26 §4: SLA Queue
+model SlaQueueItem {
+  id             String    @id @default(uuid())
+  code           String    @unique
+  type           String
+  title          String
+  description    String?
+  entityType     String
+  entityId       String
+  entityName     String?
+  priority       String    @default("high")
+  slaHours       Int       @default(24)
+  status         String    @default("pending")
+  assigneeId     String?
+  assigneeName   String?
+  claimedAt      DateTime?
+  dueAt          DateTime
+  lastAlertAt    DateTime?
+  alertCount     Int       @default(0)
+  resolvedAt     DateTime?
+  resolvedBy     String?
+  resolvedByName String?
+  resolution     String?
+  note           String?
+  skippedAt      DateTime?
+  skippedBy      String?
+  skipReason     String?
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, dueAt])
+  @@index([type])
+  @@index([assigneeId])
+}
+
+/// BE_requirement_24_10_26 §1 & §5: Profile & SLA Audit Trail
+model ProfileAuditLog {
+  id         String   @id @default(uuid())
+  module     String
+  action     String
+  entityType String
+  entityId   String
+  actorId    String?
+  actorName  String?
+  beforeData Json?
+  afterData  Json?
+  note       String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([module, createdAt])
+  @@index([entityType, entityId])
+  @@index([action])
+}
+
+
+/// 05-backend-anonymous-tracking §4.3: Profile Identifiers (cookie, device, external_user, phone)
+model ProfileIdentifier {
+  id             String   @id @default(uuid())
+  siteId         String
+  profileId      String
+  keyType        String
+  keyValue       String
+  maskedValue    String?
+  phone          String?
+  firstSeenAt    DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+  conflictLocked Boolean  @default(false)
+
+  @@unique([siteId, keyType, keyValue])
+  @@index([profileId])
+  @@index([siteId, phone])
+}
+
+/// 05-backend-anonymous-tracking §4.4: Tracking Sessions (30m idle window)
+model TrackingSession {
+  id              String    @id @default(uuid())
+  siteId          String
+  profileId       String?
+  clientSessionId String
+  startedAt       DateTime  @default(now())
+  lastActivityAt  DateTime  @default(now())
+  endedAt         DateTime?
+  pageViews       Int       @default(0)
+  durationSec     Int       @default(0)
+  engaged         Boolean   @default(false)
+  converted       Boolean   @default(false)
+  userType        String    @default("new")
+  source          String?
+  medium          String?
+  campaign        String?
+  referrer        String?
+  landingUrl      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([siteId, clientSessionId])
+  @@index([profileId, startedAt])
+  @@index([siteId, lastActivityAt])
+}
+
+/// 05-backend-anonymous-tracking §4.5: Tracking Events (idempotent by eventId)
+model TrackingEvent {
+  id          String   @id @default(uuid())
+  eventId     String   @unique
+  siteId      String
+  profileId   String?
+  sessionId   String?
+  eventType   String
+  occurredAt  DateTime
+  receivedAt  DateTime @default(now())
+  url         String?
+  referrer    String?
+  title       String?
+  utm         Json?
+  metadata    Json?
+  consent     Json?
+  projectCode String?
+  status      String   @default("accepted")
+  dropReason  String?
+  scoreDelta  Int      @default(0)
+  ipHash      String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([siteId, occurredAt])
+  @@index([profileId, occurredAt])
+  @@index([status, occurredAt])
+}
+
+/// 05-backend-anonymous-tracking §4.6: Profile Touchpoints (first/last touch)
+model ProfileTouchpoint {
+  id         String   @id @default(uuid())
+  profileId  String
+  sessionId  String?
+  occurredAt DateTime
+  source     String?
+  medium     String?
+  campaign   String?
+  referrer   String?
+  url        String?
+  isFirst    Boolean  @default(false)
+  isLast     Boolean  @default(false)
+
+  @@index([profileId, occurredAt])
+}
+
+/// 05-backend-anonymous-tracking §4.7: IP Sessions (ANON-013: cookieless / device-less visits)
+model IpSession {
+  id              String   @id @default(uuid())
+  siteId          String
+  ipHash          String
+  clientSessionId String
+  startedAt       DateTime @default(now())
+  lastActivityAt  DateTime @default(now())
+  pageViews       Int      @default(0)
+  engaged         Boolean  @default(false)
+
+  @@unique([siteId, ipHash, clientSessionId])
+  @@index([siteId, lastActivityAt])
+}
+
+/// 05-backend-anonymous-tracking §4.8: Anonymous Alerts (returning visitor >=7d, config warnings)
+model AnonymousAlert {
+  id              String    @id @default(uuid())
+  profileId       String
+  type            String    @default("website_return")
+  status          String    @default("new")
+  severity        String    @default("medium")
+  assigneeId      String?
+  assigneeName    String?
+  scoreAtCreation Int?
+  message         String?
+  note            String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  resolvedAt      DateTime?
+
+  @@index([status, createdAt])
+  @@index([profileId, createdAt])
+}
+
+/// 05-backend-anonymous-tracking §4.9: Landing Page Mappings (landingPageId <-> projectId / eventProjectId)
+model LandingPageMapping {
+  id             String    @id @default(uuid())
+  siteId         String
+  landingPageId  String
+  projectId      String
+  eventProjectId String?
+  startAt        DateTime
+  endAt          DateTime?
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+
+  @@index([siteId, landingPageId, startAt, endAt])
+}

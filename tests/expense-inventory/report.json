@@ -1,7 +1,7 @@
 {
-  "ranAt": "2026-11-03T13:49:14.556Z",
+  "ranAt": "2026-11-07T10:00:45.323Z",
   "apiBase": "https://mkt-hub.onrender.com/api",
-  "run": "MW0QTIQL",
+  "run": "MW68F4ZW",
   "summary": {
     "summary": {
       "manager": {
@@ -36,7 +36,7 @@
           "body": {
             "data": {
               "matrix": {},
-              "updatedAt": "2026-11-03T13:49:14.756Z"
+              "updatedAt": "2026-11-07T10:00:44.710Z"
             }
           }
         }
@@ -65,22 +65,22 @@
       "result": "PASS",
       "note": "line 201; after delete expense stock=100",
       "detail": {
-        "itemId": "e471ac14-0def-4787-8634-8d549b74534c",
-        "expenseId": "bad18cdf-3693-4be6-b71a-1572b9b8b42d",
+        "itemId": "5dbd0047-60f1-4538-9ddc-e6cc731fbfde",
+        "expenseId": "0cc3cb09-c828-4890-ad7f-08df25c04016",
         "lineStatus": 201,
         "lineBody": {
-          "id": "a192bcac-8aa5-46a1-a024-f11c23915719",
-          "expenseId": "bad18cdf-3693-4be6-b71a-1572b9b8b42d",
-          "name": "TEST_QA_T1_manager_MW0QTIQL",
+          "id": "46dbe8ae-8b76-44d8-8dd3-1714ae9aaa8d",
+          "expenseId": "0cc3cb09-c828-4890-ad7f-08df25c04016",
+          "name": "TEST_QA_T1_manager_MW68F4ZW",
           "categoryId": null,
-          "inventoryItemId": "e471ac14-0def-4787-8634-8d549b74534c",
-          "itemId": "e471ac14-0def-4787-8634-8d549b74534c",
+          "inventoryItemId": "5dbd0047-60f1-4538-9ddc-e6cc731fbfde",
+          "itemId": "5dbd0047-60f1-4538-9ddc-e6cc731fbfde",
           "inventoryItem": null,
           "item": null,
           "isCustom": false,
           "status": "draft",
-          "recognizedDate": "2026-11-03",
-          "expenseDate": "2026-11-03",
+          "recognizedDate": "2026-11-07",
+          "expenseDate": "2026-11-07",
           "hangMucLon": "Vật phẩm",
           "categoryName": "Vật phẩm",
           "isUnplanned": false,
@@ -96,7 +96,7 @@
           "plannedQuantity": 0,
           "actualQuantity": 10,
           "deductedQuantity": 10,
-          "stockTransactionId": "c0181b0a-5f19-48e7-beb7-1bf0ee6cce62",
+          "stockTransactionId": "814174de-b2c9-4065-8a10-3522a37f9048",
           "unitPriceBeforeVat": 10000,
           "unitPriceBeforeVatSnapshot": 10000,
           "vatRate": 8,
@@ -117,8 +117,8 @@
           "receiptUrl": null,
           "supplierName": null,
           "url": null,
-          "createdAt": "2026-11-03T13:48:17.346Z",
-          "updatedAt": "2026-11-03T13:48:17.346Z",
+          "createdAt": "2026-11-07T09:59:48.356Z",
+          "updatedAt": "2026-11-07T09:59:48.356Z",
           "archivedAt": null
         },
         "afterDelete": 100
@@ -135,11 +135,11 @@
       "note": "line HTTP 201; stock 100->100 (planned=25, actual=0)",
       "detail": {
         "request": {
-          "name": "TEST_QA_T2_manager_MW0QTIQL",
+          "name": "TEST_QA_T2_manager_MW68F4ZW",
           "hangMucLon": "Vật phẩm",
           "categoryId": null,
-          "expenseDate": "2026-11-03",
-          "inventoryItemId": "5646dcec-4c71-4907-a559-080d4cffa770",
+          "expenseDate": "2026-11-07",
+          "inventoryItemId": "64602150-d597-4f9c-a164-2c447ea019de",
           "isCustom": false,
           "plannedQuantity": 25,
           "actualQuantity": 0,
@@ -151,18 +151,18 @@
         },
         "lineStatus": 201,
         "lineBody": {
-          "id": "fb2d7ade-8675-4870-a961-04bf70dcb6ff",
-          "expenseId": "66225f6c-5937-40a7-82c6-ae350cc44c38",
-          "name": "TEST_QA_T2_manager_MW0QTIQL",
+          "id": "da649b66-7ef1-40e0-9dc0-8dc654a0927f",
+          "expenseId": "7f0d3c94-7bb6-4b26-94ea-ff9879b2c8e2",
+          "name": "TEST_QA_T2_manager_MW68F4ZW",
           "categoryId": null,
-          "inventoryItemId": "5646dcec-4c71-4907-a559-080d4cffa770",
-          "itemId": "5646dcec-4c71-4907-a559-080d4cffa770",
+          "inventoryItemId": "64602150-d597-4f9c-a164-2c447ea019de",
+          "itemId": "64602150-d597-4f9c-a164-2c447ea019de",
           "inventoryItem": null,
           "item": null,
           "isCustom": false,
           "status": "draft",
-          "recognizedDate": "2026-11-03",
-          "expenseDate": "2026-11-03",
+          "recognizedDate": "2026-11-07",
+          "expenseDate": "2026-11-07",
           "hangMucLon": "Vật phẩm",
           "categoryName": "Vật phẩm",
           "isUnplanned": false,
@@ -199,8 +199,8 @@
           "receiptUrl": null,
           "supplierName": null,
           "url": null,
-          "createdAt": "2026-11-03T13:48:18.969Z",
-          "updatedAt": "2026-11-03T13:48:18.969Z",
+          "createdAt": "2026-11-07T09:59:49.779Z",
+          "updatedAt": "2026-11-07T09:59:49.779Z",
           "archivedAt": null
         },
         "transactions": [
@@ -224,11 +224,11 @@
       "detail": {
         "requests": [
           {
-            "name": "TEST_QA_T3_manager_MW0QTIQL",
+            "name": "TEST_QA_T3_manager_MW68F4ZW",
             "hangMucLon": "Vật phẩm",
             "categoryId": null,
-            "expenseDate": "2026-11-03",
-            "inventoryItemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
+            "expenseDate": "2026-11-07",
+            "inventoryItemId": "7d51e56b-b401-4a3b-973d-3f34d82066aa",
             "isCustom": false,
             "plannedQuantity": 0,
             "actualQuantity": 10,
@@ -239,11 +239,11 @@
             "note": "TEST_QA_automated test line"
           },
           {
-            "name": "TEST_QA_T3_manager_MW0QTIQL",
+            "name": "TEST_QA_T3_manager_MW68F4ZW",
             "hangMucLon": "Vật phẩm",
             "categoryId": null,
-            "expenseDate": "2026-11-03",
-            "inventoryItemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
+            "expenseDate": "2026-11-07",
+            "inventoryItemId": "7d51e56b-b401-4a3b-973d-3f34d82066aa",
             "isCustom": false,
             "plannedQuantity": 0,
             "actualQuantity": 5,
@@ -257,18 +257,18 @@
         "line1": {
           "status": 201,
           "body": {
-            "id": "1746321d-c7ef-4fa6-8194-151d48117fb0",
-            "expenseId": "4b3fe9f3-03b0-45d7-b3b1-e7cf2f965b4e",
-            "name": "TEST_QA_T3_manager_MW0QTIQL",
+            "id": "666e9384-2d86-49dc-a274-643fe1c9c231",
+            "expenseId": "0f082c14-827a-40b3-a5af-29da3ca8c8b1",
+            "name": "TEST_QA_T3_manager_MW68F4ZW",
             "categoryId": null,
-            "inventoryItemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
-            "itemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
+            "inventoryItemId": "7d51e56b-b401-4a3b-973d-3f34d82066aa",
+            "itemId": "7d51e56b-b401-4a3b-973d-3f34d82066aa",
             "inventoryItem": null,
             "item": null,
             "isCustom": false,
             "status": "draft",
-            "recognizedDate": "2026-11-03",
-            "expenseDate": "2026-11-03",
+            "recognizedDate": "2026-11-07",
+            "expenseDate": "2026-11-07",
             "hangMucLon": "Vật phẩm",
             "categoryName": "Vật phẩm",
             "isUnplanned": false,
@@ -284,7 +284,7 @@
             "plannedQuantity": 0,
             "actualQuantity": 10,
             "deductedQuantity": 10,
-            "stockTransactionId": "0ea47f9a-5f35-44f1-9865-73d2516af6cb",
+            "stockTransactionId": "2a586965-c88d-43f4-9f43-9121b5b7710a",
             "unitPriceBeforeVat": 10000,
             "unitPriceBeforeVatSnapshot": 10000,
             "vatRate": 8,
@@ -305,26 +305,26 @@
             "receiptUrl": null,
             "supplierName": null,
             "url": null,
-            "createdAt": "2026-11-03T13:48:20.380Z",
-            "updatedAt": "2026-11-03T13:48:20.380Z",
+            "createdAt": "2026-11-07T09:59:51.266Z",
+            "updatedAt": "2026-11-07T09:59:51.266Z",
             "archivedAt": null
           }
         },
         "line2": {
           "status": 201,
           "body": {
-            "id": "0ddb4630-487a-457d-98fd-e227f01263ed",
-            "expenseId": "4b3fe9f3-03b0-45d7-b3b1-e7cf2f965b4e",
-            "name": "TEST_QA_T3_manager_MW0QTIQL",
+            "id": "0fcc59ae-e4b6-41e1-a0e1-08e49dbe07d6",
+            "expenseId": "0f082c14-827a-40b3-a5af-29da3ca8c8b1",
+            "name": "TEST_QA_T3_manager_MW68F4ZW",
             "categoryId": null,
-            "inventoryItemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
-            "itemId": "6ea4cddf-45e4-4bef-a256-0e3db984dc3a",
+            "inventoryItemId": "7d51e56b-b401-4a3b-973d-3f34d82066aa",
+            "itemId": "7d51e56b-b401-4a3b-973d-3f34d82066aa",
             "inventoryItem": null,
             "item": null,
             "isCustom": false,
             "status": "draft",
-            "recognizedDate": "2026-11-03",
-            "expenseDate": "2026-11-03",
+            "recognizedDate": "2026-11-07",
+            "expenseDate": "2026-11-07",
             "hangMucLon": "Vật phẩm",
             "categoryName": "Vật phẩm",
             "isUnplanned": false,
@@ -340,7 +340,7 @@
             "plannedQuantity": 0,
             "actualQuantity": 5,
             "deductedQuantity": 5,
-            "stockTransactionId": "b32bad19-8ca1-4241-ad22-1286f4724bb8",
+            "stockTransactionId": "db77b07f-9a73-485f-8af8-e70bfa4b6d48",
             "unitPriceBeforeVat": 10000,
             "unitPriceBeforeVatSnapshot": 10000,
             "vatRate": 8,
@@ -361,20 +361,20 @@
             "receiptUrl": null,
             "supplierName": null,
             "url": null,
-            "createdAt": "2026-11-03T13:48:21.047Z",
-            "updatedAt": "2026-11-03T13:48:21.047Z",
+            "createdAt": "2026-11-07T09:59:51.860Z",
+            "updatedAt": "2026-11-07T09:59:51.860Z",
             "archivedAt": null
           }
         },
         "mid": 90,
         "lines": [
           {
-            "id": "1746321d-c7ef-4fa6-8194-151d48117fb0",
+            "id": "666e9384-2d86-49dc-a274-643fe1c9c231",
             "plannedQuantity": 0,
             "actualQuantity": 10
           },
           {
-            "id": "0ddb4630-487a-457d-98fd-e227f01263ed",
+            "id": "0fcc59ae-e4b6-41e1-a0e1-08e49dbe07d6",
             "plannedQuantity": 0,
             "actualQuantity": 5
           }
@@ -408,22 +408,22 @@
       "result": "PASS",
       "note": "line 201; after create=90; patch=200",
       "detail": {
-        "lineId": "c8a3d3d1-c6a8-408b-8cff-3543075e3bbb",
+        "lineId": "0282a848-f2bc-42d2-a1d7-c361950925fd",
         "mid": 90,
         "patchStatus": 200,
         "patchBody": {
-          "id": "c8a3d3d1-c6a8-408b-8cff-3543075e3bbb",
-          "expenseId": "073b0f8c-e0cc-4e98-8bbc-1ba7d02d9e5d",
-          "name": "TEST_QA_T4_manager_MW0QTIQL",
+          "id": "0282a848-f2bc-42d2-a1d7-c361950925fd",
+          "expenseId": "93cafa1c-4ffd-4725-8e5e-f346f7f6171b",
+          "name": "TEST_QA_T4_manager_MW68F4ZW",
           "categoryId": null,
-          "inventoryItemId": "613db77f-738e-4599-b72b-e7be27b74a58",
-          "itemId": "613db77f-738e-4599-b72b-e7be27b74a58",
+          "inventoryItemId": "1b941002-2650-4e23-b489-da72cf074db0",
+          "itemId": "1b941002-2650-4e23-b489-da72cf074db0",
           "inventoryItem": null,
           "item": null,
           "isCustom": false,
           "status": "draft",
-          "recognizedDate": "2026-11-03",
-          "expenseDate": "2026-11-03",
+          "recognizedDate": "2026-11-07",
+          "expenseDate": "2026-11-07",
           "hangMucLon": "Vật phẩm",
           "categoryName": "Vật phẩm",
           "isUnplanned": false,
@@ -439,7 +439,7 @@
           "plannedQuantity": 0,
           "actualQuantity": 4,
           "deductedQuantity": 4,
-          "stockTransactionId": "b8d1f441-fb8f-4db9-8637-b7974f97879c",
+          "stockTransactionId": "63e40e7d-b1ed-4a34-9002-0b8ccc2f2850",
           "unitPriceBeforeVat": 10000,
           "unitPriceBeforeVatSnapshot": 10000,
           "vatRate": 8,
@@ -460,8 +460,8 @@
           "receiptUrl": null,
           "supplierName": null,
           "url": null,
-          "createdAt": "2026-11-03T13:48:23.068Z",
-          "updatedAt": "2026-11-03T13:48:23.649Z",
+          "createdAt": "2026-11-07T09:59:54.379Z",
+          "updatedAt": "2026-11-07T09:59:54.877Z",
           "archivedAt": null
         }
       },
@@ -476,22 +476,22 @@
       "result": "PASS",
       "note": "line 201; after create=90; patch0=200",
       "detail": {
-        "lineId": "87ed7209-b9ba-476e-8654-2f83f40d19da",
+        "lineId": "1b2a526f-d37d-4c85-a75a-c18991a3cdb6",
         "mid": 90,
         "patchStatus": 200,
         "patchBody": {
-          "id": "87ed7209-b9ba-476e-8654-2f83f40d19da",
-          "expenseId": "babdadd7-8712-41ca-bf7d-6df773eeaf77",
-          "name": "TEST_QA_T5_manager_MW0QTIQL",
+          "id": "1b2a526f-d37d-4c85-a75a-c18991a3cdb6",
+          "expenseId": "9762b53d-5f1d-48f5-8e36-6688f11e9f6e",
+          "name": "TEST_QA_T5_manager_MW68F4ZW",
           "categoryId": null,
-          "inventoryItemId": "424d498c-e478-4328-b78c-1f160664f0bb",
-          "itemId": "424d498c-e478-4328-b78c-1f160664f0bb",
+          "inventoryItemId": "d68b4cc5-48bf-4088-afa5-8d22b9dbb0cd",
+          "itemId": "d68b4cc5-48bf-4088-afa5-8d22b9dbb0cd",
           "inventoryItem": null,
           "item": null,
           "isCustom": false,
           "status": "draft",
-          "recognizedDate": "2026-11-03",
-          "expenseDate": "2026-11-03",
+          "recognizedDate": "2026-11-07",
+          "expenseDate": "2026-11-07",
           "hangMucLon": "Vật phẩm",
           "categoryName": "Vật phẩm",
           "isUnplanned": false,
@@ -507,7 +507,7 @@
           "plannedQuantity": 0,
           "actualQuantity": 0,
           "deductedQuantity": 0,
-          "stockTransactionId": "d6f3b6fe-1b3e-4f84-ad5b-fcdb4c2569bd",
+          "stockTransactionId": "998749b2-6c6f-4fd3-8f38-89f890a25154",
           "unitPriceBeforeVat": 10000,
           "unitPriceBeforeVatSnapshot": 10000,
           "vatRate": 8,
@@ -528,8 +528,8 @@
           "receiptUrl": null,
           "supplierName": null,
           "url": null,
-          "createdAt": "2026-11-03T13:48:25.682Z",
-          "updatedAt": "2026-11-03T13:48:26.258Z",
+          "createdAt": "2026-11-07T09:59:56.475Z",
+          "updatedAt": "2026-11-07T09:59:56.962Z",
           "archivedAt": null
         }
       },
@@ -544,7 +544,7 @@
       "result": "PASS",
       "note": "line 201; after create=90; delete line=200",
       "detail": {
-        "lineId": "bc588cf0-e815-4e28-942e-c239c164ae88",
+        "lineId": "94c27309-4090-43d8-b61c-a8e692e11389",
         "mid": 90,
         "deleteStatus": 200
       },
@@ -592,11 +592,11 @@
       "note": "negative HTTP 400; stock=100; lineCount=0",
       "detail": {
         "request": {
-          "name": "TEST_QA_T9a_manager_MW0QTIQL",
+          "name": "TEST_QA_T9a_manager_MW68F4ZW",
           "hangMucLon": "Vật phẩm",
           "categoryId": null,
-          "expenseDate": "2026-11-03",
-          "inventoryItemId": "36a37749-bbab-44d9-8b41-4249e0da16c5",
+          "expenseDate": "2026-11-07",
+          "inventoryItemId": "73157814-15cd-4807-80f7-a2d244ef3750",
           "isCustom": false,
           "plannedQuantity": 0,
           "actualQuantity": -5,
@@ -628,11 +628,11 @@
       "note": "actual=0/planned=10 HTTP 201; stock 100->100; lineCount=1",
       "detail": {
         "request": {
-          "name": "TEST_QA_T9b_manager_MW0QTIQL",
+          "name": "TEST_QA_T9b_manager_MW68F4ZW",
           "hangMucLon": "Vật phẩm",
           "categoryId": null,
-          "expenseDate": "2026-11-03",
-          "inventoryItemId": "a1464bca-347d-417c-a76d-ee5a0be39106",
+          "expenseDate": "2026-11-07",
+          "inventoryItemId": "c83b4bff-fda9-406b-b163-dbf929537805",
           "isCustom": false,
           "plannedQuantity": 10,
           "actualQuantity": 0,
@@ -644,18 +644,18 @@
         },
         "lineStatus": 201,
         "lineBody": {
-          "id": "1fd0cd61-a2b8-470c-9a0b-804a4d04ef98",
-          "expenseId": "1ce6755e-957c-4485-9bfd-6321a756061e",
-          "name": "TEST_QA_T9b_manager_MW0QTIQL",
+          "id": "e3e527e3-8bbb-4104-b6f9-471377394ded",
+          "expenseId": "f5f03218-e3dc-4dd4-bd43-d24312d21228",
+          "name": "TEST_QA_T9b_manager_MW68F4ZW",
           "categoryId": null,
-          "inventoryItemId": "a1464bca-347d-417c-a76d-ee5a0be39106",
-          "itemId": "a1464bca-347d-417c-a76d-ee5a0be39106",
+          "inventoryItemId": "c83b4bff-fda9-406b-b163-dbf929537805",
+          "itemId": "c83b4bff-fda9-406b-b163-dbf929537805",
           "inventoryItem": null,
           "item": null,
           "isCustom": false,
           "status": "draft",
-          "recognizedDate": "2026-11-03",
-          "expenseDate": "2026-11-03",
+          "recognizedDate": "2026-11-07",
+          "expenseDate": "2026-11-07",
           "hangMucLon": "Vật phẩm",
           "categoryName": "Vật phẩm",
           "isUnplanned": false,
@@ -692,8 +692,8 @@
           "receiptUrl": null,
           "supplierName": null,
           "url": null,
-          "createdAt": "2026-11-03T13:48:33.809Z",
-          "updatedAt": "2026-11-03T13:48:33.809Z",
+          "createdAt": "2026-11-07T10:00:03.587Z",
+          "updatedAt": "2026-11-07T10:00:03.587Z",
           "archivedAt": null
         },
         "lineCount": 1
@@ -725,11 +725,11 @@
       "note": "HTTP 409; message=Số lượng thực tế (10) vượt tồn kho hiện tại (5); stock 5->5; lineCount=0",
       "detail": {
         "request": {
-          "name": "TEST_QA_T11_manager_MW0QTIQL",
+          "name": "TEST_QA_T11_manager_MW68F4ZW",
           "hangMucLon": "Vật phẩm",
           "categoryId": null,
-          "expenseDate": "2026-11-03",
-          "inventoryItemId": "f0229f59-8ce9-4a3e-846e-1b8b9068fe5d",
+          "expenseDate": "2026-11-07",
+          "inventoryItemId": "b95a51f4-aa02-4f5b-a961-657826d0fee1",
           "isCustom": false,
           "plannedQuantity": 0,
           "actualQuantity": 10,
@@ -774,14 +774,14 @@
         "txStatus": 201,
         "txBody": {
           "data": {
-            "id": "0c536405-96e4-4699-9b56-2faa17c3ae4c",
-            "itemId": "16edcda9-a273-47a7-8856-fb5e82c2b214",
-            "projectId": "e73d7aee-6a03-4fd8-9f6d-33e25c3e63ca",
+            "id": "314a711d-0eb2-47b5-9a15-fa9e0d63fc93",
+            "itemId": "91bfc4e9-1fac-4c12-b024-c27e258bab4b",
+            "projectId": "91427169-9c14-4cc2-8e99-e45f5b0203e5",
             "type": "out",
             "quantity": 5,
-            "date": "2026-11-03",
+            "date": "2026-11-07",
             "note": "TEST_QA_manual stock out",
-            "createdAt": "2026-11-03T00:00:00.000Z"
+            "createdAt": "2026-11-07T00:00:00.000Z"
           }
         },
         "txCount": 2
@@ -797,22 +797,22 @@
       "result": "PASS",
       "note": "line 201; after delete expense stock=100",
       "detail": {
-        "itemId": "8512a268-7527-461f-bd82-09b9a86f481e",
-        "expenseId": "78a074e7-4d3e-42cc-951f-1a82096860ff",
+        "itemId": "c14ec2a2-e91b-4c97-a2a8-8885d8d8fdbf",
+        "expenseId": "51a4a446-05b6-455b-99ea-366d4a969905",
         "lineStatus": 201,
         "lineBody": {
-          "id": "8096631d-5653-4ef5-8ac8-56f86e300be6",
-          "expenseId": "78a074e7-4d3e-42cc-951f-1a82096860ff",
-          "name": "TEST_QA_T1_specialist_MW0QTIQL",
+          "id": "9e8eea93-1473-433a-9add-985f7694b802",
+          "expenseId": "51a4a446-05b6-455b-99ea-366d4a969905",
+          "name": "TEST_QA_T1_specialist_MW68F4ZW",
           "categoryId": null,
-          "inventoryItemId": "8512a268-7527-461f-bd82-09b9a86f481e",
-          "itemId": "8512a268-7527-461f-bd82-09b9a86f481e",
+          "inventoryItemId": "c14ec2a2-e91b-4c97-a2a8-8885d8d8fdbf",
+          "itemId": "c14ec2a2-e91b-4c97-a2a8-8885d8d8fdbf",
           "inventoryItem": null,
           "item": null,
           "isCustom": false,
           "status": "draft",
-          "recognizedDate": "2026-11-03",
-          "expenseDate": "2026-11-03",
+          "recognizedDate": "2026-11-07",
+          "expenseDate": "2026-11-07",
           "hangMucLon": "Vật phẩm",
           "categoryName": "Vật phẩm",
           "isUnplanned": false,
@@ -828,7 +828,7 @@
           "plannedQuantity": 0,
           "actualQuantity": 10,
           "deductedQuantity": 10,
-          "stockTransactionId": "045fc74c-7e31-4965-8b68-cd3348de634e",
+          "stockTransactionId": "9bbebd4f-bd84-42c4-853c-fad36f812dfa",
           "unitPriceBeforeVat": 10000,
           "unitPriceBeforeVatSnapshot": 10000,
           "vatRate": 8,
@@ -849,8 +849,8 @@
           "receiptUrl": null,
           "supplierName": null,
           "url": null,
-          "createdAt": "2026-11-03T13:48:42.161Z",
-          "updatedAt": "2026-11-03T13:48:42.161Z",
+          "createdAt": "2026-11-07T10:00:12.564Z",
+          "updatedAt": "2026-11-07T10:00:12.564Z",
           "archivedAt": null
         },
         "afterDelete": 100
@@ -867,11 +867,11 @@
       "note": "line HTTP 201; stock 100->100 (planned=25, actual=0)",
       "detail": {
         "request": {
-          "name": "TEST_QA_T2_specialist_MW0QTIQL",
+          "name": "TEST_QA_T2_specialist_MW68F4ZW",
           "hangMucLon": "Vật phẩm",
           "categoryId": null,
-          "expenseDate": "2026-11-03",
-          "inventoryItemId": "2d6d3a20-409b-4fe7-ae5e-d1b5cc7c3973",
+          "expenseDate": "2026-11-07",
+          "inventoryItemId": "f336120b-939a-47e2-aa35-a6d65a1284af",
           "isCustom": false,
           "plannedQuantity": 25,
           "actualQuantity": 0,
@@ -883,18 +883,18 @@
         },
         "lineStatus": 201,
         "lineBody": {
-          "id": "a0a46887-2461-4eeb-94e3-60728ec7f87a",
-          "expenseId": "184083d9-e616-43b7-a3b5-27a121cd779b",
-          "name": "TEST_QA_T2_specialist_MW0QTIQL",
+          "id": "e4223362-23b6-40ab-9b84-f80ac4333d47",
+          "expenseId": "206a02e0-823d-4fcd-92d4-79ba89fc018e",
+          "name": "TEST_QA_T2_specialist_MW68F4ZW",
           "categoryId": null,
-          "inventoryItemId": "2d6d3a20-409b-4fe7-ae5e-d1b5cc7c3973",
-          "itemId": "2d6d3a20-409b-4fe7-ae5e-d1b5cc7c3973",
+          "inventoryItemId": "f336120b-939a-47e2-aa35-a6d65a1284af",
+          "itemId": "f336120b-939a-47e2-aa35-a6d65a1284af",
           "inventoryItem": null,
           "item": null,
           "isCustom": false,
           "status": "draft",
-          "recognizedDate": "2026-11-03",
-          "expenseDate": "2026-11-03",
+          "recognizedDate": "2026-11-07",
+          "expenseDate": "2026-11-07",
           "hangMucLon": "Vật phẩm",
           "categoryName": "Vật phẩm",
           "isUnplanned": false,
@@ -931,8 +931,8 @@
           "receiptUrl": null,
           "supplierName": null,
           "url": null,
-          "createdAt": "2026-11-03T13:48:43.688Z",
-          "updatedAt": "2026-11-03T13:48:43.688Z",
+          "createdAt": "2026-11-07T10:00:14.189Z",
+          "updatedAt": "2026-11-07T10:00:14.189Z",
           "archivedAt": null
         },
         "transactions": [
@@ -956,11 +956,11 @@
       "detail": {
         "requests": [
           {
-            "name": "TEST_QA_T3_specialist_MW0QTIQL",
+            "name": "TEST_QA_T3_specialist_MW68F4ZW",
             "hangMucLon": "Vật phẩm",
             "categoryId": null,
-            "expenseDate": "2026-11-03",
-            "inventoryItemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
+            "expenseDate": "2026-11-07",
+            "inventoryItemId": "598f0c9a-bfff-4b12-a247-28da3c80bfb4",
             "isCustom": false,
             "plannedQuantity": 0,
             "actualQuantity": 10,
@@ -971,11 +971,11 @@
             "note": "TEST_QA_automated test line"
           },
           {
-            "name": "TEST_QA_T3_specialist_MW0QTIQL",
+            "name": "TEST_QA_T3_specialist_MW68F4ZW",
             "hangMucLon": "Vật phẩm",
             "categoryId": null,
-            "expenseDate": "2026-11-03",
-            "inventoryItemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
+            "expenseDate": "2026-11-07",
+            "inventoryItemId": "598f0c9a-bfff-4b12-a247-28da3c80bfb4",
             "isCustom": false,
             "plannedQuantity": 0,
             "actualQuantity": 5,
@@ -989,18 +989,18 @@
         "line1": {
           "status": 201,
           "body": {
-            "id": "62ae2377-8381-42ee-8fbd-d0f0391a2889",
-            "expenseId": "7832e3c0-670d-4145-8321-dfd1c981bed5",
-            "name": "TEST_QA_T3_specialist_MW0QTIQL",
+            "id": "79bcda28-83db-4fe8-8b28-6d6e61c5508d",
+            "expenseId": "b6ac6f2d-846a-4cd3-912d-e7fe6e1a2593",
+            "name": "TEST_QA_T3_specialist_MW68F4ZW",
             "categoryId": null,
-            "inventoryItemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
-            "itemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
+            "inventoryItemId": "598f0c9a-bfff-4b12-a247-28da3c80bfb4",
+            "itemId": "598f0c9a-bfff-4b12-a247-28da3c80bfb4",
             "inventoryItem": null,
             "item": null,
             "isCustom": false,
             "status": "draft",
-            "recognizedDate": "2026-11-03",
-            "expenseDate": "2026-11-03",
+            "recognizedDate": "2026-11-07",
+            "expenseDate": "2026-11-07",
             "hangMucLon": "Vật phẩm",
             "categoryName": "Vật phẩm",
             "isUnplanned": false,
@@ -1016,7 +1016,7 @@
             "plannedQuantity": 0,
             "actualQuantity": 10,
             "deductedQuantity": 10,
-            "stockTransactionId": "d660b8b5-656f-4d1f-9da1-981357f687d9",
+            "stockTransactionId": "29afa951-40df-437e-980a-71350ea333f6",
             "unitPriceBeforeVat": 10000,
             "unitPriceBeforeVatSnapshot": 10000,
             "vatRate": 8,
@@ -1037,26 +1037,26 @@
             "receiptUrl": null,
             "supplierName": null,
             "url": null,
-            "createdAt": "2026-11-03T13:48:45.150Z",
-            "updatedAt": "2026-11-03T13:48:45.150Z",
+            "createdAt": "2026-11-07T10:00:15.669Z",
+            "updatedAt": "2026-11-07T10:00:15.669Z",
             "archivedAt": null
           }
         },
         "line2": {
           "status": 201,
           "body": {
-            "id": "ff21fe49-6384-4b61-aea5-0e0fc8c519c2",
-            "expenseId": "7832e3c0-670d-4145-8321-dfd1c981bed5",
-            "name": "TEST_QA_T3_specialist_MW0QTIQL",
+            "id": "32321f79-4cfc-4af0-82ee-7612202e1b9e",
+            "expenseId": "b6ac6f2d-846a-4cd3-912d-e7fe6e1a2593",
+            "name": "TEST_QA_T3_specialist_MW68F4ZW",
             "categoryId": null,
-            "inventoryItemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
-            "itemId": "f17cf8eb-52ea-4825-94a7-b9f4c907469b",
+            "inventoryItemId": "598f0c9a-bfff-4b12-a247-28da3c80bfb4",
+            "itemId": "598f0c9a-bfff-4b12-a247-28da3c80bfb4",
             "inventoryItem": null,
             "item": null,
             "isCustom": false,
             "status": "draft",
-            "recognizedDate": "2026-11-03",
-            "expenseDate": "2026-11-03",
+            "recognizedDate": "2026-11-07",
+            "expenseDate": "2026-11-07",
             "hangMucLon": "Vật phẩm",
             "categoryName": "Vật phẩm",
             "isUnplanned": false,
@@ -1072,7 +1072,7 @@
             "plannedQuantity": 0,
             "actualQuantity": 5,
             "deductedQuantity": 5,
-            "stockTransactionId": "f7ae31e9-abd9-4dc3-aac9-09cea0317fba",
+            "stockTransactionId": "60372db7-f39f-4390-aeb8-706122800056",
             "unitPriceBeforeVat": 10000,
             "unitPriceBeforeVatSnapshot": 10000,
             "vatRate": 8,
@@ -1093,20 +1093,20 @@
             "receiptUrl": null,
             "supplierName": null,
             "url": null,
-            "createdAt": "2026-11-03T13:48:45.570Z",
-            "updatedAt": "2026-11-03T13:48:45.570Z",
+            "createdAt": "2026-11-07T10:00:16.159Z",
+            "updatedAt": "2026-11-07T10:00:16.159Z",
             "archivedAt": null
           }
         },
         "mid": 90,
         "lines": [
           {
-            "id": "62ae2377-8381-42ee-8fbd-d0f0391a2889",
+            "id": "79bcda28-83db-4fe8-8b28-6d6e61c5508d",
             "plannedQuantity": 0,
             "actualQuantity": 10
           },
           {
-            "id": "ff21fe49-6384-4b61-aea5-0e0fc8c519c2",
+            "id": "32321f79-4cfc-4af0-82ee-7612202e1b9e",
             "plannedQuantity": 0,
             "actualQuantity": 5
           }
@@ -1140,22 +1140,22 @@
       "result": "PASS",
       "note": "line 201; after create=90; patch=200",
       "detail": {
-        "lineId": "4949a62b-f89c-4813-9a78-9b3aac3988ca",
+        "lineId": "53d6bba0-3b36-413b-96cf-6cd652a3ff94",
         "mid": 90,
         "patchStatus": 200,
         "patchBody": {
-          "id": "4949a62b-f89c-4813-9a78-9b3aac3988ca",
-          "expenseId": "8ff706e8-90ad-46e5-be6d-d6ed9afaf89c",
-          "name": "TEST_QA_T4_specialist_MW0QTIQL",
+          "id": "53d6bba0-3b36-413b-96cf-6cd652a3ff94",
+          "expenseId": "9a4ce1eb-0880-430c-a1c4-c58fe53e9085",
+          "name": "TEST_QA_T4_specialist_MW68F4ZW",
           "categoryId": null,
-          "inventoryItemId": "6ed81dac-136d-4cb9-bb4c-55fa69e98d63",
-          "itemId": "6ed81dac-136d-4cb9-bb4c-55fa69e98d63",
+          "inventoryItemId": "8892d68c-7175-4a1b-b9db-da7fe92a4ab5",
+          "itemId": "8892d68c-7175-4a1b-b9db-da7fe92a4ab5",
           "inventoryItem": null,
           "item": null,
           "isCustom": false,
           "status": "draft",
-          "recognizedDate": "2026-11-03",
-          "expenseDate": "2026-11-03",
+          "recognizedDate": "2026-11-07",
+          "expenseDate": "2026-11-07",
           "hangMucLon": "Vật phẩm",
           "categoryName": "Vật phẩm",
           "isUnplanned": false,
@@ -1171,7 +1171,7 @@
           "plannedQuantity": 0,
           "actualQuantity": 4,
           "deductedQuantity": 4,
-          "stockTransactionId": "9e29b5d7-6f4c-4126-8149-0420ea5ab301",
+          "stockTransactionId": "9d27a79a-8f6e-4e0a-b23a-512c0e55e92c",
           "unitPriceBeforeVat": 10000,
           "unitPriceBeforeVatSnapshot": 10000,
           "vatRate": 8,
@@ -1192,8 +1192,8 @@
           "receiptUrl": null,
           "supplierName": null,
           "url": null,
-          "createdAt": "2026-11-03T13:48:48.159Z",
-          "updatedAt": "2026-11-03T13:48:48.667Z",
+          "createdAt": "2026-11-07T10:00:18.873Z",
+          "updatedAt": "2026-11-07T10:00:19.445Z",
           "archivedAt": null
         }
       },
@@ -1208,22 +1208,22 @@
       "result": "PASS",
       "note": "line 201; after create=90; patch0=200",
       "detail": {
-        "lineId": "d98fc4e2-63af-44e6-b009-2d171e7c53a5",
+        "lineId": "0a9d6e03-ce97-4b30-ae3e-9bc5048f44cf",
         "mid": 90,
         "patchStatus": 200,
         "patchBody": {
-          "id": "d98fc4e2-63af-44e6-b009-2d171e7c53a5",
-          "expenseId": "67fe7941-28ba-409c-b418-1cb1420a0d9a",
-          "name": "TEST_QA_T5_specialist_MW0QTIQL",
+          "id": "0a9d6e03-ce97-4b30-ae3e-9bc5048f44cf",
+          "expenseId": "50a8e4c0-7d5d-4332-b7a6-d0e7694bfbf9",
+          "name": "TEST_QA_T5_specialist_MW68F4ZW",
           "categoryId": null,
-          "inventoryItemId": "07e09d7b-93de-4779-bdbf-6e2e6a15ccbe",
-          "itemId": "07e09d7b-93de-4779-bdbf-6e2e6a15ccbe",
+          "inventoryItemId": "d0bd2095-fcb3-4438-b5e6-3bae77f396cd",
+          "itemId": "d0bd2095-fcb3-4438-b5e6-3bae77f396cd",
           "inventoryItem": null,
           "item": null,
           "isCustom": false,
           "status": "draft",
-          "recognizedDate": "2026-11-03",
-          "expenseDate": "2026-11-03",
+          "recognizedDate": "2026-11-07",
+          "expenseDate": "2026-11-07",
           "hangMucLon": "Vật phẩm",
           "categoryName": "Vật phẩm",
           "isUnplanned": false,
@@ -1239,7 +1239,7 @@
           "plannedQuantity": 0,
           "actualQuantity": 0,
           "deductedQuantity": 0,
-          "stockTransactionId": "8050aef1-4e11-4314-810e-3808f924de35",
+          "stockTransactionId": "feb72fd0-5e06-4a74-9617-9a48d42267d1",
           "unitPriceBeforeVat": 10000,
           "unitPriceBeforeVatSnapshot": 10000,
           "vatRate": 8,
@@ -1260,8 +1260,8 @@
           "receiptUrl": null,
           "supplierName": null,
           "url": null,
-          "createdAt": "2026-11-03T13:48:50.255Z",
-          "updatedAt": "2026-11-03T13:48:50.772Z",
+          "createdAt": "2026-11-07T10:00:20.672Z",
+          "updatedAt": "2026-11-07T10:00:21.255Z",
           "archivedAt": null
         }
       },
@@ -1276,7 +1276,7 @@
       "result": "PASS",
       "note": "line 201; after create=90; delete line=200",
       "detail": {
-        "lineId": "ada54b5c-bb45-49c0-8b22-2059481d675d",
+        "lineId": "3ceb08fc-3723-47c4-b455-30ad8b03a896",
         "mid": 90,
         "deleteStatus": 200
       },
@@ -1324,11 +1324,11 @@
       "note": "negative HTTP 400; stock=100; lineCount=0",
       "detail": {
         "request": {
-          "name": "TEST_QA_T9a_specialist_MW0QTIQL",
+          "name": "TEST_QA_T9a_specialist_MW68F4ZW",
           "hangMucLon": "Vật phẩm",
           "categoryId": null,
-          "expenseDate": "2026-11-03",
-          "inventoryItemId": "a272c7a3-870b-4aa5-a640-276b304a8eef",
+          "expenseDate": "2026-11-07",
+          "inventoryItemId": "aac214ac-712f-4a0d-a11a-a4af0f64fd5b",
           "isCustom": false,
           "plannedQuantity": 0,
           "actualQuantity": -5,
@@ -1360,11 +1360,11 @@
       "note": "actual=0/planned=10 HTTP 201; stock 100->100; lineCount=1",
       "detail": {
         "request": {
-          "name": "TEST_QA_T9b_specialist_MW0QTIQL",
+          "name": "TEST_QA_T9b_specialist_MW68F4ZW",
           "hangMucLon": "Vật phẩm",
           "categoryId": null,
-          "expenseDate": "2026-11-03",
-          "inventoryItemId": "dd6c0904-121e-4980-b743-c2a095e7087b",
+          "expenseDate": "2026-11-07",
+          "inventoryItemId": "6de3b540-3fe6-4f37-9fd8-2f3370645003",
           "isCustom": false,
           "plannedQuantity": 10,
           "actualQuantity": 0,
@@ -1376,18 +1376,18 @@
         },
         "lineStatus": 201,
         "lineBody": {
-          "id": "476389fa-18c6-4ccf-a9fc-30a1cbefcb6e",
-          "expenseId": "7ec1941e-ca96-4fd6-8bec-b5bde18220b0",
-          "name": "TEST_QA_T9b_specialist_MW0QTIQL",
+          "id": "a60c6878-6186-4b0c-8730-c22191372a61",
+          "expenseId": "169eea93-a128-4c63-ab0e-77d4c54b5bd3",
+          "name": "TEST_QA_T9b_specialist_MW68F4ZW",
           "categoryId": null,
-          "inventoryItemId": "dd6c0904-121e-4980-b743-c2a095e7087b",
-          "itemId": "dd6c0904-121e-4980-b743-c2a095e7087b",
+          "inventoryItemId": "6de3b540-3fe6-4f37-9fd8-2f3370645003",
+          "itemId": "6de3b540-3fe6-4f37-9fd8-2f3370645003",
           "inventoryItem": null,
           "item": null,
           "isCustom": false,
           "status": "draft",
-          "recognizedDate": "2026-11-03",
-          "expenseDate": "2026-11-03",
+          "recognizedDate": "2026-11-07",
+          "expenseDate": "2026-11-07",
           "hangMucLon": "Vật phẩm",
           "categoryName": "Vật phẩm",
           "isUnplanned": false,
@@ -1424,8 +1424,8 @@
           "receiptUrl": null,
           "supplierName": null,
           "url": null,
-          "createdAt": "2026-11-03T13:48:57.379Z",
-          "updatedAt": "2026-11-03T13:48:57.379Z",
+          "createdAt": "2026-11-07T10:00:27.652Z",
+          "updatedAt": "2026-11-07T10:00:27.652Z",
           "archivedAt": null
         },
         "lineCount": 1
@@ -1457,11 +1457,11 @@
       "note": "HTTP 409; message=Số lượng thực tế (10) vượt tồn kho hiện tại (5); stock 5->5; lineCount=0",
       "detail": {
         "request": {
-          "name": "TEST_QA_T11_specialist_MW0QTIQL",
+          "name": "TEST_QA_T11_specialist_MW68F4ZW",
           "hangMucLon": "Vật phẩm",
           "categoryId": null,
-          "expenseDate": "2026-11-03",
-          "inventoryItemId": "cd27b956-91e5-460a-84b8-ae3b41d24e34",
+          "expenseDate": "2026-11-07",
+          "inventoryItemId": "64e39bca-27a4-4f4f-baf9-2dfae037bc46",
           "isCustom": false,
           "plannedQuantity": 0,
           "actualQuantity": 10,
@@ -1506,14 +1506,14 @@
         "txStatus": 201,
         "txBody": {
           "data": {
-            "id": "93d0e80a-c13a-4342-a5f3-5f4d7d1b21a3",
-            "itemId": "cfdeaa45-9d3f-4676-a195-8dd56e1b8cfe",
-            "projectId": "e73d7aee-6a03-4fd8-9f6d-33e25c3e63ca",
+            "id": "faed5994-8d1a-425d-904d-fa9efaae286a",
+            "itemId": "0ea24cf2-68bf-4b6f-8a6a-4842ab44a1c3",
+            "projectId": "91427169-9c14-4cc2-8e99-e45f5b0203e5",
             "type": "out",
             "quantity": 5,
-            "date": "2026-11-03",
+            "date": "2026-11-07",
             "note": "TEST_QA_manual stock out",
-            "createdAt": "2026-11-03T00:00:00.000Z"
+            "createdAt": "2026-11-07T00:00:00.000Z"
           }
         },
         "txCount": 2
@@ -1538,7 +1538,7 @@
           "errorCode": null,
           "module": null,
           "level": null,
-          "count": 4
+          "count": 2
         },
         "inv": {
           "status": 200,
@@ -1570,7 +1570,7 @@
           "errorCode": null,
           "module": null,
           "level": null,
-          "count": 4
+          "count": 2
         },
         "inv": {
           "status": 200,
@@ -1623,7 +1623,7 @@
                   "inventory": "none"
                 }
               },
-              "updatedAt": "2026-11-03T13:49:10.542Z"
+              "updatedAt": "2026-11-07T10:00:40.363Z"
             }
           }
         },
@@ -1727,7 +1727,7 @@
               "body": {
                 "data": {
                   "matrix": {},
-                  "updatedAt": "2026-11-03T13:49:11.233Z"
+                  "updatedAt": "2026-11-07T10:00:41.342Z"
                 }
               }
             }
@@ -1791,7 +1791,7 @@
                   "inventory": "none"
                 }
               },
-              "updatedAt": "2026-11-03T13:49:13.814Z"
+              "updatedAt": "2026-11-07T10:00:43.840Z"
             }
           }
         },
@@ -1895,7 +1895,7 @@
               "body": {
                 "data": {
                   "matrix": {},
-                  "updatedAt": "2026-11-03T13:49:14.536Z"
+                  "updatedAt": "2026-11-07T10:00:44.519Z"
                 }
               }
             }

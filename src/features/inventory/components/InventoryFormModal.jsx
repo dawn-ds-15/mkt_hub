@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useDashboard } from '@/shared/stores/DashboardContext';
 import { createInventoryItem, updateInventoryItem, updateBatch, getItemBatches, createInventoryEntry, checkBatchCode, uploadBatchAttachments, getCategoryBudgetTree } from '@/shared/api/httpClient';
-import { getBatchExpenseCategory } from '@/features/inventory/utils/inventoryBudgetCategory';
+import { getBatchExpenseCategory, getInventoryBudgetGroup } from '@/features/inventory/utils/inventoryBudgetCategory';
 import { useInventoryCategories } from '@/features/inventory/hooks/useInventoryCategories';
 import NumberInput from '@/shared/components/ui/NumberInput';
 import BatchAttachments, { isAttachmentApiUnsupported } from '@/features/inventory/components/BatchAttachments';
@@ -16,7 +16,7 @@ function generateCode(name) {
 export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
   const { locale } = useDashboard();
   const t = (vi, en) => (locale === 'vi' ? vi : en);
-  const { categories: categoryOptions, categoryValueOf } = useInventoryCategories();
+  const { categories: categoryOptions, categoryValueOf, categoryDisplay } = useInventoryCategories();
 
   const isCreate = mode === 'create';
 
@@ -55,6 +55,9 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
   const budgetOptions = expenseCat && !budgetCategories.some((c) => c.id === expenseCat.id)
     ? [...budgetCategories, expenseCat]
     : budgetCategories;
+  const suggestedBudgetGroup = getInventoryBudgetGroup(category);
+  const expenseCatMismatch = Boolean(expenseCat?.name)
+    && String(expenseCat.name).trim().toLowerCase() !== String(suggestedBudgetGroup).trim().toLowerCase();
 
   // Mã batch duy nhất toàn kho: hỏi BE (check-code) 400ms sau khi ngừng gõ, bỏ qua chính batch đang sửa.
   // BE vẫn chặn lại bằng 409 khi lưu nếu có người vừa dùng mã này.
@@ -369,6 +372,17 @@ export default function InventoryFormModal({ item, mode, onClose, onSaved }) {
                 <p className="mt-1 text-xs text-on-surface-variant">
                   {t(`Dùng cho chi phí chung không chia được cho dự án — ghi thẳng vào hạng mục ngân sách năm ${budgetYear}.`, `For shared costs that can't be split by project — recorded directly to the ${budgetYear} budget category.`)}
                 </p>
+                {expenseCatMismatch && (
+                  <p className="mt-1 text-xs text-warning flex items-start gap-1">
+                    <span className="material-symbols-outlined text-[14px]">warning</span>
+                    <span>
+                      {t(
+                        `Vật phẩm nhóm "${categoryDisplay(category)}" thường ghi vào "${suggestedBudgetGroup}", không phải "${expenseCat.name}". Kiểm tra lại nếu đây là chi phí chung.`,
+                        `Items in "${categoryDisplay(category)}" usually belong to "${suggestedBudgetGroup}", not "${expenseCat.name}". Double-check if this is a shared cost.`
+                      )}
+                    </span>
+                  </p>
+                )}
               </div>
               <div>
                 <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">{t('Ghi chú', 'Note')}</label>

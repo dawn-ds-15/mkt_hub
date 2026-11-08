@@ -568,15 +568,19 @@ export default function ViewAnalytics({ year: propYear, periodType: propPeriodTy
           {funnelSteps.length > 0 && (
             <div className="space-y-6">
               {funnelSteps.map((step, idx) => {
-                const baseline = funnelSteps[0]?.actual || 1;
-                const barWidth = ((step.actual || 0) / baseline) * 100;
-                const pct = step.plan > 0 ? ((step.actual || 0) / step.plan) * 100 : null;
-                // Tỷ lệ chuyển đổi so với bước trước (vd MQL/Raw Leads) — ưu tiên convPct BE trả, thiếu thì tự tính
+                const plan = Number(step.plan) || 0;
+                const actual = Number(step.actual) || 0;
+                const attainment = plan > 0 ? (actual / plan) * 100 : null;
+                const barPct = attainment != null ? Math.min(attainment, 100) : 0;
+                const attainmentColor = attainment == null ? 'bg-surface-container-high'
+                  : attainment >= 100 ? 'bg-success'
+                    : attainment >= 50 ? 'bg-warning'
+                      : 'bg-danger';
+                // Tỷ lệ chuyển đổi so với bước trước (actual/actual), 1 decimal; mẫu = 0 → "—"
                 const prevActual = idx > 0 ? Number(funnelSteps[idx - 1].actual) || 0 : 0;
                 const convRate = idx === 0 ? null
-                  : step.convPct != null && Number.isFinite(Number(step.convPct)) ? Number(step.convPct)
-                    : prevActual > 0 ? Math.round(((Number(step.actual) || 0) / prevActual) * 1000) / 10 : null;
-                const barPct = Math.min(Math.max(barWidth, 1.5), 100);
+                  : step.convPct != null && Number.isFinite(Number(step.convPct)) ? Math.round(Number(step.convPct) * 10) / 10
+                    : prevActual > 0 ? Math.round((actual / prevActual) * 1000) / 10 : null;
                 const labelInside = barPct >= 12;
                 const isFirst = idx === 0;
                 const stepLabel = step.step === 'Raw Leads' ? t(locale, { vi: 'Raw Leads', en: 'Raw Leads' }) :
@@ -605,21 +609,21 @@ export default function ViewAnalytics({ year: propYear, periodType: propPeriodTy
                     </div>
                     <div className="h-8 bg-surface-container rounded-md overflow-hidden relative">
                       <div
-                        className={`h-full rounded-md transition-all duration-300 ${isFirst ? 'bg-primary' : 'bg-secondary'}`}
+                        className={`h-full rounded-md transition-all duration-300 ${attainmentColor}`}
                         style={{ width: `${barPct}%` }}
                       />
-                      {/* Số trong thanh: % đạt so với KPI (thực tế / KPI × 100%); KPI = 0 → "—" */}
+                      {/* In-bar: attainment (actual/target*100, uncapped); target=0 → "—" */}
                       <div
                         className="absolute inset-y-0 flex items-center pointer-events-none"
                         style={labelInside ? { left: '12px' } : { left: `calc(${barPct}% + 8px)` }}
                         title={t(locale, { vi: '% đạt so với KPI', en: '% of KPI achieved' })}
                       >
-                        <span className={`text-[11px] font-bold whitespace-nowrap ${labelInside ? 'text-on-primary' : pctColor(pct)}`}>
-                          {pct != null ? `${Math.round(pct)}%` : '—'}
+                        <span className={`text-[11px] font-bold whitespace-nowrap ${labelInside ? 'text-on-primary' : pctColor(attainment)}`}>
+                          {attainment != null ? `${Math.round(attainment)}%` : '—'}
                         </span>
                       </div>
                     </div>
-                    {/* Số dưới thanh: tỷ lệ chuyển đổi so với bước trước (vd MQL/Raw Leads) */}
+                    {/* Số dưới thanh: tỷ lệ chuyển đổi actual/actual so với bước trước; mẫu = 0 → "—" */}
                     <div className="mt-1 flex justify-between items-center">
                       <span className="text-[12px] text-on-surface-variant">
                         {!isFirst ? `${t(locale, { vi: 'Tỷ lệ chuyển đổi', en: 'Conversion rate' })} ${stepLabel}/${prevLabel}:` : ''}

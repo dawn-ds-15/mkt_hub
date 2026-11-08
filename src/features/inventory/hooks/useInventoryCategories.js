@@ -6,12 +6,14 @@ const FALLBACK = {
   posm: { vi: 'POSM', en: 'POSM' },
   gift: { vi: 'Quà tặng', en: 'Gift' },
   print: { vi: 'Ấn phẩm in', en: 'Printed materials' },
+  uniform: { vi: 'Đồng phục', en: 'Uniform' },
 };
 
 const VI_LABELS = {
   posm: 'POSM',
   gift: 'Quà tặng',
   print: 'Ấn phẩm in',
+  uniform: 'Đồng phục',
 };
 
 export function useInventoryCategories() {

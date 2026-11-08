@@ -17,6 +17,7 @@ import NumberInput from '@/shared/components/ui/NumberInput';
 import { getExpenseMeta, setExpenseMeta } from '@/features/expense/utils/expenseMeta';
 import { ATTACHMENT_ACCEPT, lineAttachments, validateAttachmentFile } from '@/features/expense/utils/expenseAttachments';
 import { matchInventoryItem, normalizeItemName } from '@/features/expense/utils/inventoryMatching';
+import { resolveInventoryBudgetCategory } from '@/features/inventory/utils/inventoryBudgetCategory';
 
 let rowSeq = 0;
 
@@ -339,6 +340,8 @@ export default function ExpenseEntryForm({ onSaved, projectId, onProjectChange, 
   const [inventoryItems, setInventoryItems] = useState([]);
   const [dirty, setDirty] = useState(false);
   const [categoryNameById, setCategoryNameById] = useState({});
+  const [categoryTreeReady, setCategoryTreeReady] = useState(false);
+  const [categoryTreeFailed, setCategoryTreeFailed] = useState(false);
   const [dragRowId, setDragRowId] = useState(null);
   const snapRef = useRef(null);
   const savingRef = useRef(false);
@@ -364,6 +367,8 @@ export default function ExpenseEntryForm({ onSaved, projectId, onProjectChange, 
   }, []);
 
   useEffect(() => {
+    setCategoryTreeReady(false);
+    setCategoryTreeFailed(false);
     getCategoryBudgetTree(period.year, projectId || undefined)
       .then((res) => {
         const cats = Array.isArray(res.data?.categories) ? res.data.categories : [];
@@ -396,13 +401,48 @@ export default function ExpenseEntryForm({ onSaved, projectId, onProjectChange, 
         const nameById = {};
         cats.forEach((c) => { if (c.id && c.name) nameById[c.id] = c.name; });
         setCategoryNameById(nameById);
+        setCategoryTreeReady(true);
+        setCategoryTreeFailed(false);
       })
       .catch(() => {
         setHangMucOptions([VAT_PHAM, OTHER_HANG_MUC]);
         setCategoryIdMap({});
         setCategoryNameById({});
+        setCategoryTreeReady(true);
+        setCategoryTreeFailed(true);
       });
   }, [period.year, projectId]);
+
+  // Danh sách nhóm ngân sách thật từ cây (dùng để tra categoryId theo tên nhóm).
+  const budgetCategoryList = useMemo(() => {
+    const list = Object.entries(categoryIdMap).map(([name, id]) => ({ id, name }));
+    const hasVatPham = list.some((c) => String(c.name || '').trim().toLowerCase() === String(VAT_PHAM).trim().toLowerCase());
+    if (!hasVatPham) list.push({ id: null, name: VAT_PHAM });
+    return list;
+  }, [categoryIdMap]);
+
+  // Dòng có liên kết kho → nhóm ngân sách bắt buộc theo danh mục vật phẩm.
+  const mapRowToInventoryGroup = (row) => {
+    if (!categoryTreeReady || categoryTreeFailed || !row.inventoryItemId) return row;
+    const item = inventoryItems.find((i) => i.id === row.inventoryItemId);
+    if (!item) return row;
+    const mapped = resolveInventoryBudgetCategory(item.category, budgetCategoryList);
+    if (row.hangMucLon === mapped.name && String(row.categoryId || '') === String(mapped.id || '')) return row;
+    return { ...row, hangMucLon: mapped.name, categoryId: mapped.id || '' };
+  };
+
+  // Áp mapping cho các dòng đã liên kết kho (kể cả dòng cũ vừa được relink theo tên).
+  useEffect(() => {
+    if (!categoryTreeReady || inventoryItems.length === 0) return undefined;
+    let changed = false;
+    const next = rows.map((r) => {
+      const mapped = mapRowToInventoryGroup(r);
+      if (mapped !== r) changed = true;
+      return mapped;
+    });
+    if (changed) setRows(next);
+    return undefined;
+  }, [categoryTreeReady, budgetCategoryList, inventoryItems, rows]);
 
   const markDirty = (nextRows) => {
     if (!snapRef.current) {
@@ -727,12 +767,31 @@ export default function ExpenseEntryForm({ onSaved, projectId, onProjectChange, 
       showToast(t('Nhập ít nhất một dòng chi phí', 'Enter at least one expense line'), 'error');
       return;
     }
+    if (!categoryTreeReady) {
+      showToast(t('Đang tải hạng mục ngân sách, vui lòng thử lại.', 'Budget categories are loading, please try again.'), 'warning');
+      return;
+    }
+    if (categoryTreeFailed && contentRows.some((r) => r.inventoryItemId)) {
+      showToast(
+        t(
+          'Không tải được hạng mục ngân sách nên chưa thể tự gán nhóm cho dòng vật phẩm. Vui lòng thử lại.',
+          'Could not load budget categories, so inventory lines cannot be mapped. Please try again.'
+        ),
+        'error'
+      );
+      return;
+    }
     // Liên kết lại kho ngay trước khi lưu (phòng trường hợp effect liên kết chưa kịp chạy),
     // để dòng quà tặng / in ấn có tên trùng vật phẩm luôn được BE trừ tồn kho.
+    // Sau khi liên kết, ép nhóm ngân sách theo danh mục vật phẩm (gift/print → QUÀ TẶNG/ IN ẤN,
+    // posm/uniform/khác → Vật phẩm) trước khi gộp dòng trùng.
     const linkedRows = contentRows.map((r) => {
-      if (r.inventoryItemId || isAmountOnlyHml(r.hangMucLon)) return r;
-      const item = matchInventoryItem(inventoryItems, r.name);
-      return item ? { ...r, inventoryItemId: item.id, isCustom: false } : r;
+      let next = r;
+      if (!next.inventoryItemId && !isAmountOnlyHml(next.hangMucLon)) {
+        const item = matchInventoryItem(inventoryItems, next.name);
+        if (item) next = { ...next, inventoryItemId: item.id, isCustom: false };
+      }
+      return mapRowToInventoryGroup(next);
     });
     const validRows = mergeDuplicateRows(linkedRows);
     if (validRows.length < contentRows.length) {
@@ -975,13 +1034,16 @@ export default function ExpenseEntryForm({ onSaved, projectId, onProjectChange, 
                           value={row.hangMucLon || ''}
                           onChange={(e) => {
                             const v = e.target.value;
+                            const categoryId = categoryIdMap[v] || '';
+                            const mappedRow = mapRowToInventoryGroup({ ...row, hangMucLon: v, categoryId });
+                            const nextHml = mappedRow.hangMucLon;
+                            const nextCatId = mappedRow.categoryId || '';
                             const wasAmt = isAmountOnlyHml(row.hangMucLon);
-                            const isAmtNow = isAmountOnlyHml(v);
-                            const catId = categoryIdMap[v] || '';
+                            const isAmtNow = isAmountOnlyHml(nextHml);
                             updateRow(row.rowId, {
-                              hangMucLon: v,
-                              categoryId: catId,
-                              ...(v === VAT_PHAM
+                              hangMucLon: nextHml,
+                              categoryId: nextCatId,
+                              ...(nextHml === VAT_PHAM
                                 ? { inventoryItemId: row.inventoryItemId || '', isCustom: Boolean(row.inventoryItemId) }
                                 : {}),
                               ...(isAmtNow && !wasAmt
@@ -1009,10 +1071,14 @@ export default function ExpenseEntryForm({ onSaved, projectId, onProjectChange, 
                             onChange={(e) => {
                               const v = e.target.value;
                               const item = inventoryItems.find((u) => u.id === v);
+                              const mapped = item && categoryTreeReady && !categoryTreeFailed
+                                ? resolveInventoryBudgetCategory(item.category, budgetCategoryList)
+                                : null;
                               updateRow(row.rowId, {
                                 inventoryItemId: v,
                                 name: item ? item.name : row.name,
                                 isCustom: !item,
+                                ...(mapped ? { hangMucLon: mapped.name, categoryId: mapped.id || '' } : {}),
                                 ...(item
                                   ? { unitPrice: preVatOf(item), vatRate: item.vatRate != null ? item.vatRate : row.vatRate }
                                   : {}),
@@ -1044,10 +1110,14 @@ export default function ExpenseEntryForm({ onSaved, projectId, onProjectChange, 
                               if (amountOnly) { updateRow(row.rowId, { name: v }); return; }
                               const item = matchInventoryItem(inventoryItems, v);
                               if (item) {
+                                const mapped = categoryTreeReady && !categoryTreeFailed
+                                  ? resolveInventoryBudgetCategory(item.category, budgetCategoryList)
+                                  : null;
                                 updateRow(row.rowId, {
                                   name: v,
                                   inventoryItemId: item.id,
                                   isCustom: false,
+                                  ...(mapped ? { hangMucLon: mapped.name, categoryId: mapped.id || '' } : {}),
                                   unitPrice: preVatOf(item),
                                   vatRate: item.vatRate != null ? item.vatRate : row.vatRate,
                                 });
